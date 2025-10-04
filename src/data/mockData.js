@@ -233,3 +233,179 @@ export const sortOptions = [
   { value: 'popular', label: 'Phổ biến nhất' }
 ]
 
+// Events data for EventPage
+export const events = [
+  {
+    id: 1,
+    title: 'GreenLoop Fashion Swap Meet #12',
+    description: 'Sự kiện trao đổi quần áo lớn nhất tháng! Mang theo 5 món đồ cũ để đổi lấy những món đồ mới tuyệt vời.',
+    date: '2025-01-15',
+    time: '14:00 - 18:00',
+    location: 'Công viên Tao Đàn, Quận 1, TP.HCM',
+    address: '12 Trương Định, Phường Bến Thành, Quận 1',
+    coordinates: { lat: 10.7769, lng: 106.7009 },
+    image: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600',
+    category: 'Trao đổi',
+    attendees: 156,
+    maxAttendees: 200,
+    price: 0,
+    status: 'upcoming',
+    organizer: {
+      name: 'GreenLoop Team',
+      avatar: 'https://ui-avatars.com/api/?name=GreenLoop&background=10b981&color=fff'
+    },
+    tags: ['Miễn phí', 'Trao đổi', 'Thời trang bền vững'],
+    highlights: [
+      'Trao đổi miễn phí quần áo',
+      'Workshop về thời trang bền vững',
+      'Gặp gỡ cộng đồng yêu môi trường',
+      'Nhận điểm eco khi tham gia'
+    ]
+  },
+  {
+    id: 2,
+    title: 'Workshop: Tái chế quần áo cũ',
+    description: 'Học cách biến những món đồ cũ thành những thiết kế độc đáo và sáng tạo cùng các chuyên gia thời trang.',
+    date: '2025-01-20',
+    time: '09:00 - 12:00',
+    location: 'Trung tâm Sáng tạo, Quận 3, TP.HCM',
+    address: '45 Nguyễn Thị Minh Khai, Phường 6, Quận 3',
+    coordinates: { lat: 10.7886, lng: 106.6917 },
+    image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600',
+    category: 'Workshop',
+    attendees: 24,
+    maxAttendees: 30,
+    price: 150000,
+    status: 'upcoming',
+    organizer: {
+      name: 'Chị Lan Anh - Fashion Designer',
+      avatar: 'https://ui-avatars.com/api/?name=Lan+Anh&background=ec4899&color=fff'
+    },
+    tags: ['Có phí', 'Workshop', 'DIY', 'Sáng tạo'],
+    highlights: [
+      'Học từ chuyên gia 10 năm kinh nghiệm',
+      'Tài liệu và dụng cụ được cung cấp',
+      'Mang về sản phẩm handmade',
+      'Certificate hoàn thành khóa học'
+    ]
+  },
+  {
+    id: 3,
+    title: 'Green Market Weekend',
+    description: 'Chợ cuối tuần với các sản phẩm thời trang bền vững, thực phẩm organic và các hoạt động giải trí cho cả gia đình.',
+    date: '2025-01-25',
+    time: '08:00 - 20:00',
+    location: 'Công viên Gia Định, Quận Gò Vấp, TP.HCM',
+    address: 'Hoàng Minh Giám, Phường 9, Quận Gò Vấp',
+    coordinates: { lat: 10.8142, lng: 106.6438 },
+    image: 'https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=600',
+    category: 'Chợ phiên',
+    attendees: 89,
+    maxAttendees: 500,
+    price: 0,
+    status: 'upcoming',
+    organizer: {
+      name: 'GreenLoop Community',
+      avatar: 'https://ui-avatars.com/api/?name=Community&background=059669&color=fff'
+    },
+    tags: ['Miễn phí', 'Gia đình', 'Chợ phiên', 'Organic'],
+    highlights: [
+      'Hơn 50 gian hàng thân thiện môi trường',
+      'Hoạt động vui chơi cho trẻ em',
+      'Food truck với đồ ăn organic',
+      'Live music và entertainment'
+    ]
+  },
+  {
+    id: 4,
+    title: 'Sustainable Fashion Talk',
+    description: 'Buổi tọa đàm về tương lai của thời trang bền vững với sự tham gia của các chuyên gia hàng đầu trong ngành.',
+    date: '2025-02-01',
+    time: '19:00 - 21:30',
+    location: 'Bitexco Financial Tower, Quận 1, TP.HCM',
+    address: '2 Hải Triều, Phường Bến Nghé, Quận 1',
+    coordinates: { lat: 10.7718, lng: 106.7045 },
+    image: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=600',
+    category: 'Tọa đàm',
+    attendees: 67,
+    maxAttendees: 100,
+    price: 200000,
+    status: 'upcoming',
+    organizer: {
+      name: 'Fashion Forward Vietnam',
+      avatar: 'https://ui-avatars.com/api/?name=Fashion+Forward&background=7c3aed&color=fff'
+    },
+    tags: ['Có phí', 'Chuyên gia', 'Networking', 'Tọa đàm'],
+    highlights: [
+      'Diễn giả là CEO của các thương hiệu lớn',
+      'Networking session với finger food',
+      'Tặng voucher mua sắm GreenLoop',
+      'Q&A trực tiếp với chuyên gia'
+    ]
+  },
+  {
+    id: 5,
+    title: 'Eco Fashion Show 2025',
+    description: 'Show diễn thời trang đặc biệt với các thiết kế từ vật liệu tái chế và thương hiệu bền vững.',
+    date: '2025-02-10',
+    time: '20:00 - 22:00',
+    location: 'Nhà hát Thành phố, Quận 1, TP.HCM',
+    address: '7 Lam Sơn, Phường Bến Nghé, Quận 1',
+    coordinates: { lat: 10.7764, lng: 106.7017 },
+    image: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=600',
+    category: 'Show diễn',
+    attendees: 245,
+    maxAttendees: 300,
+    price: 500000,
+    status: 'upcoming',
+    organizer: {
+      name: 'Vietnam Fashion Week',
+      avatar: 'https://ui-avatars.com/api/?name=VFW&background=dc2626&color=fff'
+    },
+    tags: ['Có phí', 'Show diễn', 'High-end', 'Exclusive'],
+    highlights: [
+      'Các nhà thiết kế nổi tiếng tham gia',
+      'BST từ 100% vật liệu tái chế',
+      'After party với DJ nổi tiếng',
+      'Goodie bag trị giá 1 triệu đồng'
+    ]
+  },
+  {
+    id: 6,
+    title: 'Kids Eco Art Workshop',
+    description: 'Workshop sáng tạo dành cho trẻ em, học cách làm đồ chơi và trang trí từ vật liệu tái chế.',
+    date: '2025-02-15',
+    time: '14:00 - 16:30',
+    location: 'Trung tâm Văn hóa Quận 7, TP.HCM',
+    address: '123 Nguyễn Thị Thập, Phường Tân Phú, Quận 7',
+    coordinates: { lat: 10.7411, lng: 106.6957 },
+    image: 'https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=600',
+    category: 'Workshop',
+    attendees: 18,
+    maxAttendees: 25,
+    price: 80000,
+    status: 'upcoming',
+    organizer: {
+      name: 'Green Kids Club',
+      avatar: 'https://ui-avatars.com/api/?name=Green+Kids&background=f59e0b&color=fff'
+    },
+    tags: ['Trẻ em', 'Sáng tạo', 'Gia đình', 'Tái chế'],
+    highlights: [
+      'Dành cho trẻ 6-12 tuổi',
+      'Phụ huynh được tham gia miễn phí',
+      'Mang về 3-4 sản phẩm handmade',
+      'Snack và nước uống cho trẻ'
+    ]
+  }
+]
+
+// Event categories for filtering
+export const eventCategories = [
+  { id: 'all', name: 'Tất cả', icon: '🎪' },
+  { id: 'trao-doi', name: 'Trao đổi', icon: '🔄' },
+  { id: 'workshop', name: 'Workshop', icon: '🛠️' },
+  { id: 'cho-phien', name: 'Chợ phiên', icon: '🛒' },
+  { id: 'toa-dam', name: 'Tọa đàm', icon: '💬' },
+  { id: 'show-dien', name: 'Show diễn', icon: '👗' }
+]
+

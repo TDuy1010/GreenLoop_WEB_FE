@@ -4,6 +4,8 @@ import MainLayout from './layouts/MainLayout'
 import LandingPage from './pages/user/landingpage/LandingPage'
 import ShopPage from './pages/user/shop/ShopPage'
 import ProductDetail from './pages/user/shop/ProductDetail'
+import EventPage from './pages/user/events/EventPage'
+import EventDetail from './pages/user/events/EventDetail'
 
 const router = createBrowserRouter([
   {
@@ -21,6 +23,14 @@ const router = createBrowserRouter([
       {
         path: 'shop/:id',
         element: <ProductDetail />
+      },
+      {
+        path: 'events',
+        element: <EventPage />
+      },
+      {
+        path: 'events/:id',
+        element: <EventDetail />
       }
     ]
   }
