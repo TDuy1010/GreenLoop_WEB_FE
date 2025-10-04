@@ -1,37 +1,9 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import heroImage from '../../../assets/images/herosection.jpg'
+import { priceRanges, brands, categories, partnerBrands } from '../../../data/mockData'
 
 const LandingPage = () => {
-  const priceRanges = [
-    { label: 'DƯỚI', price: '19k' },
-    { label: 'DƯỚI', price: '29k' },
-    { label: 'DƯỚI', price: '49k' },
-    { label: 'DƯỚI', price: '69k' },
-  ]
-
-  const brands = [
-    { name: 'H&M', image: 'https://via.placeholder.com/150?text=H%26M', subtitle: 'Thời trang phổ thông' },
-    { name: 'MANGO', image: 'https://via.placeholder.com/150?text=MANGO', subtitle: 'Thương hiệu cao cấp' },
-    { name: 'M.A.C', image: 'https://via.placeholder.com/150?text=MAC', subtitle: 'Thương hiệu nổi tiếng' },
-    { name: 'MIKI', image: 'https://via.placeholder.com/150?text=MIKI', subtitle: 'Thương hiệu nội địa' },
-  ]
-
-  const categories = [
-    { name: 'Đầm Dạ', image: 'https://via.placeholder.com/200?text=Dam+Da' },
-    { name: 'Áo Thun', image: 'https://via.placeholder.com/200?text=Ao+Thun' },
-    { name: 'Chân Váy', image: 'https://via.placeholder.com/200?text=Chan+Vay' },
-    { name: 'Giày Cao Gót', image: 'https://via.placeholder.com/200?text=Giay' },
-    { name: 'Quần Jean', image: 'https://via.placeholder.com/200?text=Quan+Jean' },
-    { name: 'Áo Sơ Mi', image: 'https://via.placeholder.com/200?text=Ao+So+Mi' },
-    { name: 'Áo Hoodie', image: 'https://via.placeholder.com/200?text=Hoodie' },
-    { name: 'Túi Xách', image: 'https://via.placeholder.com/200?text=Tui+Xach' },
-  ]
-
-  const partnerBrands = [
-    { name: 'ROYAL LONDON', logo: 'https://via.placeholder.com/150x50?text=ROYAL+LONDON' },
-    { name: 'IMPERIAL', logo: 'https://via.placeholder.com/150x50?text=IMPERIAL' },
-  ]
 
   // Animation variants
   const fadeInUp = {
