@@ -6,6 +6,9 @@ import ShopPage from './pages/user/shop/ShopPage'
 import ProductDetail from './pages/user/shop/ProductDetail'
 import EventPage from './pages/user/events/EventPage'
 import EventDetail from './pages/user/events/EventDetail'
+import LoginPage from './pages/user/loginpage/LoginPage'
+import RegisterPage from './pages/user/registerpage/RegisterPage'
+import ErrorPage from './pages/ErrorPage'
 
 const router = createBrowserRouter([
   {
@@ -32,7 +35,22 @@ const router = createBrowserRouter([
         path: 'events/:id',
         element: <EventDetail />
       }
-    ]
+    ],
+    errorElement: <ErrorPage />
+  },
+  // Auth routes (without MainLayout)
+  {
+    path: '/login',
+    element: <LoginPage />
+  },
+  {
+    path: '/register',
+    element: <RegisterPage />
+  },
+  // Catch-all route for 404 and development pages
+  {
+    path: '*',
+    element: <ErrorPage />
   }
 ])
 

@@ -609,20 +609,7 @@ const EventDetail = () => {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Địa chỉ thu gom *
-                  </label>
-                  <textarea
-                    required
-                    value={donationData.address}
-                    onChange={(e) => setDonationData({...donationData, address: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
-                    rows="2"
-                    placeholder="Địa chỉ để chúng tôi đến thu gom"
-                  />
-                </div>
-
+               
                 <div className="flex gap-3 pt-4">
                   <button
                     type="button"
