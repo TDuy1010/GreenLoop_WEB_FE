@@ -16,6 +16,7 @@ import UserManagement from './pages/admin/usermanagement/UserManagement'
 import ProductManagement from './pages/admin/productmanagement/ProductManagement'
 import WarehouseManagement from './pages/admin/warehousemanagement/WarehouseManagement'
 import DonationManagement from './pages/admin/donationmanagement/DonationManagement'
+import OrderManagement from './pages/admin/ordermanagement/OrderManagement'
 import AdminErrorPage from './pages/admin/AdminErrorPage'
 import ErrorPage from './pages/ErrorPage'
 
@@ -88,7 +89,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'orders',
-        element: <AdminErrorPage />
+        element: <OrderManagement />
       },
       {
         path: 'analytics',
