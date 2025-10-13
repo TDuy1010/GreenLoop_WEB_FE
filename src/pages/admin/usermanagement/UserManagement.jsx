@@ -1,42 +1,21 @@
 import React, { useState } from 'react'
 import { 
-  Table, 
   Button, 
-  Space, 
   Input, 
   Select, 
-  Tag, 
-  Avatar, 
-  Modal, 
-  Form, 
-  DatePicker, 
   message,
-  Popconfirm,
   Card,
   Row,
   Col,
-  Statistic,
-  Switch,
-  Tooltip,
-  Badge
+  Statistic
 } from 'antd'
 import { 
   PlusOutlined, 
-  EditOutlined, 
-  DeleteOutlined, 
   SearchOutlined,
-  UserOutlined,
-  MailOutlined,
-  PhoneOutlined,
-  CalendarOutlined,
-  EyeOutlined,
-  LockOutlined,
-  UnlockOutlined,
-  ShoppingCartOutlined,
-  HeartOutlined,
-  EnvironmentOutlined
+  UserOutlined
 } from '@ant-design/icons'
 import { motion } from 'framer-motion'
+import UserTable from './components/UserTable'
 
 const { Search } = Input
 const { Option } = Select
@@ -146,9 +125,6 @@ const UserManagement = () => {
   ])
 
   const [filteredData, setFilteredData] = useState(userData)
-  const [isModalVisible, setIsModalVisible] = useState(false)
-  const [editingUser, setEditingUser] = useState(null)
-  const [form] = Form.useForm()
   const [searchText, setSearchText] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterAccountType, setFilterAccountType] = useState('all')
@@ -400,9 +376,7 @@ const UserManagement = () => {
 
   // Handle CRUD operations
   const handleAdd = () => {
-    setEditingUser(null)
-    form.resetFields()
-    setIsModalVisible(true)
+    message.info("Tính năng đang phát triển")
   }
 
   const handleView = (user) => {
@@ -410,12 +384,7 @@ const UserManagement = () => {
   }
 
   const handleEdit = (user) => {
-    setEditingUser(user)
-    form.setFieldsValue({
-      ...user,
-      dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth) : null
-    })
-    setIsModalVisible(true)
+    message.info(`Chỉnh sửa khách hàng: ${user.name}`)
   }
 
   const handleToggleStatus = (user) => {
@@ -433,42 +402,6 @@ const UserManagement = () => {
     setUserData(newData)
     filterData(searchText, filterStatus, filterAccountType, filterVerified)
     message.success('Xóa khách hàng thành công!')
-  }
-
-  const handleSubmit = async (values) => {
-    try {
-      const formattedValues = {
-        ...values,
-        dateOfBirth: values.dateOfBirth ? values.dateOfBirth.format('YYYY-MM-DD') : null,
-        id: editingUser ? editingUser.id : Date.now(),
-        joinDate: editingUser ? editingUser.joinDate : new Date().toISOString().split('T')[0],
-        totalOrders: editingUser ? editingUser.totalOrders : 0,
-        totalSpent: editingUser ? editingUser.totalSpent : 0,
-        ecoPoints: editingUser ? editingUser.ecoPoints : 0,
-        lastLogin: editingUser ? editingUser.lastLogin : new Date().toISOString().split('T')[0],
-        donationCount: editingUser ? editingUser.donationCount : 0,
-        eventParticipation: editingUser ? editingUser.eventParticipation : 0
-      }
-
-      if (editingUser) {
-        // Update existing user
-        const newData = userData.map(user =>
-          user.id === editingUser.id ? { ...user, ...formattedValues } : user
-        )
-        setUserData(newData)
-        message.success('Cập nhật khách hàng thành công!')
-      } else {
-        // Add new user
-        setUserData([...userData, formattedValues])
-        message.success('Thêm khách hàng thành công!')
-      }
-
-      setIsModalVisible(false)
-      form.resetFields()
-      filterData(searchText, filterStatus, filterAccountType, filterVerified)
-    } catch (error) {
-      message.error('Có lỗi xảy ra!')
-    }
   }
 
   return (
@@ -592,169 +525,18 @@ const UserManagement = () => {
         </div>
 
         {/* Table */}
-        <Table
-          columns={columns}
-          dataSource={filteredData}
-          rowKey="id"
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} của ${total} khách hàng`,
-          }}
-          scroll={{ x: 1400 }}
+        <UserTable
+          filteredData={filteredData}
+          handleView={handleView}
+          handleEdit={handleEdit}
+          handleToggleStatus={handleToggleStatus}
+          handleDelete={handleDelete}
+          statusConfig={statusConfig}
+          accountTypeConfig={accountTypeConfig}
+          genderConfig={genderConfig}
         />
       </Card>
 
-      {/* Add/Edit Modal */}
-      <Modal
-        title={editingUser ? 'Sửa thông tin khách hàng' : 'Thêm khách hàng mới'}
-        open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
-        footer={null}
-        width={700}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-          className="mt-4"
-        >
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="name"
-                label="Họ và tên"
-                rules={[{ required: true, message: 'Vui lòng nhập họ tên!' }]}
-              >
-                <Input placeholder="Nhập họ và tên" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="email"
-                label="Email"
-                rules={[
-                  { required: true, message: 'Vui lòng nhập email!' },
-                  { type: 'email', message: 'Email không hợp lệ!' }
-                ]}
-              >
-                <Input placeholder="Nhập email" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="phone"
-                label="Số điện thoại"
-                rules={[{ required: true, message: 'Vui lòng nhập số điện thoại!' }]}
-              >
-                <Input placeholder="Nhập số điện thoại" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="gender"
-                label="Giới tính"
-                rules={[{ required: true, message: 'Vui lòng chọn giới tính!' }]}
-              >
-                <Select placeholder="Chọn giới tính">
-                  <Option value="male">Nam</Option>
-                  <Option value="female">Nữ</Option>
-                  <Option value="other">Khác</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="dateOfBirth"
-                label="Ngày sinh"
-              >
-                <DatePicker 
-                  placeholder="Chọn ngày sinh" 
-                  className="w-full"
-                  format="DD/MM/YYYY"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="accountType"
-                label="Loại tài khoản"
-                rules={[{ required: true, message: 'Vui lòng chọn loại tài khoản!' }]}
-              >
-                <Select placeholder="Chọn loại tài khoản">
-                  <Option value="standard">Tiêu chuẩn</Option>
-                  <Option value="premium">Premium</Option>
-                  <Option value="vip">VIP</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="status"
-                label="Trạng thái"
-                rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
-              >
-                <Select placeholder="Chọn trạng thái">
-                  <Option value="active">Hoạt động</Option>
-                  <Option value="inactive">Không hoạt động</Option>
-                  <Option value="suspended">Bị khóa</Option>
-                  <Option value="pending">Chờ xác thực</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="isVerified"
-                label="Xác thực tài khoản"
-                valuePropName="checked"
-              >
-                <Switch 
-                  checkedChildren="Đã xác thực" 
-                  unCheckedChildren="Chưa xác thực"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item
-                name="address"
-                label="Địa chỉ"
-                rules={[{ required: true, message: 'Vui lòng nhập địa chỉ!' }]}
-              >
-                <Input placeholder="Nhập địa chỉ đầy đủ" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item className="mb-0 text-right">
-            <Space>
-              <Button onClick={() => setIsModalVisible(false)}>
-                Hủy
-              </Button>
-              <Button 
-                type="primary" 
-                htmlType="submit"
-                className="bg-green-600 hover:bg-green-700 border-green-600"
-              >
-                {editingUser ? 'Cập nhật' : 'Thêm mới'}
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
     </motion.div>
   )
 }

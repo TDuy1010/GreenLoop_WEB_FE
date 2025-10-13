@@ -13,6 +13,8 @@ import DashboardPage from './pages/admin/dashboard/DashboardPage'
 import StaffManagement from './pages/admin/StaffManagement/StaffManagement'
 import EventManagement from './pages/admin/eventmanagemt/EventManagement'
 import UserManagement from './pages/admin/usermanagement/UserManagement'
+import ProductManagement from './pages/admin/productmanagement/ProductManagement'
+import WarehouseManagement from './pages/admin/warehousemanagement/WarehouseManagement'
 import AdminErrorPage from './pages/admin/AdminErrorPage'
 import ErrorPage from './pages/ErrorPage'
 
@@ -67,10 +69,14 @@ const router = createBrowserRouter([
           path: 'users',
           element: <UserManagement />
         },
-      {
-        path: 'products',
-        element: <AdminErrorPage />
-      },
+        {
+          path: 'products',
+          element: <ProductManagement />
+        },
+        {
+          path: 'warehouses',
+          element: <WarehouseManagement />
+        },
         {
           path: 'events',
           element: <EventManagement />

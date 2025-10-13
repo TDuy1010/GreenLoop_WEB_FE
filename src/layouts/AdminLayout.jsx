@@ -16,6 +16,7 @@ const AdminLayout = () => {
     if (path.includes('staff')) return 'Quản lý nhân viên'
     if (path.includes('users')) return 'Quản lý người dùng'
     if (path.includes('products')) return 'Quản lý sản phẩm'
+    if (path.includes('warehouses')) return 'Quản lý kho'
     if (path.includes('events')) return 'Quản lý sự kiện'
     if (path.includes('donations')) return 'Quản lý quyên góp'
     if (path.includes('orders')) return 'Quản lý đơn hàng'

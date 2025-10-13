@@ -1,33 +1,22 @@
 import React, { useState } from "react";
 import {
-  Table,
   Button,
-  Space,
   Input,
   Select,
-  Tag,
-  Avatar,
-  Modal,
-  Form,
-  DatePicker,
   message,
-  Popconfirm,
   Card,
   Row,
   Col,
   Statistic,
+  Space
 } from "antd";
 import {
   PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
   SearchOutlined,
   UserOutlined,
-  MailOutlined,
-  PhoneOutlined,
-  CalendarOutlined,
 } from "@ant-design/icons";
 import { motion } from "framer-motion";
+import StaffTable from "./components/StaffTable";
 
 const { Search } = Input;
 const { Option } = Select;
@@ -85,9 +74,6 @@ const StaffManagement = () => {
   ]);
 
   const [filteredData, setFilteredData] = useState(staffData);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [editingStaff, setEditingStaff] = useState(null);
-  const [form] = Form.useForm();
   const [searchText, setSearchText] = useState("");
   const [filterDepartment, setFilterDepartment] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -234,18 +220,11 @@ const StaffManagement = () => {
 
   // Handle CRUD operations
   const handleAdd = () => {
-    setEditingStaff(null);
-    form.resetFields();
-    setIsModalVisible(true);
+    message.info("Tính năng đang phát triển");
   };
 
   const handleEdit = (staff) => {
-    setEditingStaff(staff);
-    form.setFieldsValue({
-      ...staff,
-      joinDate: staff.joinDate ? new Date(staff.joinDate) : null,
-    });
-    setIsModalVisible(true);
+    message.info(`Chỉnh sửa nhân viên: ${staff.name}`);
   };
 
   const handleDelete = (id) => {
@@ -253,37 +232,6 @@ const StaffManagement = () => {
     setStaffData(newData);
     filterData(searchText, filterDepartment, filterStatus);
     message.success("Xóa nhân viên thành công!");
-  };
-
-  const handleSubmit = async (values) => {
-    try {
-      const formattedValues = {
-        ...values,
-        joinDate: values.joinDate ? values.joinDate.format("YYYY-MM-DD") : null,
-        id: editingStaff ? editingStaff.id : Date.now(),
-      };
-
-      if (editingStaff) {
-        // Update existing staff
-        const newData = staffData.map((staff) =>
-          staff.id === editingStaff.id
-            ? { ...staff, ...formattedValues }
-            : staff
-        );
-        setStaffData(newData);
-        message.success("Cập nhật nhân viên thành công!");
-      } else {
-        // Add new staff
-        setStaffData([...staffData, formattedValues]);
-        message.success("Thêm nhân viên thành công!");
-      }
-
-      setIsModalVisible(false);
-      form.resetFields();
-      filterData(searchText, filterDepartment, filterStatus);
-    } catch (error) {
-      message.error("Có lỗi xảy ra!");
-    }
   };
 
   return (
@@ -394,166 +342,13 @@ const StaffManagement = () => {
         </div>
 
         {/* Table */}
-        <Table
-          columns={columns}
-          dataSource={filteredData}
-          rowKey="id"
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} của ${total} nhân viên`,
-          }}
-          scroll={{ x: 1000 }}
+        <StaffTable
+          filteredData={filteredData}
+          handleEdit={handleEdit}
+          handleDelete={handleDelete}
         />
       </Card>
 
-      {/* Add/Edit Modal */}
-      <Modal
-        title={editingStaff ? "Sửa thông tin nhân viên" : "Thêm nhân viên mới"}
-        open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
-        footer={null}
-        width={600}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-          className="mt-4"
-        >
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="name"
-                label="Họ và tên"
-                rules={[{ required: true, message: "Vui lòng nhập họ tên!" }]}
-              >
-                <Input placeholder="Nhập họ và tên" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="email"
-                label="Email"
-                rules={[
-                  { required: true, message: "Vui lòng nhập email!" },
-                  { type: "email", message: "Email không hợp lệ!" },
-                ]}
-              >
-                <Input placeholder="Nhập email" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="phone"
-                label="Số điện thoại"
-                rules={[
-                  { required: true, message: "Vui lòng nhập số điện thoại!" },
-                ]}
-              >
-                <Input placeholder="Nhập số điện thoại" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="position"
-                label="Chức vụ"
-                rules={[{ required: true, message: "Vui lòng chọn chức vụ!" }]}
-              >
-                <Select placeholder="Chọn chức vụ">
-                  <Option value="Nhân viên">Nhân viên</Option>
-                  <Option value="Quản lý">Quản lý</Option>
-                  <Option value="Trưởng phòng">Trưởng phòng</Option>
-                  <Option value="Giám đốc">Giám đốc</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="department"
-                label="Phòng ban"
-                rules={[
-                  { required: true, message: "Vui lòng chọn phòng ban!" },
-                ]}
-              >
-                <Select placeholder="Chọn phòng ban">
-                  <Option value="Vận hành">Vận hành</Option>
-                  <Option value="Marketing">Marketing</Option>
-                  <Option value="Kỹ thuật">Kỹ thuật</Option>
-                  <Option value="Nhân sự">Nhân sự</Option>
-                  <Option value="Kế toán">Kế toán</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="status"
-                label="Trạng thái"
-                rules={[
-                  { required: true, message: "Vui lòng chọn trạng thái!" },
-                ]}
-              >
-                <Select placeholder="Chọn trạng thái">
-                  <Option value="active">Đang làm việc</Option>
-                  <Option value="inactive">Nghỉ việc</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="joinDate"
-                label="Ngày vào làm"
-                rules={[
-                  { required: true, message: "Vui lòng chọn ngày vào làm!" },
-                ]}
-              >
-                <DatePicker
-                  placeholder="Chọn ngày vào làm"
-                  className="w-full"
-                  format="DD/MM/YYYY"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="salary"
-                label="Lương (VNĐ)"
-                rules={[{ required: true, message: "Vui lòng nhập lương!" }]}
-              >
-                <Input
-                  type="number"
-                  placeholder="Nhập lương"
-                  addonAfter="VNĐ"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item className="mb-0 text-right">
-            <Space>
-              <Button onClick={() => setIsModalVisible(false)}>Hủy</Button>
-              <Button
-                type="primary"
-                htmlType="submit"
-                className="bg-green-600 hover:bg-green-700 border-green-600"
-              >
-                {editingStaff ? "Cập nhật" : "Thêm mới"}
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
     </motion.div>
   );
 };

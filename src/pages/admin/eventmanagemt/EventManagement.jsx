@@ -1,45 +1,29 @@
 import React, { useState } from 'react'
 import { 
-  Table, 
   Button, 
-  Space, 
   Input, 
   Select, 
-  Tag, 
-  Modal, 
-  Form, 
-  DatePicker, 
   message,
-  Popconfirm,
   Card,
   Row,
   Col,
-  Statistic,
-  Image,
-  TimePicker,
-  InputNumber,
-  Upload
+  Statistic
 } from 'antd'
 import { 
   PlusOutlined, 
-  EditOutlined, 
-  DeleteOutlined, 
   SearchOutlined,
   CalendarOutlined,
-  EnvironmentOutlined,
-  UserOutlined,
-  EyeOutlined,
-  UploadOutlined,
   ClockCircleOutlined,
   TeamOutlined
 } from '@ant-design/icons'
 import { motion } from 'framer-motion'
-import dayjs from 'dayjs'
+
+import EventTable from './components/EventTable'
 
 const { Search } = Input
 const { Option } = Select
 const { TextArea } = Input
-const { RangePicker } = DatePicker
+
 
 const EventManagement = () => {
   const [eventData, setEventData] = useState([
@@ -151,9 +135,6 @@ const EventManagement = () => {
   ])
 
   const [filteredData, setFilteredData] = useState(eventData)
-  const [isModalVisible, setIsModalVisible] = useState(false)
-  const [editingEvent, setEditingEvent] = useState(null)
-  const [form] = Form.useForm()
   const [searchText, setSearchText] = useState('')
   const [filterCategory, setFilterCategory] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
@@ -189,118 +170,6 @@ const EventManagement = () => {
     conference: { color: 'red', text: 'Hội nghị' }
   }
 
-  // Table columns
-  const columns = [
-    {
-      title: 'Sự kiện',
-      key: 'event',
-      width: 300,
-      render: (_, record) => (
-        <div className="flex gap-3">
-          <Image
-            width={60}
-            height={60}
-            src={record.image}
-            alt={record.title}
-            className="rounded-lg object-cover"
-            fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN"
-          />
-          <div className="flex-1 min-w-0">
-            <div className="font-medium text-gray-900 truncate">{record.title}</div>
-            <div className="text-sm text-gray-500 line-clamp-2">{record.description}</div>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {record.tags.slice(0, 2).map(tag => (
-                <Tag key={tag} size="small" color="blue">{tag}</Tag>
-              ))}
-            </div>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: 'Thời gian & Địa điểm',
-      key: 'datetime',
-      render: (_, record) => (
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-sm">
-            <CalendarOutlined className="text-gray-400" />
-            <span>{dayjs(record.date).format('DD/MM/YYYY')}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <ClockCircleOutlined className="text-gray-400" />
-            <span>{record.startTime} - {record.endTime}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <EnvironmentOutlined className="text-gray-400" />
-            <span className="truncate">{record.location}</span>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: 'Loại sự kiện',
-      dataIndex: 'category',
-      key: 'category',
-      render: (category) => {
-        const config = categoryConfig[category] || { color: 'default', text: category }
-        return <Tag color={config.color}>{config.text}</Tag>
-      },
-    },
-    
-    {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status) => {
-        const config = statusConfig[status] || { color: 'default', text: status }
-        return <Tag color={config.color}>{config.text}</Tag>
-      },
-    },
-    
-    {
-      title: 'Thao tác',
-      key: 'action',
-      render: (_, record) => (
-        <Space size="small">
-          <Button
-            type="text"
-            icon={<EyeOutlined />}
-            onClick={() => handleView(record)}
-            className="text-green-600 hover:text-green-700"
-            size="small"
-          >
-            Xem
-          </Button>
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-            className="text-blue-600 hover:text-blue-700"
-            size="small"
-          >
-            Sửa
-          </Button>
-          <Popconfirm
-            title="Xóa sự kiện"
-            description="Bạn có chắc chắn muốn xóa sự kiện này?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-            okButtonProps={{ danger: true }}
-          >
-            <Button
-              type="text"
-              icon={<DeleteOutlined />}
-              danger
-              size="small"
-            >
-              Xóa
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ]
 
   // Handle search and filter
   const handleSearch = (value) => {
@@ -343,28 +212,15 @@ const EventManagement = () => {
 
   // Handle CRUD operations
   const handleAdd = () => {
-    setEditingEvent(null)
-    form.resetFields()
-    setIsModalVisible(true)
+    message.info("Tính năng đang phát triển")
   }
 
   const handleView = (event) => {
-    // Navigate to event detail page or show detail modal
     message.info(`Xem chi tiết sự kiện: ${event.title}`)
   }
 
   const handleEdit = (event) => {
-    setEditingEvent(event)
-    form.setFieldsValue({
-      ...event,
-      date: event.date ? dayjs(event.date) : null,
-      timeRange: [
-        event.startTime ? dayjs(event.startTime, 'HH:mm') : null,
-        event.endTime ? dayjs(event.endTime, 'HH:mm') : null
-      ],
-      tags: event.tags
-    })
-    setIsModalVisible(true)
+    message.info(`Chỉnh sửa sự kiện: ${event.title}`)
   }
 
   const handleDelete = (id) => {
@@ -372,43 +228,6 @@ const EventManagement = () => {
     setEventData(newData)
     filterData(searchText, filterCategory, filterStatus)
     message.success('Xóa sự kiện thành công!')
-  }
-
-  const handleSubmit = async (values) => {
-    try {
-      const formattedValues = {
-        ...values,
-        date: values.date ? values.date.format('YYYY-MM-DD') : null,
-        startTime: values.timeRange ? values.timeRange[0].format('HH:mm') : null,
-        endTime: values.timeRange ? values.timeRange[1].format('HH:mm') : null,
-        id: editingEvent ? editingEvent.id : Date.now(),
-        registeredCount: editingEvent ? editingEvent.registeredCount : 0,
-        image: editingEvent ? editingEvent.image : 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400',
-        coordinates: editingEvent ? editingEvent.coordinates : { lat: 21.0285, lng: 105.8542 }
-      }
-
-      // Remove timeRange from final object
-      delete formattedValues.timeRange
-
-      if (editingEvent) {
-        // Update existing event
-        const newData = eventData.map(event =>
-          event.id === editingEvent.id ? { ...event, ...formattedValues } : event
-        )
-        setEventData(newData)
-        message.success('Cập nhật sự kiện thành công!')
-      } else {
-        // Add new event
-        setEventData([...eventData, formattedValues])
-        message.success('Thêm sự kiện thành công!')
-      }
-
-      setIsModalVisible(false)
-      form.resetFields()
-      filterData(searchText, filterCategory, filterStatus)
-    } catch (error) {
-      message.error('Có lỗi xảy ra!')
-    }
   }
 
   return (
@@ -523,246 +342,16 @@ const EventManagement = () => {
         </div>
 
         {/* Table */}
-        <Table
-          columns={columns}
-          dataSource={filteredData}
-          rowKey="id"
-          pagination={{
-            pageSize: 8,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} của ${total} sự kiện`,
-          }}
-          scroll={{ x: 1200 }}
+        <EventTable
+          filteredData={filteredData}
+          handleView={handleView}
+          handleEdit={handleEdit}
+          handleDelete={handleDelete}
+          statusConfig={statusConfig}
+          categoryConfig={categoryConfig}
         />
       </Card>
 
-      {/* Add/Edit Modal */}
-      <Modal
-        title={editingEvent ? 'Sửa thông tin sự kiện' : 'Tạo sự kiện mới'}
-        open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
-        footer={null}
-        width={800}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-          className="mt-4"
-        >
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item
-                name="title"
-                label="Tên sự kiện"
-                rules={[{ required: true, message: 'Vui lòng nhập tên sự kiện!' }]}
-              >
-                <Input placeholder="Nhập tên sự kiện" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item
-                name="description"
-                label="Mô tả sự kiện"
-                rules={[{ required: true, message: 'Vui lòng nhập mô tả!' }]}
-              >
-                <TextArea 
-                  rows={3} 
-                  placeholder="Nhập mô tả chi tiết về sự kiện" 
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="date"
-                label="Ngày tổ chức"
-                rules={[{ required: true, message: 'Vui lòng chọn ngày!' }]}
-              >
-                <DatePicker 
-                  placeholder="Chọn ngày tổ chức" 
-                  className="w-full"
-                  format="DD/MM/YYYY"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="timeRange"
-                label="Thời gian"
-                rules={[{ required: true, message: 'Vui lòng chọn thời gian!' }]}
-              >
-                <TimePicker.RangePicker 
-                  placeholder={['Giờ bắt đầu', 'Giờ kết thúc']}
-                  className="w-full"
-                  format="HH:mm"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="location"
-                label="Địa điểm"
-                rules={[{ required: true, message: 'Vui lòng nhập địa điểm!' }]}
-              >
-                <Input placeholder="Nhập địa điểm tổ chức" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="address"
-                label="Địa chỉ chi tiết"
-                rules={[{ required: true, message: 'Vui lòng nhập địa chỉ!' }]}
-              >
-                <Input placeholder="Nhập địa chỉ chi tiết" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item
-                name="category"
-                label="Loại sự kiện"
-                rules={[{ required: true, message: 'Vui lòng chọn loại sự kiện!' }]}
-              >
-                <Select placeholder="Chọn loại sự kiện">
-                  <Option value="workshop">Workshop</Option>
-                  <Option value="seminar">Hội thảo</Option>
-                  <Option value="collection">Thu gom</Option>
-                  <Option value="exhibition">Triển lãm</Option>
-                  <Option value="conference">Hội nghị</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="status"
-                label="Trạng thái"
-                rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
-              >
-                <Select placeholder="Chọn trạng thái">
-                  <Option value="upcoming">Sắp diễn ra</Option>
-                  <Option value="active">Đang diễn ra</Option>
-                  <Option value="completed">Đã kết thúc</Option>
-                  <Option value="cancelled">Đã hủy</Option>
-                  <Option value="full">Đã đầy</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="maxParticipants"
-                label="Số người tối đa"
-                rules={[{ required: true, message: 'Vui lòng nhập số người!' }]}
-              >
-                <InputNumber 
-                  placeholder="Số người tối đa" 
-                  className="w-full"
-                  min={1}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="organizer"
-                label="Ban tổ chức"
-                rules={[{ required: true, message: 'Vui lòng nhập ban tổ chức!' }]}
-              >
-                <Input placeholder="Nhập tên ban tổ chức" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="price"
-                label="Phí tham gia (VNĐ)"
-                rules={[{ required: true, message: 'Vui lòng nhập phí tham gia!' }]}
-              >
-                <InputNumber 
-                  placeholder="Nhập phí tham gia (0 = miễn phí)" 
-                  className="w-full"
-                  min={0}
-                  addonAfter="VNĐ"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="requirements"
-                label="Yêu cầu tham gia"
-              >
-                <TextArea 
-                  rows={2} 
-                  placeholder="Nhập yêu cầu tham gia (nếu có)" 
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="benefits"
-                label="Quyền lợi"
-              >
-                <TextArea 
-                  rows={2} 
-                  placeholder="Nhập quyền lợi khi tham gia" 
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item
-                name="tags"
-                label="Tags"
-              >
-                <Select
-                  mode="tags"
-                  placeholder="Nhập các tag cho sự kiện"
-                  className="w-full"
-                >
-                  <Option value="Tái chế">Tái chế</Option>
-                  <Option value="Môi trường">Môi trường</Option>
-                  <Option value="Bền vững">Bền vững</Option>
-                  <Option value="Công nghệ">Công nghệ</Option>
-                  <Option value="Cộng đồng">Cộng đồng</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item className="mb-0 text-right">
-            <Space>
-              <Button onClick={() => setIsModalVisible(false)}>
-                Hủy
-              </Button>
-              <Button 
-                type="primary" 
-                htmlType="submit"
-                className="bg-green-600 hover:bg-green-700 border-green-600"
-              >
-                {editingEvent ? 'Cập nhật' : 'Tạo mới'}
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
     </motion.div>
   )
 }

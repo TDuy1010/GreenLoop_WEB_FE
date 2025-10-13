@@ -14,6 +14,7 @@ import {
   MenuFoldOutlined, 
   MenuUnfoldOutlined,
   LogoutOutlined,
+  HomeOutlined,
 } from '@ant-design/icons';
 
 const { Sider } = Layout;
@@ -29,6 +30,7 @@ const Sidebar = ({ collapsed, onToggle }) => {
       { key: '/admin/staff',  label: 'Quản lý nhân viên', icon: <UserOutlined /> },
       { key: '/admin/users',     label: 'Quản lý người dùng', icon: <UserOutlined /> },
       { key: '/admin/products',  label: 'Quản lý sản phẩm', icon: <AppstoreOutlined /> },
+      { key: '/admin/warehouses', label: 'Quản lý kho', icon: <HomeOutlined /> },
       { key: '/admin/events',    label: 'Quản lý sự kiện', icon: <CalendarOutlined /> },
       { key: '/admin/donations', label: 'Quản lý quyên góp', icon: <HeartOutlined /> },
       { key: '/admin/orders',    label: 'Quản lý đơn hàng', icon: <ShoppingCartOutlined /> },
