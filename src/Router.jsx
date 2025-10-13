@@ -15,6 +15,7 @@ import EventManagement from './pages/admin/eventmanagemt/EventManagement'
 import UserManagement from './pages/admin/usermanagement/UserManagement'
 import ProductManagement from './pages/admin/productmanagement/ProductManagement'
 import WarehouseManagement from './pages/admin/warehousemanagement/WarehouseManagement'
+import DonationManagement from './pages/admin/donationmanagement/DonationManagement'
 import AdminErrorPage from './pages/admin/AdminErrorPage'
 import ErrorPage from './pages/ErrorPage'
 
@@ -83,7 +84,7 @@ const router = createBrowserRouter([
         },
       {
         path: 'donations',
-        element: <AdminErrorPage />
+        element: <DonationManagement />
       },
       {
         path: 'orders',
