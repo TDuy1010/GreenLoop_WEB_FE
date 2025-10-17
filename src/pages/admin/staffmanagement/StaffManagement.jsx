@@ -19,6 +19,7 @@ import { motion } from "framer-motion";
 import StaffTable from "./components/StaffTable";
 import StaffDetail from "./components/StaffDetail";
 import StaffAdd from "./components/StaffAdd";
+import StaffEdit from "./components/StaffEdit";
 
 const { Search } = Input;
 const { Option } = Select;
@@ -81,6 +82,7 @@ const StaffManagement = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [addModalVisible, setAddModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
 
   // Animation variants
@@ -241,7 +243,17 @@ const StaffManagement = () => {
   };
 
   const handleEdit = (staff) => {
-    message.info(`Chỉnh sửa nhân viên: ${staff.name}`);
+    setSelectedStaff(staff);
+    setEditModalVisible(true);
+  };
+
+  const handleUpdateStaff = (updatedStaff) => {
+    const updatedData = staffData.map(staff =>
+      staff.id === updatedStaff.id ? updatedStaff : staff
+    );
+    setStaffData(updatedData);
+    filterData(searchText, filterDepartment, filterStatus);
+    message.success("Cập nhật nhân viên thành công!");
   };
 
   const handleDelete = (id) => {
@@ -258,6 +270,11 @@ const StaffManagement = () => {
 
   const handleCloseAdd = () => {
     setAddModalVisible(false);
+  };
+
+  const handleCloseEdit = () => {
+    setEditModalVisible(false);
+    setSelectedStaff(null);
   };
 
   return (
@@ -388,6 +405,14 @@ const StaffManagement = () => {
         visible={addModalVisible}
         onClose={handleCloseAdd}
         onAdd={handleAddStaff}
+      />
+
+      {/* Staff Edit Modal */}
+      <StaffEdit
+        visible={editModalVisible}
+        onClose={handleCloseEdit}
+        onUpdate={handleUpdateStaff}
+        staff={selectedStaff}
       />
 
     </motion.div>
