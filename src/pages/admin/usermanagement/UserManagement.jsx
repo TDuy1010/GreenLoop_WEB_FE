@@ -71,7 +71,7 @@ const UserManagement = () => {
       dateOfBirth: '1988-12-10',
       address: '789 Võ Văn Tần, Quận 10, TP.HCM',
       joinDate: '2023-02-10',
-      status: 'suspended',
+      status: 'inactive',
       isVerified: false,
       avatar: null,
       totalOrders: 2,
@@ -144,10 +144,8 @@ const UserManagement = () => {
 
   // Status mapping
   const statusConfig = {
-    active: { color: 'green', text: 'Hoạt động' },
-    inactive: { color: 'default', text: 'Không hoạt động' },
-    suspended: { color: 'red', text: 'Bị khóa' },
-    pending: { color: 'orange', text: 'Chờ xác thực' }
+    active: { color: 'green', text: 'Active' },
+    inactive: { color: 'red', text: 'Inactive' }
   }
 
   // Account type mapping
@@ -388,13 +386,13 @@ const UserManagement = () => {
   }
 
   const handleToggleStatus = (user) => {
-    const newStatus = user.status === 'active' ? 'suspended' : 'active'
+    const newStatus = user.status === 'active' ? 'inactive' : 'active'
     const newData = userData.map(u =>
       u.id === user.id ? { ...u, status: newStatus } : u
     )
     setUserData(newData)
     filterData(searchText, filterStatus, filterAccountType, filterVerified)
-    message.success(`${newStatus === 'active' ? 'Mở khóa' : 'Khóa'} tài khoản thành công!`)
+    message.success(`Cập nhật trạng thái thành công!`)
   }
 
   const handleDelete = (id) => {
@@ -494,10 +492,8 @@ const UserManagement = () => {
             className="w-full lg:w-48"
           >
             <Option value="all">Tất cả trạng thái</Option>
-            <Option value="active">Hoạt động</Option>
-            <Option value="inactive">Không hoạt động</Option>
-            <Option value="suspended">Bị khóa</Option>
-            <Option value="pending">Chờ xác thực</Option>
+            <Option value="active">Active</Option>
+            <Option value="inactive">Inactive</Option>
           </Select>
           <Select
             placeholder="Lọc theo loại tài khoản"

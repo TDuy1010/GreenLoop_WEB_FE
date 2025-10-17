@@ -131,16 +131,6 @@ const UserTable = ({
       },
     },
     {
-      title: 'Lần cuối truy cập',
-      dataIndex: 'lastLogin',
-      key: 'lastLogin',
-      render: (date) => (
-        <div className="text-sm">
-          {new Date(date).toLocaleDateString('vi-VN')}
-        </div>
-      ),
-    },
-    {
       title: 'Thao tác',
       key: 'action',
       render: (_, record) => (
@@ -206,7 +196,7 @@ const UserTable = ({
         showTotal: (total, range) =>
           `${range[0]}-${range[1]} của ${total} khách hàng`,
       }}
-      scroll={{ x: 1400 }}
+      scroll={{ x: 1200 }}
     />
   )
 }

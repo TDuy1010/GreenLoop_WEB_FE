@@ -133,7 +133,7 @@ const StaffManagement = () => {
       ),
     },
     {
-      title: "Phòng ban",
+      title: "Chức vụ",
       dataIndex: "department",
       key: "department",
       render: (department) => <Tag color="blue">{department}</Tag>,
@@ -277,7 +277,7 @@ const StaffManagement = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Phòng ban"
+              title="Chức vụ"
               value={departments}
               prefix={<UserOutlined className="text-purple-600" />}
               valueStyle={{ color: "#722ed1" }}
@@ -316,13 +316,13 @@ const StaffManagement = () => {
             className="flex-1"
           />
           <Select
-            placeholder="Lọc theo phòng ban"
+            placeholder="Lọc theo chức vụ"
             size="large"
             value={filterDepartment}
             onChange={handleDepartmentFilter}
             className="w-full sm:w-48"
           >
-            <Option value="all">Tất cả phòng ban</Option>
+            <Option value="all">Tất cả chức vụ</Option>
             <Option value="Vận hành">Vận hành</Option>
             <Option value="Marketing">Marketing</Option>
             <Option value="Kỹ thuật">Kỹ thuật</Option>

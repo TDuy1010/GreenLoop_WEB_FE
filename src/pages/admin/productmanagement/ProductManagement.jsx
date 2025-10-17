@@ -244,11 +244,6 @@ const ProductManagement = () => {
                 <Tag key={tag} size="small" color="blue">{tag}</Tag>
               ))}
             </div>
-            <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
-              <span>👁 {record.views}</span>
-              <span>❤️ {record.likes}</span>
-              <span>⭐ {record.ecoPoints} EP</span>
-            </div>
           </div>
         </div>
       ),
@@ -256,20 +251,28 @@ const ProductManagement = () => {
     {
       title: 'Thông tin sản phẩm',
       key: 'info',
+      width: 280,
       render: (_, record) => (
-        <div className="space-y-1">
-          <div className="text-sm">
-            <span className="font-medium">Danh mục:</span> {record.category}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-gray-600 w-24">Danh mục:</span>
+            <span className="text-sm text-gray-900">{record.category}</span>
           </div>
-          <div className="text-sm">
-            <span className="font-medium">Thương hiệu:</span> {record.brand}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-gray-600 w-24">Thương hiệu:</span>
+            <span className="text-sm text-gray-900">{record.brand}</span>
           </div>
-          <div className="text-sm">
-            <span className="font-medium">Size:</span> {record.size} | 
-            <span className="font-medium"> Màu:</span> {record.color}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-gray-600 w-24">Size:</span>
+            <span className="text-sm text-gray-900">{record.size}</span>
           </div>
-          <div className="text-sm">
-            <span className="font-medium">Chất liệu:</span> {record.material}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-gray-600 w-24">Màu sắc:</span>
+            <span className="text-sm text-gray-900">{record.color}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-gray-600 w-24">Chất liệu:</span>
+            <span className="text-sm text-gray-900">{record.material}</span>
           </div>
         </div>
       ),
@@ -282,20 +285,6 @@ const ProductManagement = () => {
         const config = conditionConfig[condition] || { color: 'default', text: condition }
         return <Tag color={config.color}>{config.text}</Tag>
       },
-    },
-    {
-      title: 'Người quyên góp',
-      key: 'donor',
-      render: (_, record) => (
-        <div className="space-y-1">
-          <div className="font-medium text-sm">{record.donorName}</div>
-          <div className="text-xs text-gray-500">{record.donorEmail}</div>
-          <div className="text-xs text-gray-500">{record.donorPhone}</div>
-          <div className="text-xs text-gray-400">
-            {new Date(record.donationDate).toLocaleDateString('vi-VN')}
-          </div>
-        </div>
-      ),
     },
     {
       title: 'Giá',
@@ -535,7 +524,7 @@ const ProductManagement = () => {
         {/* Filters */}
         <div className="mb-4 flex flex-col lg:flex-row gap-4">
           <Search
-            placeholder="Tìm kiếm theo tên, mô tả, thương hiệu, người quyên góp, tags..."
+            placeholder="Tìm kiếm theo tên, mô tả, thương hiệu, tags..."
             allowClear
             enterButton={<SearchOutlined />}
             size="large"

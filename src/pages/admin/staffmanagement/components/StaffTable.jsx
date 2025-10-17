@@ -57,7 +57,7 @@ const StaffTable = ({
       ),
     },
     {
-      title: "Phòng ban",
+      title: "Chức vụ",
       dataIndex: "department",
       key: "department",
       render: (department) => <Tag color="blue">{department}</Tag>,
