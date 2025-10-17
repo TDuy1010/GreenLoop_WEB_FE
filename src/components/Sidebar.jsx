@@ -15,6 +15,8 @@ import {
   MenuUnfoldOutlined,
   LogoutOutlined,
   HomeOutlined,
+  TeamOutlined,
+  UsergroupAddOutlined,
 } from '@ant-design/icons';
 
 const { Sider } = Layout;
@@ -26,31 +28,100 @@ const Sidebar = ({ collapsed, onToggle }) => {
   // Cấu hình menu
   const menuItems = useMemo(
     () => [
-      { key: '/admin/dashboard', label: 'Bảng điều khiển', icon: <DashboardOutlined /> },
-      { key: '/admin/staff',  label: 'Quản lý nhân viên', icon: <UserOutlined /> },
-      { key: '/admin/users',     label: 'Quản lý người dùng', icon: <UserOutlined /> },
-      { key: '/admin/products',  label: 'Quản lý sản phẩm', icon: <AppstoreOutlined /> },
-      { key: '/admin/warehouses', label: 'Quản lý kho', icon: <HomeOutlined /> },
-      { key: '/admin/events',    label: 'Quản lý sự kiện', icon: <CalendarOutlined /> },
-      { key: '/admin/donations', label: 'Quản lý quyên góp', icon: <HeartOutlined /> },
-      { key: '/admin/orders',    label: 'Quản lý đơn hàng', icon: <ShoppingCartOutlined /> },
-      { key: '/admin/analytics', label: 'Thống kê & Báo cáo', icon: <BarChartOutlined /> },
-      { key: '/admin/settings',  label: 'Cài đặt hệ thống', icon: <SettingOutlined /> },
-      { key: '/admin/logout',    label: 'Đăng xuất', icon: <LogoutOutlined /> },
-      
+      { 
+        key: '/admin/dashboard', 
+        label: 'Bảng điều khiển', 
+        icon: <DashboardOutlined /> 
+      },
+      { 
+        key: 'user-management',
+        label: 'Quản lý người dùng',
+        icon: <TeamOutlined />,
+        children: [
+          {
+            key: '/admin/users',
+            label: 'Quản lý khách hàng',
+            icon: <UserOutlined />
+          },
+          {
+            key: '/admin/staff',
+            label: 'Quản lý nhân viên',
+            icon: <UsergroupAddOutlined />
+          }
+        ]
+      },
+      { 
+        key: '/admin/products', 
+        label: 'Quản lý sản phẩm', 
+        icon: <AppstoreOutlined /> 
+      },
+      { 
+        key: '/admin/warehouses', 
+        label: 'Quản lý kho', 
+        icon: <HomeOutlined /> 
+      },
+      { 
+        key: '/admin/events', 
+        label: 'Quản lý sự kiện', 
+        icon: <CalendarOutlined /> 
+      },
+      { 
+        key: '/admin/donations', 
+        label: 'Quản lý quyên góp', 
+        icon: <HeartOutlined /> 
+      },
+      { 
+        key: '/admin/orders', 
+        label: 'Quản lý đơn hàng', 
+        icon: <ShoppingCartOutlined /> 
+      },
+      { 
+        key: '/admin/analytics', 
+        label: 'Thống kê & Báo cáo', 
+        icon: <BarChartOutlined /> 
+      },
+      { 
+        key: '/admin/settings', 
+        label: 'Cài đặt hệ thống', 
+        icon: <SettingOutlined /> 
+      },
+      { 
+        key: '/admin/logout', 
+        label: 'Đăng xuất', 
+        icon: <LogoutOutlined /> 
+      },
     ],
     []
   );
 
-  // Xác định key đang active theo pathname
-  const selectedKey = useMemo(() => {
-    // Ưu tiên match dài nhất (để /admin/products/123 vẫn ăn /admin/products)
+  // Xác định key đang active và submenu mở
+  const { selectedKey, openKeys } = useMemo(() => {
     const path = location.pathname;
-    const candidate = menuItems
-      .map(m => m.key)
-      .sort((a, b) => b.length - a.length)
-      .find(k => path === k || path.startsWith(k + '/'));
-    return candidate || '/admin/dashboard';
+    
+    // Tìm menu item có children match với path
+    for (const item of menuItems) {
+      if (item.children) {
+        const matchedChild = item.children.find(
+          child => path === child.key || path.startsWith(child.key + '/')
+        );
+        if (matchedChild) {
+          return {
+            selectedKey: matchedChild.key,
+            openKeys: [item.key]
+          };
+        }
+      } else if (path === item.key || path.startsWith(item.key + '/')) {
+        return {
+          selectedKey: item.key,
+          openKeys: []
+        };
+      }
+    }
+    
+    return {
+      selectedKey: '/admin/dashboard',
+      openKeys: []
+    };
   }, [location.pathname, menuItems]);
 
   return (
@@ -101,12 +172,18 @@ const Sidebar = ({ collapsed, onToggle }) => {
         mode="inline"
         inlineCollapsed={collapsed}
         selectedKeys={[selectedKey]}
+        defaultOpenKeys={openKeys}
         items={menuItems.map(mi => ({
           key: mi.key,
           icon: mi.icon,
-          // AntD tự hiện tooltip = title khi inlineCollapsed = true
-          label: <Link to={mi.key}>{mi.label}</Link>,
+          label: mi.children ? mi.label : <Link to={mi.key}>{mi.label}</Link>,
           title: mi.label,
+          children: mi.children?.map(child => ({
+            key: child.key,
+            icon: child.icon,
+            label: <Link to={child.key}>{child.label}</Link>,
+            title: child.label,
+          }))
         }))}
         className="p-2 border-r-0"
       />

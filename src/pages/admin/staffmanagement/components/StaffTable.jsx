@@ -12,11 +12,13 @@ import {
   DeleteOutlined, 
   UserOutlined,
   MailOutlined,
-  PhoneOutlined
+  PhoneOutlined,
+  EyeOutlined
 } from '@ant-design/icons'
 
 const StaffTable = ({ 
-  filteredData, 
+  filteredData,
+  handleView, 
   handleEdit, 
   handleDelete 
 }) => {
@@ -77,6 +79,14 @@ const StaffTable = ({
       key: "action",
       render: (_, record) => (
         <Space size="middle">
+          <Button
+            type="text"
+            icon={<EyeOutlined />}
+            onClick={() => handleView(record)}
+            className="text-green-600 hover:text-green-700"
+          >
+            Xem
+          </Button>
           <Button
             type="text"
             icon={<EditOutlined />}

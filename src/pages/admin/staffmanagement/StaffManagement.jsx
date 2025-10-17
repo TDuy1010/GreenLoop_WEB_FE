@@ -17,6 +17,8 @@ import {
 } from "@ant-design/icons";
 import { motion } from "framer-motion";
 import StaffTable from "./components/StaffTable";
+import StaffDetail from "./components/StaffDetail";
+import StaffAdd from "./components/StaffAdd";
 
 const { Search } = Input;
 const { Option } = Select;
@@ -77,6 +79,9 @@ const StaffManagement = () => {
   const [searchText, setSearchText] = useState("");
   const [filterDepartment, setFilterDepartment] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [addModalVisible, setAddModalVisible] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState(null);
 
   // Animation variants
   const fadeInUp = {
@@ -220,7 +225,19 @@ const StaffManagement = () => {
 
   // Handle CRUD operations
   const handleAdd = () => {
-    message.info("Tính năng đang phát triển");
+    setAddModalVisible(true);
+  };
+
+  const handleAddStaff = (newStaff) => {
+    const updatedData = [...staffData, newStaff];
+    setStaffData(updatedData);
+    setFilteredData(updatedData);
+    message.success("Thêm nhân viên thành công!");
+  };
+
+  const handleView = (staff) => {
+    setSelectedStaff(staff);
+    setDetailModalVisible(true);
   };
 
   const handleEdit = (staff) => {
@@ -232,6 +249,15 @@ const StaffManagement = () => {
     setStaffData(newData);
     filterData(searchText, filterDepartment, filterStatus);
     message.success("Xóa nhân viên thành công!");
+  };
+
+  const handleCloseDetail = () => {
+    setDetailModalVisible(false);
+    setSelectedStaff(null);
+  };
+
+  const handleCloseAdd = () => {
+    setAddModalVisible(false);
   };
 
   return (
@@ -344,10 +370,25 @@ const StaffManagement = () => {
         {/* Table */}
         <StaffTable
           filteredData={filteredData}
+          handleView={handleView}
           handleEdit={handleEdit}
           handleDelete={handleDelete}
         />
       </Card>
+
+      {/* Staff Detail Modal */}
+      <StaffDetail
+        visible={detailModalVisible}
+        onClose={handleCloseDetail}
+        staff={selectedStaff}
+      />
+
+      {/* Staff Add Modal */}
+      <StaffAdd
+        visible={addModalVisible}
+        onClose={handleCloseAdd}
+        onAdd={handleAddStaff}
+      />
 
     </motion.div>
   );
