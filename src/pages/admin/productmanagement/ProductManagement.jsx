@@ -19,6 +19,9 @@ import {
 } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 import ProductTable from './components/ProductTable'
+import ProductDetail from './components/ProductDetail'
+import ProductAdd from './components/ProductAdd'
+import ProductEdit from './components/ProductEdit'
 
 const { Search } = Input
 const { Option } = Select
@@ -189,6 +192,10 @@ const ProductManagement = () => {
   const [filterCategory, setFilterCategory] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterCondition, setFilterCondition] = useState('all')
+  const [detailModalVisible, setDetailModalVisible] = useState(false)
+  const [addModalVisible, setAddModalVisible] = useState(false)
+  const [editModalVisible, setEditModalVisible] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState(null)
 
   // Animation variants
   const fadeInUp = {
@@ -417,15 +424,33 @@ const ProductManagement = () => {
 
   // Handle CRUD operations
   const handleAdd = () => {
-    message.info("Tính năng đang phát triển")
+    setAddModalVisible(true)
+  }
+
+  const handleAddProduct = (newProduct) => {
+    const updatedData = [...productData, newProduct]
+    setProductData(updatedData)
+    setFilteredData(updatedData)
+    message.success("Thêm sản phẩm thành công!")
   }
 
   const handleView = (product) => {
-    message.info(`Xem chi tiết sản phẩm: ${product.name}`)
+    setSelectedProduct(product)
+    setDetailModalVisible(true)
   }
 
   const handleEdit = (product) => {
-    message.info(`Chỉnh sửa sản phẩm: ${product.name}`)
+    setSelectedProduct(product)
+    setEditModalVisible(true)
+  }
+
+  const handleUpdateProduct = (updatedProduct) => {
+    const updatedData = productData.map(product =>
+      product.id === updatedProduct.id ? updatedProduct : product
+    )
+    setProductData(updatedData)
+    filterData(searchText, filterCategory, filterStatus, filterCondition)
+    message.success("Cập nhật sản phẩm thành công!")
   }
 
   const handleApprove = (product) => {
@@ -448,6 +473,20 @@ const ProductManagement = () => {
     setProductData(newData)
     filterData(searchText, filterCategory, filterStatus, filterCondition)
     message.success('Xóa sản phẩm thành công!')
+  }
+
+  const handleCloseDetail = () => {
+    setDetailModalVisible(false)
+    setSelectedProduct(null)
+  }
+
+  const handleCloseAdd = () => {
+    setAddModalVisible(false)
+  }
+
+  const handleCloseEdit = () => {
+    setEditModalVisible(false)
+    setSelectedProduct(null)
   }
 
   return (
@@ -585,6 +624,28 @@ const ProductManagement = () => {
           conditionConfig={conditionConfig}
         />
       </Card>
+
+      {/* Product Detail Modal */}
+      <ProductDetail
+        visible={detailModalVisible}
+        onClose={handleCloseDetail}
+        product={selectedProduct}
+      />
+
+      {/* Product Add Modal */}
+      <ProductAdd
+        visible={addModalVisible}
+        onClose={handleCloseAdd}
+        onAdd={handleAddProduct}
+      />
+
+      {/* Product Edit Modal */}
+      <ProductEdit
+        visible={editModalVisible}
+        onClose={handleCloseEdit}
+        onUpdate={handleUpdateProduct}
+        product={selectedProduct}
+      />
 
     </motion.div>
   )

@@ -16,6 +16,9 @@ import {
 } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 import UserTable from './components/UserTable'
+import UserDetail from './components/UserDetail'
+import UserAdd from './components/UserAdd'
+import UserEdit from './components/UserEdit'
 
 const { Search } = Input
 const { Option } = Select
@@ -129,6 +132,10 @@ const UserManagement = () => {
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterAccountType, setFilterAccountType] = useState('all')
   const [filterVerified, setFilterVerified] = useState('all')
+  const [detailModalVisible, setDetailModalVisible] = useState(false)
+  const [addModalVisible, setAddModalVisible] = useState(false)
+  const [editModalVisible, setEditModalVisible] = useState(false)
+  const [selectedUser, setSelectedUser] = useState(null)
 
   // Animation variants
   const fadeInUp = {
@@ -374,15 +381,33 @@ const UserManagement = () => {
 
   // Handle CRUD operations
   const handleAdd = () => {
-    message.info("Tính năng đang phát triển")
+    setAddModalVisible(true)
+  }
+
+  const handleAddUser = (newUser) => {
+    const updatedData = [...userData, newUser]
+    setUserData(updatedData)
+    setFilteredData(updatedData)
+    message.success("Thêm khách hàng thành công!")
   }
 
   const handleView = (user) => {
-    message.info(`Xem chi tiết khách hàng: ${user.name}`)
+    setSelectedUser(user)
+    setDetailModalVisible(true)
   }
 
   const handleEdit = (user) => {
-    message.info(`Chỉnh sửa khách hàng: ${user.name}`)
+    setSelectedUser(user)
+    setEditModalVisible(true)
+  }
+
+  const handleUpdateUser = (updatedUser) => {
+    const updatedData = userData.map(user =>
+      user.id === updatedUser.id ? updatedUser : user
+    )
+    setUserData(updatedData)
+    filterData(searchText, filterStatus, filterAccountType, filterVerified)
+    message.success("Cập nhật khách hàng thành công!")
   }
 
   const handleToggleStatus = (user) => {
@@ -400,6 +425,20 @@ const UserManagement = () => {
     setUserData(newData)
     filterData(searchText, filterStatus, filterAccountType, filterVerified)
     message.success('Xóa khách hàng thành công!')
+  }
+
+  const handleCloseDetail = () => {
+    setDetailModalVisible(false)
+    setSelectedUser(null)
+  }
+
+  const handleCloseAdd = () => {
+    setAddModalVisible(false)
+  }
+
+  const handleCloseEdit = () => {
+    setEditModalVisible(false)
+    setSelectedUser(null)
   }
 
   return (
@@ -532,6 +571,28 @@ const UserManagement = () => {
           genderConfig={genderConfig}
         />
       </Card>
+
+      {/* User Detail Modal */}
+      <UserDetail
+        visible={detailModalVisible}
+        onClose={handleCloseDetail}
+        user={selectedUser}
+      />
+
+      {/* User Add Modal */}
+      <UserAdd
+        visible={addModalVisible}
+        onClose={handleCloseAdd}
+        onAdd={handleAddUser}
+      />
+
+      {/* User Edit Modal */}
+      <UserEdit
+        visible={editModalVisible}
+        onClose={handleCloseEdit}
+        onUpdate={handleUpdateUser}
+        user={selectedUser}
+      />
 
     </motion.div>
   )
