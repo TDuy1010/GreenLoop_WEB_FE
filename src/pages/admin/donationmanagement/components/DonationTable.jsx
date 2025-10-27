@@ -5,7 +5,7 @@ import dayjs from 'dayjs';
 
 const { Text } = Typography;
 
-const DonationTable = ({ data, loading }) => {
+const DonationTable = ({ data, loading, handleView, handleEdit, handleDelete }) => {
   
   const getStatusColor = (status) => {
     const colors = {
@@ -58,25 +58,6 @@ const DonationTable = ({ data, loading }) => {
     );
   };
 
-  const handleView = (record) => {
-    console.log('View donation:', record);
-  };
-
-  const handleEdit = (record) => {
-    console.log('Edit donation:', record);
-  };
-
-  const handleDelete = (record) => {
-    console.log('Delete donation:', record);
-  };
-
-  const handleApprove = (record) => {
-    console.log('Approve donation:', record);
-  };
-
-  const handleReject = (record) => {
-    console.log('Reject donation:', record);
-  };
 
   const columns = [
     {

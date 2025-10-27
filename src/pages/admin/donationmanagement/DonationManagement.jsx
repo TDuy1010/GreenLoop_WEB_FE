@@ -2,11 +2,19 @@ import React, { useState, useMemo } from 'react';
 import { Card, Row, Col, Statistic, Input, Select, Button, message, Space } from 'antd';
 import { SearchOutlined, PlusOutlined, ReloadOutlined, FilterOutlined } from '@ant-design/icons';
 import DonationTable from './components/DonationTable';
+import DonationDetail from './components/DonationDetail';
+import DonationAdd from './components/DonationAdd';
+import DonationEdit from './components/DonationEdit';
 
 const { Search } = Input;
 const { Option } = Select;
 
 const DonationManagement = () => {
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [addModalVisible, setAddModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedDonation, setSelectedDonation] = useState(null);
+
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -118,9 +126,11 @@ const DonationManagement = () => {
     }
   ];
 
+  const [donationData, setDonationData] = useState(mockDonations);
+
   // Filtered data
   const filteredData = useMemo(() => {
-    return mockDonations.filter(donation => {
+    return donationData.filter(donation => {
       const matchesSearch = 
         donation.donorName.toLowerCase().includes(searchText.toLowerCase()) ||
         donation.donorEmail.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -133,24 +143,73 @@ const DonationManagement = () => {
       
       return matchesSearch && matchesStatus;
     });
-  }, [searchText, statusFilter, mockDonations]);
+  }, [searchText, statusFilter, donationData]);
 
   // Statistics
   const stats = useMemo(() => {
-    const total = mockDonations.length;
-    const received = mockDonations.filter(d => d.status === 'received').length;
-    const pending = mockDonations.filter(d => d.status === 'pending').length;
-    const processing = mockDonations.filter(d => d.status === 'processing').length;
-    const rejected = mockDonations.filter(d => d.status === 'rejected').length;
-    const totalWeight = mockDonations
+    const total = donationData.length;
+    const received = donationData.filter(d => d.status === 'received').length;
+    const pending = donationData.filter(d => d.status === 'pending').length;
+    const processing = donationData.filter(d => d.status === 'processing').length;
+    const rejected = donationData.filter(d => d.status === 'rejected').length;
+    const totalWeight = donationData
       .filter(d => d.status === 'received' && d.totalWeight)
       .reduce((sum, d) => sum + d.totalWeight, 0);
-    const totalItems = mockDonations
+    const totalItems = donationData
       .filter(d => d.status === 'received')
       .reduce((sum, d) => sum + d.clothingItems.reduce((itemSum, item) => itemSum + item.quantity, 0), 0);
 
     return { total, received, pending, processing, rejected, totalWeight, totalItems };
-  }, [mockDonations]);
+  }, [donationData]);
+
+  // Handle CRUD operations
+  const handleAdd = () => {
+    setAddModalVisible(true);
+  };
+
+  const handleAddDonation = (newDonation) => {
+    const updatedData = [...donationData, newDonation];
+    setDonationData(updatedData);
+    message.success('Thêm quyên góp thành công!');
+  };
+
+  const handleView = (donation) => {
+    setSelectedDonation(donation);
+    setDetailModalVisible(true);
+  };
+
+  const handleEdit = (donation) => {
+    setSelectedDonation(donation);
+    setEditModalVisible(true);
+  };
+
+  const handleUpdateDonation = (updatedDonation) => {
+    const updatedData = donationData.map(donation =>
+      donation.id === updatedDonation.id ? updatedDonation : donation
+    );
+    setDonationData(updatedData);
+    message.success('Cập nhật quyên góp thành công!');
+  };
+
+  const handleDelete = (id) => {
+    const newData = donationData.filter(donation => donation.id !== id);
+    setDonationData(newData);
+    message.success('Xóa quyên góp thành công!');
+  };
+
+  const handleCloseDetail = () => {
+    setDetailModalVisible(false);
+    setSelectedDonation(null);
+  };
+
+  const handleCloseAdd = () => {
+    setAddModalVisible(false);
+  };
+
+  const handleCloseEdit = () => {
+    setEditModalVisible(false);
+    setSelectedDonation(null);
+  };
 
   const handleRefresh = () => {
     message.info('Đã làm mới dữ liệu quyên góp');
@@ -257,10 +316,21 @@ const DonationManagement = () => {
               <Option value="rejected">Từ chối</Option>
             </Select>
           </Col>
-          <Col xs={12} sm={6} md={8}>
+          <Col xs={12} sm={6} md={4}>
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />}
+              onClick={handleAdd}
+              size="middle"
+              className="w-full"
+            >
+              Thêm quyên góp
+            </Button>
+          </Col>
+          <Col xs={12} sm={6} md={4}>
             <div className="text-right">
               <span className="text-gray-600">
-                Hiển thị {filteredData.length} / {stats.total} lượt quyên góp
+                {filteredData.length} / {stats.total} lượt
               </span>
             </div>
           </Col>
@@ -272,8 +342,33 @@ const DonationManagement = () => {
         <DonationTable 
           data={filteredData}
           loading={false}
+          handleView={handleView}
+          handleEdit={handleEdit}
+          handleDelete={handleDelete}
         />
       </Card>
+
+      {/* Donation Detail Modal */}
+      <DonationDetail
+        visible={detailModalVisible}
+        onClose={handleCloseDetail}
+        donation={selectedDonation}
+      />
+
+      {/* Donation Add Modal */}
+      <DonationAdd
+        visible={addModalVisible}
+        onClose={handleCloseAdd}
+        onAdd={handleAddDonation}
+      />
+
+      {/* Donation Edit Modal */}
+      <DonationEdit
+        visible={editModalVisible}
+        onClose={handleCloseEdit}
+        onUpdate={handleUpdateDonation}
+        donation={selectedDonation}
+      />
     </div>
   );
 };

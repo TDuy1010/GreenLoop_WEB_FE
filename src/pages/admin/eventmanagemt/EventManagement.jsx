@@ -19,6 +19,9 @@ import {
 import { motion } from 'framer-motion'
 
 import EventTable from './components/EventTable'
+import EventDetail from './components/EventDetail'
+import EventAdd from './components/EventAdd'
+import EventEdit from './components/EventEdit'
 
 const { Search } = Input
 const { Option } = Select
@@ -26,6 +29,11 @@ const { TextArea } = Input
 
 
 const EventManagement = () => {
+  const [detailModalVisible, setDetailModalVisible] = useState(false)
+  const [addModalVisible, setAddModalVisible] = useState(false)
+  const [editModalVisible, setEditModalVisible] = useState(false)
+  const [selectedEvent, setSelectedEvent] = useState(null)
+
   const [eventData, setEventData] = useState([
     {
       id: 1,
@@ -212,15 +220,31 @@ const EventManagement = () => {
 
   // Handle CRUD operations
   const handleAdd = () => {
-    message.info("Tính năng đang phát triển")
+    setAddModalVisible(true)
+  }
+
+  const handleAddEvent = (newEvent) => {
+    const updatedData = [...eventData, newEvent]
+    setEventData(updatedData)
+    filterData(searchText, filterCategory, filterStatus)
   }
 
   const handleView = (event) => {
-    message.info(`Xem chi tiết sự kiện: ${event.title}`)
+    setSelectedEvent(event)
+    setDetailModalVisible(true)
   }
 
   const handleEdit = (event) => {
-    message.info(`Chỉnh sửa sự kiện: ${event.title}`)
+    setSelectedEvent(event)
+    setEditModalVisible(true)
+  }
+
+  const handleUpdateEvent = (updatedEvent) => {
+    const updatedData = eventData.map(event =>
+      event.id === updatedEvent.id ? updatedEvent : event
+    )
+    setEventData(updatedData)
+    filterData(searchText, filterCategory, filterStatus)
   }
 
   const handleDelete = (id) => {
@@ -228,6 +252,20 @@ const EventManagement = () => {
     setEventData(newData)
     filterData(searchText, filterCategory, filterStatus)
     message.success('Xóa sự kiện thành công!')
+  }
+
+  const handleCloseDetail = () => {
+    setDetailModalVisible(false)
+    setSelectedEvent(null)
+  }
+
+  const handleCloseAdd = () => {
+    setAddModalVisible(false)
+  }
+
+  const handleCloseEdit = () => {
+    setEditModalVisible(false)
+    setSelectedEvent(null)
   }
 
   return (
@@ -352,6 +390,27 @@ const EventManagement = () => {
         />
       </Card>
 
+      {/* Event Detail Modal */}
+      <EventDetail
+        visible={detailModalVisible}
+        onClose={handleCloseDetail}
+        event={selectedEvent}
+      />
+
+      {/* Event Add Modal */}
+      <EventAdd
+        visible={addModalVisible}
+        onClose={handleCloseAdd}
+        onAdd={handleAddEvent}
+      />
+
+      {/* Event Edit Modal */}
+      <EventEdit
+        visible={editModalVisible}
+        onClose={handleCloseEdit}
+        onUpdate={handleUpdateEvent}
+        event={selectedEvent}
+      />
     </motion.div>
   )
 }

@@ -19,11 +19,19 @@ import {
 } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 import WarehouseTable from './components/WarehouseTable'
+import WarehouseDetail from './components/WarehouseDetail'
+import WarehouseAdd from './components/WarehouseAdd'
+import WarehouseEdit from './components/WarehouseEdit'
 
 const { Search } = Input
 const { Option } = Select
 
 const WarehouseManagement = () => {
+  const [detailModalVisible, setDetailModalVisible] = useState(false)
+  const [addModalVisible, setAddModalVisible] = useState(false)
+  const [editModalVisible, setEditModalVisible] = useState(false)
+  const [selectedWarehouse, setSelectedWarehouse] = useState(null)
+
   const [warehouseData, setWarehouseData] = useState([
     {
       id: 1,
@@ -191,15 +199,31 @@ const WarehouseManagement = () => {
 
   // Handle CRUD operations
   const handleAdd = () => {
-    message.info("Tính năng đang phát triển")
+    setAddModalVisible(true)
+  }
+
+  const handleAddWarehouse = (newWarehouse) => {
+    const updatedData = [...warehouseData, newWarehouse]
+    setWarehouseData(updatedData)
+    filterData(searchText, filterStatus, filterType)
   }
 
   const handleView = (warehouse) => {
-    message.info(`Xem chi tiết kho: ${warehouse.name}`)
+    setSelectedWarehouse(warehouse)
+    setDetailModalVisible(true)
   }
 
   const handleEdit = (warehouse) => {
-    message.info(`Chỉnh sửa kho: ${warehouse.name}`)
+    setSelectedWarehouse(warehouse)
+    setEditModalVisible(true)
+  }
+
+  const handleUpdateWarehouse = (updatedWarehouse) => {
+    const updatedData = warehouseData.map(warehouse =>
+      warehouse.id === updatedWarehouse.id ? updatedWarehouse : warehouse
+    )
+    setWarehouseData(updatedData)
+    filterData(searchText, filterStatus, filterType)
   }
 
   const handleToggleStatus = (warehouse) => {
@@ -217,6 +241,20 @@ const WarehouseManagement = () => {
     setWarehouseData(newData)
     filterData(searchText, filterStatus, filterType)
     message.success('Xóa kho thành công!')
+  }
+
+  const handleCloseDetail = () => {
+    setDetailModalVisible(false)
+    setSelectedWarehouse(null)
+  }
+
+  const handleCloseAdd = () => {
+    setAddModalVisible(false)
+  }
+
+  const handleCloseEdit = () => {
+    setEditModalVisible(false)
+    setSelectedWarehouse(null)
   }
 
   return (
@@ -340,6 +378,28 @@ const WarehouseManagement = () => {
           typeConfig={typeConfig}
         />
       </Card>
+
+      {/* Warehouse Detail Modal */}
+      <WarehouseDetail
+        visible={detailModalVisible}
+        onClose={handleCloseDetail}
+        warehouse={selectedWarehouse}
+      />
+
+      {/* Warehouse Add Modal */}
+      <WarehouseAdd
+        visible={addModalVisible}
+        onClose={handleCloseAdd}
+        onAdd={handleAddWarehouse}
+      />
+
+      {/* Warehouse Edit Modal */}
+      <WarehouseEdit
+        visible={editModalVisible}
+        onClose={handleCloseEdit}
+        onUpdate={handleUpdateWarehouse}
+        warehouse={selectedWarehouse}
+      />
     </motion.div>
   )
 }

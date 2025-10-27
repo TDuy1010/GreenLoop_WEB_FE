@@ -14,7 +14,7 @@ import dayjs from 'dayjs';
 
 const { Text } = Typography;
 
-const OrderTable = ({ data, loading }) => {
+const OrderTable = ({ data, loading, handleView, handleEdit, handleDelete }) => {
   
   const getOrderStatusColor = (status) => {
     const colors = {
@@ -106,37 +106,6 @@ const OrderTable = ({ data, loading }) => {
     );
   };
 
-  const handleView = (record) => {
-    console.log('View order:', record);
-  };
-
-  const handleEdit = (record) => {
-    console.log('Edit order:', record);
-  };
-
-  const handleDelete = (record) => {
-    console.log('Delete order:', record);
-  };
-
-  const handleConfirm = (record) => {
-    console.log('Confirm order:', record);
-  };
-
-  const handleCancel = (record) => {
-    console.log('Cancel order:', record);
-  };
-
-  const handleShip = (record) => {
-    console.log('Ship order:', record);
-  };
-
-  const handlePrint = (record) => {
-    console.log('Print order:', record);
-  };
-
-  const handleCall = (record) => {
-    console.log('Call customer:', record);
-  };
 
   const columns = [
     {

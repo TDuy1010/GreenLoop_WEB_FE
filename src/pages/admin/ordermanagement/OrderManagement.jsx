@@ -2,6 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { Card, Row, Col, Statistic, Input, Select, Button, message, Space, DatePicker } from 'antd';
 import { SearchOutlined, PlusOutlined, ReloadOutlined, FilterOutlined, ExportOutlined } from '@ant-design/icons';
 import OrderTable from './components/OrderTable';
+import OrderDetail from './components/OrderDetail';
+import OrderAdd from './components/OrderAdd';
+import OrderEdit from './components/OrderEdit';
 import dayjs from 'dayjs';
 
 const { Search } = Input;
@@ -9,6 +12,11 @@ const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 const OrderManagement = () => {
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [addModalVisible, setAddModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
@@ -240,9 +248,11 @@ const OrderManagement = () => {
     }
   ];
 
+  const [orderData, setOrderData] = useState(mockOrders);
+
   // Filtered data
   const filteredData = useMemo(() => {
-    return mockOrders.filter(order => {
+    return orderData.filter(order => {
       const matchesSearch = 
         order.orderNumber.toLowerCase().includes(searchText.toLowerCase()) ||
         order.customerName.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -264,22 +274,22 @@ const OrderManagement = () => {
       
       return matchesSearch && matchesStatus && matchesPayment && matchesDate;
     });
-  }, [searchText, statusFilter, paymentFilter, dateRange, mockOrders]);
+  }, [searchText, statusFilter, paymentFilter, dateRange, orderData]);
 
   // Statistics
   const stats = useMemo(() => {
-    const total = mockOrders.length;
-    const pending = mockOrders.filter(o => o.orderStatus === 'pending').length;
-    const processing = mockOrders.filter(o => o.orderStatus === 'processing').length;
-    const shipping = mockOrders.filter(o => o.orderStatus === 'shipping').length;
-    const delivered = mockOrders.filter(o => o.orderStatus === 'delivered').length;
-    const cancelled = mockOrders.filter(o => o.orderStatus === 'cancelled').length;
+    const total = orderData.length;
+    const pending = orderData.filter(o => o.orderStatus === 'pending').length;
+    const processing = orderData.filter(o => o.orderStatus === 'processing').length;
+    const shipping = orderData.filter(o => o.orderStatus === 'shipping').length;
+    const delivered = orderData.filter(o => o.orderStatus === 'delivered').length;
+    const cancelled = orderData.filter(o => o.orderStatus === 'cancelled').length;
     
-    const totalRevenue = mockOrders
+    const totalRevenue = orderData
       .filter(o => o.paymentStatus === 'paid')
       .reduce((sum, o) => sum + o.totalAmount, 0);
     
-    const avgOrderValue = totalRevenue / mockOrders.filter(o => o.paymentStatus === 'paid').length || 0;
+    const avgOrderValue = totalRevenue / orderData.filter(o => o.paymentStatus === 'paid').length || 0;
 
     return { 
       total, 
@@ -291,7 +301,56 @@ const OrderManagement = () => {
       totalRevenue, 
       avgOrderValue 
     };
-  }, [mockOrders]);
+  }, [orderData]);
+
+  // Handle CRUD operations
+  const handleAdd = () => {
+    setAddModalVisible(true);
+  };
+
+  const handleAddOrder = (newOrder) => {
+    const updatedData = [...orderData, newOrder];
+    setOrderData(updatedData);
+    message.success('Thêm đơn hàng thành công!');
+  };
+
+  const handleView = (order) => {
+    setSelectedOrder(order);
+    setDetailModalVisible(true);
+  };
+
+  const handleEdit = (order) => {
+    setSelectedOrder(order);
+    setEditModalVisible(true);
+  };
+
+  const handleUpdateOrder = (updatedOrder) => {
+    const updatedData = orderData.map(order =>
+      order.id === updatedOrder.id ? updatedOrder : order
+    );
+    setOrderData(updatedData);
+    message.success('Cập nhật đơn hàng thành công!');
+  };
+
+  const handleDelete = (id) => {
+    const newData = orderData.filter(order => order.id !== id);
+    setOrderData(newData);
+    message.success('Xóa đơn hàng thành công!');
+  };
+
+  const handleCloseDetail = () => {
+    setDetailModalVisible(false);
+    setSelectedOrder(null);
+  };
+
+  const handleCloseAdd = () => {
+    setAddModalVisible(false);
+  };
+
+  const handleCloseEdit = () => {
+    setEditModalVisible(false);
+    setSelectedOrder(null);
+  };
 
   const handleRefresh = () => {
     message.info('Đã làm mới dữ liệu đơn hàng');
@@ -301,9 +360,6 @@ const OrderManagement = () => {
     message.info('Đang xuất báo cáo đơn hàng...');
   };
 
-  const handleCreateOrder = () => {
-    message.info('Tính năng tạo đơn hàng đang được phát triển');
-  };
 
   return (
     <div className="space-y-6">
@@ -329,7 +385,7 @@ const OrderManagement = () => {
           <Button 
             type="primary" 
             icon={<PlusOutlined />}
-            onClick={handleCreateOrder}
+            onClick={handleAdd}
           >
             Tạo đơn hàng
           </Button>
@@ -494,8 +550,33 @@ const OrderManagement = () => {
         <OrderTable 
           data={filteredData}
           loading={false}
+          handleView={handleView}
+          handleEdit={handleEdit}
+          handleDelete={handleDelete}
         />
       </Card>
+
+      {/* Order Detail Modal */}
+      <OrderDetail
+        visible={detailModalVisible}
+        onClose={handleCloseDetail}
+        order={selectedOrder}
+      />
+
+      {/* Order Add Modal */}
+      <OrderAdd
+        visible={addModalVisible}
+        onClose={handleCloseAdd}
+        onAdd={handleAddOrder}
+      />
+
+      {/* Order Edit Modal */}
+      <OrderEdit
+        visible={editModalVisible}
+        onClose={handleCloseEdit}
+        onUpdate={handleUpdateOrder}
+        order={selectedOrder}
+      />
     </div>
   );
 };
