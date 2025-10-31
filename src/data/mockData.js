@@ -201,28 +201,28 @@ export const priceRanges = [
 
 // Brands for LandingPage
 export const brands = [
-  { name: 'H&M', image: 'https://via.placeholder.com/150?text=H%26M', subtitle: 'Thời trang phổ thông' },
-  { name: 'MANGO', image: 'https://via.placeholder.com/150?text=MANGO', subtitle: 'Thương hiệu cao cấp' },
-  { name: 'M.A.C', image: 'https://via.placeholder.com/150?text=MAC', subtitle: 'Thương hiệu nổi tiếng' },
-  { name: 'MIKI', image: 'https://via.placeholder.com/150?text=MIKI', subtitle: 'Thương hiệu nội địa' },
+  { name: 'H&M', image: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=200', subtitle: 'Thời trang phổ thông' },
+  { name: 'MANGO', image: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=200', subtitle: 'Thương hiệu cao cấp' },
+  { name: 'M.A.C', image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=200', subtitle: 'Thương hiệu nổi tiếng' },
+  { name: 'MIKI', image: 'https://images.unsplash.com/photo-1467043237213-65f2da53396f?w=200', subtitle: 'Thương hiệu nội địa' },
 ]
 
 // Categories for LandingPage
 export const categories = [
-  { name: 'Đầm Dạ', image: 'https://via.placeholder.com/200?text=Dam+Da' },
-  { name: 'Áo Thun', image: 'https://via.placeholder.com/200?text=Ao+Thun' },
-  { name: 'Chân Váy', image: 'https://via.placeholder.com/200?text=Chan+Vay' },
-  { name: 'Giày Cao Gót', image: 'https://via.placeholder.com/200?text=Giay' },
-  { name: 'Quần Jean', image: 'https://via.placeholder.com/200?text=Quan+Jean' },
-  { name: 'Áo Sơ Mi', image: 'https://via.placeholder.com/200?text=Ao+So+Mi' },
-  { name: 'Áo Hoodie', image: 'https://via.placeholder.com/200?text=Hoodie' },
-  { name: 'Túi Xách', image: 'https://via.placeholder.com/200?text=Tui+Xach' },
+  { name: 'Đầm Dạ', image: 'https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=300' },
+  { name: 'Áo Thun', image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300' },
+  { name: 'Chân Váy', image: 'https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=300' },
+  { name: 'Giày Cao Gót', image: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=300' },
+  { name: 'Quần Jean', image: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=300' },
+  { name: 'Áo Sơ Mi', image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=300' },
+  { name: 'Áo Hoodie', image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=300' },
+  { name: 'Túi Xách', image: 'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=300' },
 ]
 
 // Partner brands for LandingPage
 export const partnerBrands = [
-  { name: 'ROYAL LONDON', logo: 'https://via.placeholder.com/150x50?text=ROYAL+LONDON' },
-  { name: 'IMPERIAL', logo: 'https://via.placeholder.com/150x50?text=IMPERIAL' },
+  { name: 'ROYAL LONDON', logo: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=200&h=80&fit=crop' },
+  { name: 'IMPERIAL', logo: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=200&h=80&fit=crop' },
 ]
 
 // Sort options for ShopPage

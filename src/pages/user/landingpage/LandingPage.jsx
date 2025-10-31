@@ -202,16 +202,16 @@ const LandingPage = () => {
             </motion.div>
             <div className="grid grid-cols-2 gap-4">
               <motion.img 
-                src="https://via.placeholder.com/250?text=Image+1" 
-                alt="GreenLoop" 
-                className="rounded-lg shadow-md"
+                src="https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=400" 
+                alt="GreenLoop Community" 
+                className="rounded-lg shadow-md object-cover h-64"
                 whileHover={{ scale: 1.05, rotate: -2 }}
                 transition={{ duration: 0.3 }}
               />
               <motion.img 
-                src="https://via.placeholder.com/250?text=Image+2" 
-                alt="GreenLoop" 
-                className="rounded-lg shadow-md"
+                src="https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?w=400" 
+                alt="Sustainable Fashion" 
+                className="rounded-lg shadow-md object-cover h-64"
                 whileHover={{ scale: 1.05, rotate: 2 }}
                 transition={{ duration: 0.3 }}
               />
@@ -285,12 +285,16 @@ const LandingPage = () => {
                 Luôn luôn có hàng ngàn chương trình giảm giá dành cho bạn
               </p>
               <div className="grid grid-cols-3 gap-4">
-                {[1, 2, 3].map((i) => (
+                {[
+                  'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=200',
+                  'https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=200',
+                  'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=200'
+                ].map((img, i) => (
                   <motion.img 
                     key={i}
-                    src={`https://via.placeholder.com/150?text=Product`} 
-                    alt="Product" 
-                    className="rounded-lg shadow-md"
+                    src={img} 
+                    alt="Fashion Product" 
+                    className="rounded-lg shadow-md object-cover h-32 w-full"
                     whileHover={{ scale: 1.1, rotate: 5 }}
                     transition={{ duration: 0.3 }}
                   />
@@ -299,9 +303,9 @@ const LandingPage = () => {
             </div>
             <div className="flex justify-center">
               <motion.img 
-                src="https://via.placeholder.com/400?text=Sale+Banner" 
-                alt="Sale" 
-                className="rounded-lg shadow-xl"
+                src="https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=500" 
+                alt="Sale Banner" 
+                className="rounded-lg shadow-xl object-cover h-80 w-full max-w-md"
                 whileHover={{ scale: 1.05 }}
                 transition={{ duration: 0.3 }}
               />
@@ -379,12 +383,16 @@ const LandingPage = () => {
               <h3 className="text-3xl font-bold mb-6">CHIẾN DỊCH PHỦ XANH MẢNG ĐEN</h3>
               <p className="mb-4">KẾT NỐI TỪ 01/01/2025 🌿 Sự kiện được tham gia cùng</p>
               <div className="flex gap-4 mb-6">
-                {[1, 2, 3].map((i) => (
+                {[
+                  'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=120',
+                  'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=120',
+                  'https://images.unsplash.com/photo-1505236858219-8359eb29e329?w=120'
+                ].map((img, i) => (
                   <motion.img 
                     key={i}
-                    src={`https://via.placeholder.com/100x60?text=Event`} 
-                    alt="Event" 
-                    className="rounded"
+                    src={img} 
+                    alt="Event Partner" 
+                    className="rounded object-cover w-24 h-16"
                     whileHover={{ scale: 1.1 }}
                     transition={{ duration: 0.3 }}
                   />
@@ -395,7 +403,11 @@ const LandingPage = () => {
               whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.3 }}
             >
-              <img src="https://via.placeholder.com/500x300?text=Campaign+Image" alt="Campaign" className="rounded-lg shadow-xl" />
+              <img 
+                src="https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=600" 
+                alt="Campaign Green Earth" 
+                className="rounded-lg shadow-xl object-cover h-80 w-full" 
+              />
             </motion.div>
           </div>
         </div>

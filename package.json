@@ -10,8 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.1.0",
     "@googlemaps/react-wrapper": "^1.2.0",
-    "antd": "^5.27.4",
+    "antd": "^5.27.6",
     "axios": "^1.12.2",
     "framer-motion": "^12.23.22",
     "react": "^19.1.1",

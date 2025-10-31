@@ -19,6 +19,10 @@ import DonationManagement from './pages/admin/donationmanagement/DonationManagem
 import OrderManagement from './pages/admin/ordermanagement/OrderManagement'
 import AdminErrorPage from './pages/admin/AdminErrorPage'
 import ErrorPage from './pages/ErrorPage'
+import AboutUsPage from './pages/user/aboutus/AboutUsPage'
+import BlogPage from './pages/user/blog/BlogPage'
+import ChatPage from './pages/user/chat/ChatPage'
+import ProfilePage from './pages/user/profile/ProfilePage'
 
 const router = createBrowserRouter([
   // User routes with MainLayout
@@ -45,7 +49,24 @@ const router = createBrowserRouter([
       {
         path: 'events/:id',
         element: <EventDetail />
+      },
+      {
+        path: 'about-us',
+        element: <AboutUsPage />
+      },
+      {
+        path:'blogs',
+        element:<BlogPage />
+      },
+      {
+        path: 'chat',
+        element: <ChatPage />
+      },
+      {
+        path: 'profile',
+        element: <ProfilePage />
       }
+        
     ],
     errorElement: <ErrorPage />
   },
