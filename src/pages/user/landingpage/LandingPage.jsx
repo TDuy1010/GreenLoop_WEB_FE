@@ -1,9 +1,29 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { useLocation } from 'react-router-dom'
+import { message } from 'antd'
 import heroImage from '../../../assets/images/herosection.jpg'
 import { priceRanges, brands, categories, partnerBrands } from '../../../data/mockData'
 
 const LandingPage = () => {
+  const location = useLocation()
+  
+  // Hiển thị thông báo nếu bị từ chối truy cập
+  useEffect(() => {
+    if (location.state?.message) {
+      message.warning({
+        content: location.state.message,
+        duration: 4,
+        style: {
+          marginTop: '20vh',
+          fontSize: '16px'
+        }
+      })
+      
+      // Clear state sau khi hiển thị
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state])
 
   // Animation variants
   const fadeInUp = {
@@ -58,7 +78,7 @@ const LandingPage = () => {
                   fill="none" 
                   stroke="currentColor" 
                   viewBox="0 0 24 24"
-                  animate={{ rotate: 360 }}
+                  animate={{ rotate: -360 }}
                   transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

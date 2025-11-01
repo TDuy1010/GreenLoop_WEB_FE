@@ -2,6 +2,7 @@ import React from 'react'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import MainLayout from './layouts/MainLayout'
 import AdminLayout from './layouts/AdminLayout'
+import ProtectedRoute from './components/ProtectedRoute'
 import LandingPage from './pages/user/landingpage/LandingPage'
 import ShopPage from './pages/user/shop/ShopPage'
 import ProductDetail from './pages/user/shop/ProductDetail'
@@ -71,10 +72,14 @@ const router = createBrowserRouter([
     errorElement: <ErrorPage />
   },
   
-  // Admin routes with AdminLayout
+  // Admin routes with AdminLayout (Protected - chỉ ADMIN, MANAGER, STAFF)
   {
     path: '/admin',
-    element: <AdminLayout />,
+    element: (
+      <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'STAFF']}>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
     children: [
       {
         index: true,

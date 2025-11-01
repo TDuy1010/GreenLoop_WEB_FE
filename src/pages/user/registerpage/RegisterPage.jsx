@@ -1,17 +1,22 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { message } from 'antd'
 import recyclingImage from '../../../assets/images/Uncover the truth about plastic recycling with….jpg'
+import { registerUser, verifyEmail, resendVerifyEmailOTP } from '../../../service/api/authAPI'
+import VerifyEmailModal from '../../../components/VerifyEmailModal'
+import SuccessModal from '../../../components/SuccessModal'
 
 const RegisterPage = () => {
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     password: '',
     confirmPassword: '',
-    phone: '',
+    phoneNumber: '',
     gender: '',
-    birthDate: '',
+    dateOfBirth: '',
     agreeToTerms: false,
     subscribeNewsletter: true
   })
@@ -19,6 +24,14 @@ const RegisterPage = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState({})
+  
+  // Verify Email Modal states
+  const [showVerifyModal, setShowVerifyModal] = useState(false)
+  const [isVerifying, setIsVerifying] = useState(false)
+  const [registeredEmail, setRegisteredEmail] = useState('')
+  
+  // Success Modal state
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -58,15 +71,16 @@ const RegisterPage = () => {
       newErrors.confirmPassword = 'Mật khẩu xác nhận không khớp'
     }
 
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Vui lòng nhập số điện thoại'
-    } else if (!/^[0-9]{10,11}$/.test(formData.phone.replace(/\s/g, ''))) {
-      newErrors.phone = 'Số điện thoại không hợp lệ'
+    if (!formData.phoneNumber.trim()) {
+      newErrors.phoneNumber = 'Vui lòng nhập số điện thoại'
+    } else if (!/^\+?[0-9]{10,15}$/.test(formData.phoneNumber.replace(/\s/g, ''))) {
+      newErrors.phoneNumber = 'Số điện thoại không hợp lệ'
     }
 
-    if (!formData.agreeToTerms) {
-      newErrors.agreeToTerms = 'Vui lòng đồng ý với điều khoản sử dụng'
-    }
+    // Bỏ validation agreeToTerms vì không có trong form
+    // if (!formData.agreeToTerms) {
+    //   newErrors.agreeToTerms = 'Vui lòng đồng ý với điều khoản sử dụng'
+    // }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -74,20 +88,135 @@ const RegisterPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    console.log('🎯 [Register] Form submitted!')
+    console.log('📋 [Register] Current form data:', formData)
     
-    if (!validateForm()) {
+    const isValid = validateForm()
+    console.log('✔️ [Register] Validation result:', isValid)
+    console.log('❌ [Register] Validation errors:', errors)
+    
+    if (!isValid) {
+      console.log('⛔ [Register] Validation failed, stopping...')
       return
     }
 
     setIsLoading(true)
+    console.log('📝 [Register] Submitting registration:', formData)
     
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Register data:', formData)
-      alert('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.')
+    try {
+      // Chuẩn bị data theo format API
+      const registerData = {
+        email: formData.email,
+        fullName: formData.fullName,
+        dateOfBirth: formData.dateOfBirth,
+        phoneNumber: formData.phoneNumber,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword
+      }
+
+      console.log('🔄 [Register] Calling API with:', registerData)
+      
+      // Gọi API register
+      const response = await registerUser(registerData)
+      
+      console.log('✅ [Register] Success:', response)
+      message.success(response.message || 'Đăng ký thành công! Vui lòng kiểm tra email để xác thực.')
+      
+      // Lưu email và mở modal verify
+      setRegisteredEmail(formData.email)
+      setShowVerifyModal(true)
+      
+    } catch (error) {
+      console.error('❌ [Register] Error:', error)
+      
+      // Xử lý các lỗi cụ thể
+      const errorMessage = error.message || 'Đăng ký thất bại. Vui lòng thử lại!'
+      
+      // Hiển thị message error
+      message.error(errorMessage)
+      
+      // Set errors cho từng field cụ thể
+      const newErrors = {}
+      
+      // Check nếu lỗi về email
+      if (errorMessage.toLowerCase().includes('email')) {
+        newErrors.email = errorMessage
+      }
+      
+      // Check nếu lỗi về số điện thoại
+      if (errorMessage.toLowerCase().includes('số điện thoại') || 
+          errorMessage.toLowerCase().includes('phone')) {
+        newErrors.phoneNumber = errorMessage
+      }
+      
+      // Check nếu lỗi về mật khẩu
+      if (errorMessage.toLowerCase().includes('mật khẩu') || 
+          errorMessage.toLowerCase().includes('password')) {
+        newErrors.password = errorMessage
+      }
+      
+      // Set tất cả errors
+      setErrors(prev => ({
+        ...prev,
+        ...newErrors,
+        submit: errorMessage
+      }))
+    } finally {
       setIsLoading(false)
-      // In real app: redirect to email verification or login page
-    }, 2000)
+    }
+  }
+
+  // Handler verify OTP
+  const handleVerifyOTP = async (otpCode) => {
+    console.log('🔐 [Register] Verifying OTP:', otpCode)
+    setIsVerifying(true)
+
+    try {
+      const response = await verifyEmail({ 
+        email: registeredEmail,
+        otp: otpCode 
+      })
+
+      console.log('✅ [Register] Verify success:', response)
+      
+      // Đóng verify modal
+      setShowVerifyModal(false)
+      
+      // Hiển thị success modal
+      setShowSuccessModal(true)
+      
+      // Chuyển đến trang login sau 3s
+      setTimeout(() => {
+        setShowSuccessModal(false)
+        navigate('/login')
+      }, 3000)
+      
+    } catch (error) {
+      console.error('❌ [Register] Verify error:', error)
+      message.error(error.message || 'Mã OTP không đúng. Vui lòng thử lại!')
+    } finally {
+      setIsVerifying(false)
+    }
+  }
+
+  // Handler resend OTP
+  const handleResendOTP = async () => {
+    console.log('📧 [Register] Resending OTP to:', registeredEmail)
+    
+    try {
+      const response = await resendVerifyEmailOTP({ email: registeredEmail })
+      console.log('✅ [Register] Resend success:', response)
+      message.success('Đã gửi lại mã OTP đến email của bạn!')
+    } catch (error) {
+      console.error('❌ [Register] Resend error:', error)
+      message.error(error.message || 'Không thể gửi lại mã OTP. Vui lòng thử lại sau!')
+    }
+  }
+
+  // Handler close verify modal
+  const handleCloseVerifyModal = () => {
+    setShowVerifyModal(false)
+    // User có thể resend OTP hoặc đăng nhập sau
   }
 
   const fadeIn = {
@@ -266,75 +395,60 @@ const RegisterPage = () => {
                 {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
               </div>
 
-              {/* Phone Fields Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                    Họ Và Tên
-                  </label>
-                  <input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    required
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className={`block w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition ${
-                      errors.phone ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="Nhập Họ Và Tên "
-                  />
-                  {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
-                </div>
-
-                <div>
-                  <label htmlFor="phone2" className="block text-sm font-medium text-gray-700 mb-2">
-                    Số điện thoại
-                  </label>
-                  <input
-                    id="phone2"
-                    name="phone2"
-                    type="tel"
-                    className="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
-                    placeholder="1234567890"
-                  />
-                </div>
+              {/* Full Name */}
+              <div>
+                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+                  Họ và Tên
+                </label>
+                <input
+                  id="fullName"
+                  name="fullName"
+                  type="text"
+                  required
+                  value={formData.fullName}
+                  onChange={handleInputChange}
+                  className={`block w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition ${
+                    errors.fullName ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="Nguyễn Văn A"
+                />
+                {errors.fullName && <p className="mt-1 text-sm text-red-600">{errors.fullName}</p>}
               </div>
 
-              {/* Gender and Birth Date Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-2">
-                    Giới tính
-                  </label>
-                  <select
-                    id="gender"
-                    name="gender"
-                    value={formData.gender}
-                    onChange={handleInputChange}
-                    className="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
-                  >
-                    <option value="">Nam</option>
-                    <option value="male">Nam</option>
-                    <option value="female">Nữ</option>
-                    <option value="other">Khác</option>
-                  </select>
-                </div>
+              {/* Phone Number */}
+              <div>
+                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-2">
+                  Số điện thoại
+                </label>
+                <input
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  type="tel"
+                  required
+                  value={formData.phoneNumber}
+                  onChange={handleInputChange}
+                  className={`block w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition ${
+                    errors.phoneNumber ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  placeholder="+84911772199"
+                />
+                {errors.phoneNumber && <p className="mt-1 text-sm text-red-600">{errors.phoneNumber}</p>}
+              </div>
 
-                <div>
-                  <label htmlFor="birthDate" className="block text-sm font-medium text-gray-700 mb-2">
-                    Ngày sinh
-                  </label>
-                  <input
-                    id="birthDate"
-                    name="birthDate"
-                    type="date"
-                    value={formData.birthDate}
-                    onChange={handleInputChange}
-                    className="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
-                    placeholder="23/03/1995"
-                  />
-                </div>
+              {/* Date of Birth */}
+              <div>
+                <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 mb-2">
+                  Ngày sinh
+                </label>
+                <input
+                  id="dateOfBirth"
+                  name="dateOfBirth"
+                  type="date"
+                  value={formData.dateOfBirth}
+                  onChange={handleInputChange}
+                  className="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition"
+                  placeholder="2003-10-10"
+                />
               </div>
 
               {/* Password Field */}
@@ -458,6 +572,27 @@ const RegisterPage = () => {
           </motion.div>
         </div>
       </motion.div>
+
+      {/* Verify Email Modal */}
+      <VerifyEmailModal
+        isOpen={showVerifyModal}
+        email={registeredEmail}
+        onVerify={handleVerifyOTP}
+        onResend={handleResendOTP}
+        onClose={handleCloseVerifyModal}
+        isLoading={isVerifying}
+      />
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={showSuccessModal}
+        title="🎉 Đăng ký thành công!"
+        message="Xác thực email hoàn tất. Đang chuyển đến trang đăng nhập..."
+        onClose={() => {
+          setShowSuccessModal(false)
+          navigate('/login')
+        }}
+      />
     </div>
   )
 }
