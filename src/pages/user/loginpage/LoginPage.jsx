@@ -20,6 +20,7 @@ const LoginPage = () => {
     email: '',
     password: ''
   })
+  const [loginError, setLoginError] = useState('') // Lỗi chung khi login fail
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -33,6 +34,26 @@ const LoginPage = () => {
       setErrors(prev => ({
         ...prev,
         [name]: ''
+      }))
+    }
+    
+    // Clear login error khi user bắt đầu nhập lại
+    if (loginError) {
+      setLoginError('')
+    }
+    
+    // Real-time validation
+    if (name === 'email' && value && !isValidEmail(value)) {
+      setErrors(prev => ({
+        ...prev,
+        email: 'Email không hợp lệ'
+      }))
+    }
+    
+    if (name === 'password' && value && value.length < 6) {
+      setErrors(prev => ({
+        ...prev,
+        password: 'Mật khẩu phải có ít nhất 6 ký tự'
       }))
     }
   }
@@ -93,12 +114,57 @@ const LoginPage = () => {
           }
         }, 500)
       } else {
-        message.error(response.message || 'Đăng nhập thất bại!')
+        // API trả về success: false - xử lý lỗi
+        console.error('❌ [Login] Failed:', response)
+        
+        const errorMsg = response.message || 'Đăng nhập thất bại!'
+        
+        // Chỉ set lỗi chung, không set lỗi vào từng field
+        setLoginError(errorMsg)
+        
+        // Hiển thị toast
+        message.error({
+          content: errorMsg,
+          duration: 4,
+          style: {
+            marginTop: '20vh'
+          }
+        })
       }
     } catch (error) {
-      console.error('Login error:', error)
-      const errorMessage = formatAuthError(error)
-      message.error(errorMessage)
+      console.error('❌ [Login] Error caught:', error)
+      
+      // Axios interceptor đã reject error.response.data, nên error chính là response data
+      const errorData = error.message ? error : error.response?.data || error
+      const { message: errorMsg, statusCode } = errorData
+      
+      console.log('📋 [Login] Error details:', { errorMsg, statusCode, errorData })
+      
+      // Nếu có message từ API
+      if (errorMsg) {
+        // Chỉ set lỗi chung
+        setLoginError(errorMsg)
+        
+        message.error({
+          content: errorMsg,
+          duration: 4,
+          style: {
+            marginTop: '20vh'
+          }
+        })
+      } 
+      // Không có message - có thể là lỗi network
+      else {
+        console.error('❌ [Login] Network or unknown error')
+        const errorMessage = formatAuthError(error)
+        
+        setLoginError('Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.')
+        
+        message.error({
+          content: errorMessage,
+          duration: 4
+        })
+      }
     } finally {
       setIsLoading(false)
     }
@@ -263,30 +329,63 @@ const LoginPage = () => {
               {/* Email Field */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Địa chỉ Email
+                  Địa chỉ Email <span className="text-red-500">*</span>
                 </label>
+                <div className="relative">
                 <input
                   id="email"
                   name="email"
                   type="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className={`block w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition ${
-                    errors.email
-                      ? 'border-red-500 focus:ring-red-500'
-                      : 'border-gray-300 focus:ring-green-500 focus:border-transparent'
-                  }`}
-                  placeholder="admin@greenloop.com"
-                />
+                    className={`block w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition ${
+                      errors.email
+                        ? 'border-red-500 focus:ring-red-500 bg-red-50'
+                        : formData.email && !errors.email && isValidEmail(formData.email)
+                        ? 'border-green-500 focus:ring-green-500 bg-green-50'
+                        : 'border-gray-300 focus:ring-green-500 focus:border-transparent'
+                    }`}
+                    placeholder="admin@greenloop.com"
+                    autoComplete="email"
+                  />
+                  
+                  {/* Success Icon */}
+                  {formData.email && !errors.email && isValidEmail(formData.email) && (
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                  
+                  {/* Error Icon */}
+                  {errors.email && (
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                
                 {errors.email && (
-                  <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+                  <motion.p
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-2 text-sm text-red-600 flex items-center gap-1"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    {errors.email}
+                  </motion.p>
                 )}
               </div>
 
               {/* Password Field */}
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                  Mật khẩu
+                  Mật khẩu <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -297,30 +396,45 @@ const LoginPage = () => {
                     onChange={handleInputChange}
                     className={`block w-full px-4 py-3 pr-12 border rounded-lg focus:outline-none focus:ring-2 transition ${
                       errors.password
-                        ? 'border-red-500 focus:ring-red-500'
+                        ? 'border-red-500 focus:ring-red-500 bg-red-50'
+                        : formData.password && !errors.password && formData.password.length >= 6
+                        ? 'border-green-500 focus:ring-green-500 bg-green-50'
                         : 'border-gray-300 focus:ring-green-500 focus:border-transparent'
                     }`}
-                    placeholder="Admin123"
+                    placeholder="••••••••"
+                    autoComplete="current-password"
                   />
+                  
+                  {/* Toggle Password Visibility */}
                   <button
                     type="button"
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
-                      <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="h-5 w-5 text-gray-400 hover:text-gray-600 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
                       </svg>
                     ) : (
-                      <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="h-5 w-5 text-gray-400 hover:text-gray-600 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                       </svg>
                     )}
                   </button>
                 </div>
+                
                 {errors.password && (
-                  <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+                  <motion.p
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-2 text-sm text-red-600 flex items-center gap-1"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    {errors.password}
+                  </motion.p>
                 )}
               </div>
 
@@ -333,28 +447,47 @@ const LoginPage = () => {
                     type="checkbox"
                     checked={formData.rememberMe}
                     onChange={handleInputChange}
-                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded cursor-pointer"
                   />
-                  <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700">
-                    Ghi nhớ tôi
+                  <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-700 cursor-pointer">
+                    Ghi nhớ đăng nhập
                   </label>
                 </div>
-                <Link to="/forgot-password" className="text-sm text-green-600 hover:text-green-700 font-medium">
+                <Link 
+                  to="/forgot-password" 
+                  className="text-sm text-green-600 hover:text-green-700 font-medium transition"
+                >
                   Quên mật khẩu?
                 </Link>
               </div>
 
+              {/* Login Error Message */}
+              {loginError && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-3 bg-red-50 border border-red-200 rounded-lg"
+                >
+                  <p className="text-sm text-red-600 flex items-center gap-2">
+                    <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    <span>{loginError}</span>
+                  </p>
+                </motion.div>
+              )}
+
               {/* Submit Button */}
               <motion.button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || !formData.email || !formData.password || errors.email || errors.password}
                 className={`w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-white font-medium transition ${
-                  isLoading
+                  isLoading || !formData.email || !formData.password || errors.email || errors.password
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500'
                 }`}
-                whileHover={!isLoading ? { scale: 1.02 } : {}}
-                whileTap={!isLoading ? { scale: 0.98 } : {}}
+                whileHover={!isLoading && formData.email && formData.password && !errors.email && !errors.password ? { scale: 1.02 } : {}}
+                whileTap={!isLoading && formData.email && formData.password && !errors.email && !errors.password ? { scale: 0.98 } : {}}
               >
                 {isLoading ? (
                   <>
@@ -365,7 +498,12 @@ const LoginPage = () => {
                     Đang đăng nhập...
                   </>
                 ) : (
-                  'Đăng nhập'
+                  <>
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                    </svg>
+                    Đăng nhập
+                  </>
                 )}
               </motion.button>
 

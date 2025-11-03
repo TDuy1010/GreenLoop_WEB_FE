@@ -10,6 +10,8 @@ import { message } from 'antd'
  * @param {function} onResend - Callback khi resend OTP
  * @param {function} onClose - Callback khi đóng modal
  * @param {boolean} isLoading - Trạng thái loading khi verify
+ * @param {string} title - Tiêu đề modal (optional)
+ * @param {string} description - Mô tả modal (optional)
  */
 const VerifyEmailModal = ({ 
   isOpen, 
@@ -17,7 +19,9 @@ const VerifyEmailModal = ({
   onVerify, 
   onResend,
   onClose,
-  isLoading = false
+  isLoading = false,
+  title = "Xác thực Email",
+  description = "Chúng tôi đã gửi mã OTP gồm 6 số đến email của bạn. Vui lòng kiểm tra hộp thư và nhập mã bên dưới."
 }) => {
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [resendTimer, setResendTimer] = useState(60)
@@ -195,13 +199,14 @@ const VerifyEmailModal = ({
 
                   {/* Title */}
                   <h3 className="text-2xl font-bold text-gray-900 text-center mb-2">
-                    Xác thực Email
+                    {title}
                   </h3>
 
                   {/* Description */}
-                  <p className="text-sm text-gray-600 text-center mb-6">
-                    Chúng tôi đã gửi mã OTP đến email
-                    <br />
+                  <p className="text-sm text-gray-600 text-center mb-2">
+                    {description}
+                  </p>
+                  <p className="text-sm text-center mb-6">
                     <span className="font-semibold text-green-600">{email}</span>
                   </p>
 

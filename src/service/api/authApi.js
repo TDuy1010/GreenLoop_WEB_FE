@@ -184,14 +184,28 @@ export const forgotPassword = async (email) => {
 
 // ===== RESET MẬT KHẨU =====
 /**
- * Reset mật khẩu với token
+ * Reset mật khẩu với OTP
  * @param {Object} resetData - Dữ liệu reset
- * @param {string} resetData.token - Token từ email
+ * @param {string} resetData.email - Email người dùng
+ * @param {string} resetData.otp - Mã OTP 6 số
  * @param {string} resetData.newPassword - Mật khẩu mới
  * @returns {Promise} Response từ server
+ * 
+ * Request body:
+ * {
+ *   "email": "user@example.com",
+ *   "otp": "123456",
+ *   "newPassword": "NewPassword123"
+ * }
  */
 export const resetPassword = async (resetData) => {
+  console.log('🔐 [API] Resetting password with:', {
+    email: resetData.email,
+    hasOtp: !!resetData.otp,
+    hasNewPassword: !!resetData.newPassword
+  })
   const response = await axiosClient.post('/auth/reset-password', resetData);
+  console.log('✅ [API] Reset password response:', response)
   return response;
 };
 

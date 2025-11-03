@@ -10,6 +10,7 @@ import EventPage from './pages/user/events/EventPage'
 import EventDetail from './pages/user/events/EventDetail'
 import LoginPage from './pages/user/loginpage/LoginPage'
 import RegisterPage from './pages/user/registerpage/RegisterPage'
+import ForgotPasswordPage from './pages/user/forgotpassword/ForgotPasswordPage'
 import DashboardPage from './pages/admin/dashboard/DashboardPage'
 import StaffManagement from './pages/admin/StaffManagement/StaffManagement'
 import EventManagement from './pages/admin/eventmanagemt/EventManagement'
@@ -137,6 +138,10 @@ const router = createBrowserRouter([
   {
     path: '/register',
     element: <RegisterPage />
+  },
+  {
+    path: '/forgot-password',
+    element: <ForgotPasswordPage />
   },
   
   // Catch-all route for 404 and development pages
