@@ -85,11 +85,12 @@ const Sidebar = ({ collapsed, onToggle }) => {
         label: 'Cài đặt hệ thống', 
         icon: <SettingOutlined /> 
       },
-      { 
-        key: '/admin/logout', 
-        label: 'Đăng xuất', 
-        icon: <LogoutOutlined /> 
-      },
+      // Đăng xuất được di chuyển sang dropdown trong Admin header
+      // { 
+      //   key: '/admin/logout', 
+      //   label: 'Đăng xuất', 
+      //   icon: <LogoutOutlined /> 
+      // },
     ],
     []
   );

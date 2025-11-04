@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { 
   Button, 
   Input, 
@@ -16,12 +16,14 @@ import {
   ClockCircleOutlined,
   TeamOutlined
 } from '@ant-design/icons'
-import { motion } from 'framer-motion'
+ 
 
 import EventTable from './components/EventTable'
 import EventDetail from './components/EventDetail'
 import EventAdd from './components/EventAdd'
 import EventEdit from './components/EventEdit'
+import { getEvents } from '../../../service/api/eventApi'
+import heroImg from '../../../assets/images/herosection.jpg'
 
 const { Search } = Input
 const { Option } = Select
@@ -34,181 +36,93 @@ const EventManagement = () => {
   const [editModalVisible, setEditModalVisible] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState(null)
 
-  const [eventData, setEventData] = useState([
-    {
-      id: 1,
-      title: 'Hội thảo Tái chế Thông minh',
-      description: 'Tìm hiểu về các công nghệ tái chế hiện đại và cách áp dụng vào cuộc sống hàng ngày',
-      date: '2024-01-15',
-      startTime: '09:00',
-      endTime: '17:00',
-      location: 'Trung tâm Hội nghị Quốc gia, Hà Nội',
-      address: '1 Thăng Long, Ba Đình, Hà Nội',
-      coordinates: { lat: 21.0285, lng: 105.8542 },
-      maxParticipants: 200,
-      registeredCount: 156,
-      status: 'upcoming',
-      category: 'workshop',
-      organizer: 'GreenLoop Team',
-      image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400',
-      tags: ['Tái chế', 'Công nghệ', 'Môi trường'],
-      price: 0,
-      requirements: 'Mang theo laptop cá nhân',
-      benefits: 'Chứng chỉ tham dự, tài liệu học tập'
-    },
-    {
-      id: 2,
-      title: 'Ngày hội Thu gom Rác thải Điện tử',
-      description: 'Sự kiện thu gom và tái chế các thiết bị điện tử cũ từ cộng đồng',
-      date: '2024-01-20',
-      startTime: '08:00',
-      endTime: '16:00',
-      location: 'Công viên Thống Nhất, TP.HCM',
-      address: 'Công viên Thống Nhất, Quận 1, TP.HCM',
-      coordinates: { lat: 10.7769, lng: 106.6951 },
-      maxParticipants: 500,
-      registeredCount: 423,
-      status: 'active',
-      category: 'collection',
-      organizer: 'GreenLoop & Sở TN&MT TP.HCM',
-      image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',
-      tags: ['Thu gom', 'Điện tử', 'Cộng đồng'],
-      price: 0,
-      requirements: 'Mang theo rác thải điện tử',
-      benefits: 'Quà tặng, voucher giảm giá'
-    },
-    {
-      id: 3,
-      title: 'Workshop Làm đồ handmade từ Vật liệu tái chế',
-      description: 'Học cách tạo ra những món đồ hữu ích từ các vật liệu tái chế',
-      date: '2024-01-25',
-      startTime: '14:00',
-      endTime: '18:00',
-      location: 'Trung tâm Văn hóa Đông Đa, Hà Nội',
-      address: '2 Hồ Tùng Mậu, Đống Đa, Hà Nội',
-      coordinates: { lat: 21.0227, lng: 105.8194 },
-      maxParticipants: 50,
-      registeredCount: 45,
-      status: 'full',
-      category: 'workshop',
-      organizer: 'GreenLoop Creative Team',
-      image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=400',
-      tags: ['Handmade', 'Sáng tạo', 'DIY'],
-      price: 150000,
-      requirements: 'Không yêu cầu kinh nghiệm',
-      benefits: 'Sản phẩm handmade, tài liệu hướng dẫn'
-    },
-    {
-      id: 4,
-      title: 'Hội thảo Kinh tế Tuần hoàn',
-      description: 'Thảo luận về mô hình kinh tế tuần hoàn và ứng dụng trong doanh nghiệp',
-      date: '2024-02-01',
-      startTime: '09:30',
-      endTime: '16:30',
-      location: 'Khách sạn Lotte, Hà Nội',
-      address: '54 Liễu Giai, Ba Đình, Hà Nội',
-      coordinates: { lat: 21.0245, lng: 105.8412 },
-      maxParticipants: 150,
-      registeredCount: 89,
-      status: 'upcoming',
-      category: 'seminar',
-      organizer: 'GreenLoop & Hiệp hội Doanh nghiệp',
-      image: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=400',
-      tags: ['Kinh tế', 'Doanh nghiệp', 'Bền vững'],
-      price: 500000,
-      requirements: 'Dành cho doanh nghiệp và startup',
-      benefits: 'Networking, chứng chỉ, tài liệu'
-    },
-    {
-      id: 5,
-      title: 'Ngày hội Thời trang Bền vững',
-      description: 'Triển lãm và workshop về thời trang từ vật liệu tái chế',
-      date: '2024-01-10',
-      startTime: '10:00',
-      endTime: '20:00',
-      location: 'Trung tâm Thương mại Vincom, TP.HCM',
-      address: 'Vincom Center, Quận 1, TP.HCM',
-      coordinates: { lat: 10.7796, lng: 106.6999 },
-      maxParticipants: 1000,
-      registeredCount: 1000,
-      status: 'completed',
-      category: 'exhibition',
-      organizer: 'GreenLoop Fashion',
-      image: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=400',
-      tags: ['Thời trang', 'Bền vững', 'Triển lãm'],
-      price: 0,
-      requirements: 'Mở cửa cho mọi người',
-      benefits: 'Trải nghiệm, mua sắm, giải trí'
-    }
-  ])
+  const [eventData, setEventData] = useState([])
 
-  const [filteredData, setFilteredData] = useState(eventData)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  // Load danh sách sự kiện từ API
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setLoading(true)
+        const res = await getEvents({ page: 0, size: 50, sortBy: 'createdAt', sortDir: 'DESC' })
+        const list = res?.data?.content || []
+        const mapped = list.map(ev => ({
+          id: ev.id,
+          title: ev.name,
+          description: '',
+          date: ev.startTime?.substring(0, 10) || '',
+          startTime: new Date(ev.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+          endTime: new Date(ev.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+          location: ev.location,
+          address: '',
+          coordinates: ev.latitude && ev.longitude ? { lat: Number(ev.latitude), lng: Number(ev.longitude) } : undefined,
+          maxParticipants: ev.maxParticipants || 0,
+          registeredCount: ev.registeredCount || 0,
+          status: ev.status, // CREATED | PUBLISHED | ...
+          category: ev.category || 'workshop',
+          organizer: 'GreenLoop',
+          image: heroImg,
+          tags: [],
+          price: ev.price || 0,
+        }))
+        setEventData(mapped)
+        setFilteredData(mapped)
+      } catch (e) {
+        setError(e?.message || 'Không thể tải danh sách sự kiện')
+        message.error('Tải danh sách sự kiện thất bại')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchEvents()
+  }, [])
+
+  const [filteredData, setFilteredData] = useState([])
   const [searchText, setSearchText] = useState('')
-  const [filterCategory, setFilterCategory] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
 
-  // Animation variants
-  const fadeInUp = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
-  }
+  
 
   // Statistics
   const totalEvents = eventData.length
-  const upcomingEvents = eventData.filter(event => event.status === 'upcoming').length
-  const activeEvents = eventData.filter(event => event.status === 'active').length
-  const completedEvents = eventData.filter(event => event.status === 'completed').length
-  const totalParticipants = eventData.reduce((sum, event) => sum + event.registeredCount, 0)
+  const upcomingEvents = eventData.filter(event => event.status === 'CREATED').length
+  const activeEvents = eventData.filter(event => event.status === 'PUBLISHED').length
+  // Có thể thêm thống kê 'Đã kết thúc' nếu cần hiển thị
+  // const completedEvents = eventData.filter(event => event.status === 'COMPLETED').length
+  const totalParticipants = eventData.reduce((sum, event) => sum + (event.registeredCount || 0), 0)
 
   // Status mapping
   const statusConfig = {
-    upcoming: { color: 'blue', text: 'Sắp diễn ra' },
-    active: { color: 'green', text: 'Đang diễn ra' },
-    completed: { color: 'default', text: 'Đã kết thúc' },
-    cancelled: { color: 'red', text: 'Đã hủy' },
-    full: { color: 'orange', text: 'Đã đầy' }
+    CREATED: { color: 'blue', text: 'Đã tạo' },
+    PUBLISHED: { color: 'green', text: 'Công khai' },
+    COMPLETED: { color: 'default', text: 'Đã kết thúc' },
+    CANCELLED: { color: 'red', text: 'Đã hủy' }
   }
 
-  // Category mapping
-  const categoryConfig = {
-    workshop: { color: 'purple', text: 'Workshop' },
-    seminar: { color: 'blue', text: 'Hội thảo' },
-    collection: { color: 'green', text: 'Thu gom' },
-    exhibition: { color: 'orange', text: 'Triển lãm' },
-    conference: { color: 'red', text: 'Hội nghị' }
-  }
+  // Không dùng phân loại (category) nữa
 
 
   // Handle search and filter
   const handleSearch = (value) => {
     setSearchText(value)
-    filterData(value, filterCategory, filterStatus)
-  }
-
-  const handleCategoryFilter = (value) => {
-    setFilterCategory(value)
-    filterData(searchText, value, filterStatus)
+    filterData(value, filterStatus)
   }
 
   const handleStatusFilter = (value) => {
     setFilterStatus(value)
-    filterData(searchText, filterCategory, value)
+    filterData(searchText, value)
   }
 
-  const filterData = (search, category, status) => {
+  const filterData = (search, status) => {
     let filtered = eventData
 
     if (search) {
       filtered = filtered.filter(event =>
-        event.title.toLowerCase().includes(search.toLowerCase()) ||
-        event.description.toLowerCase().includes(search.toLowerCase()) ||
-        event.location.toLowerCase().includes(search.toLowerCase()) ||
-        event.organizer.toLowerCase().includes(search.toLowerCase())
+        event.title?.toLowerCase().includes(search.toLowerCase()) ||
+        event.description?.toLowerCase().includes(search.toLowerCase()) ||
+        event.location?.toLowerCase().includes(search.toLowerCase())
       )
-    }
-
-    if (category !== 'all') {
-      filtered = filtered.filter(event => event.category === category)
     }
 
     if (status !== 'all') {
@@ -226,7 +140,7 @@ const EventManagement = () => {
   const handleAddEvent = (newEvent) => {
     const updatedData = [...eventData, newEvent]
     setEventData(updatedData)
-    filterData(searchText, filterCategory, filterStatus)
+    filterData(searchText, filterStatus)
   }
 
   const handleView = (event) => {
@@ -244,13 +158,13 @@ const EventManagement = () => {
       event.id === updatedEvent.id ? updatedEvent : event
     )
     setEventData(updatedData)
-    filterData(searchText, filterCategory, filterStatus)
+    filterData(searchText, filterStatus)
   }
 
   const handleDelete = (id) => {
     const newData = eventData.filter(event => event.id !== id)
     setEventData(newData)
-    filterData(searchText, filterCategory, filterStatus)
+    filterData(searchText, filterStatus)
     message.success('Xóa sự kiện thành công!')
   }
 
@@ -269,13 +183,7 @@ const EventManagement = () => {
   }
 
   return (
-    <motion.div
-      initial="hidden"
-      animate="visible"
-      variants={fadeInUp}
-      transition={{ duration: 0.6 }}
-      className="space-y-6"
-    >
+    <div className="space-y-6">
       {/* Statistics Cards */}
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} lg={6}>
@@ -350,20 +258,6 @@ const EventManagement = () => {
             className="flex-1"
           />
           <Select
-            placeholder="Lọc theo loại sự kiện"
-            size="large"
-            value={filterCategory}
-            onChange={handleCategoryFilter}
-            className="w-full sm:w-48"
-          >
-            <Option value="all">Tất cả loại</Option>
-            <Option value="workshop">Workshop</Option>
-            <Option value="seminar">Hội thảo</Option>
-            <Option value="collection">Thu gom</Option>
-            <Option value="exhibition">Triển lãm</Option>
-            <Option value="conference">Hội nghị</Option>
-          </Select>
-          <Select
             placeholder="Lọc theo trạng thái"
             size="large"
             value={filterStatus}
@@ -371,11 +265,10 @@ const EventManagement = () => {
             className="w-full sm:w-48"
           >
             <Option value="all">Tất cả trạng thái</Option>
-            <Option value="upcoming">Sắp diễn ra</Option>
-            <Option value="active">Đang diễn ra</Option>
-            <Option value="completed">Đã kết thúc</Option>
-            <Option value="cancelled">Đã hủy</Option>
-            <Option value="full">Đã đầy</Option>
+            <Option value="CREATED">Đã tạo</Option>
+            <Option value="PUBLISHED">Công khai</Option>
+            <Option value="COMPLETED">Đã kết thúc</Option>
+            <Option value="CANCELLED">Đã hủy</Option>
           </Select>
         </div>
 
@@ -386,8 +279,9 @@ const EventManagement = () => {
           handleEdit={handleEdit}
           handleDelete={handleDelete}
           statusConfig={statusConfig}
-          categoryConfig={categoryConfig}
         />
+        {loading && <div className="text-center py-3 text-gray-500">Đang tải dữ liệu...</div>}
+        {error && <div className="text-center py-2 text-red-600">{error}</div>}
       </Card>
 
       {/* Event Detail Modal */}
@@ -411,7 +305,7 @@ const EventManagement = () => {
         onUpdate={handleUpdateEvent}
         event={selectedEvent}
       />
-    </motion.div>
+    </div>
   )
 }
 

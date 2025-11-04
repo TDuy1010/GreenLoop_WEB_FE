@@ -92,7 +92,7 @@ export const refreshAccessToken = async () => {
   }
 
   const response = await axiosClient.post('/auth/refresh', {
-    refresh_token: refreshToken
+    refreshToken: refreshToken
   });
 
   // Cập nhật token mới

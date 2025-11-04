@@ -13,8 +13,7 @@ import {
   CalendarOutlined,
   EnvironmentOutlined,
   EyeOutlined,
-  ClockCircleOutlined,
-  TeamOutlined
+  ClockCircleOutlined
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 
@@ -74,31 +73,15 @@ const EventTable = ({
       ),
     },
     {
-      title: 'Loại sự kiện',
-      dataIndex: 'category',
-      key: 'category',
-      render: (category) => {
-        const config = categoryConfig[category] || { color: 'default', text: category }
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => {
+        const config = statusConfig[status] || { color: 'default', text: status }
         return <Tag color={config.color}>{config.text}</Tag>
       },
     },
-    {
-      title: 'Người tham gia',
-      key: 'participants',
-      render: (_, record) => (
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-1 text-sm">
-            <TeamOutlined className="text-gray-400" />
-            <span className="font-medium">
-              {record.registeredCount}/{record.maxParticipants}
-            </span>
-          </div>
-          <div className="text-xs text-gray-500 mt-1">
-            {Math.round((record.registeredCount / record.maxParticipants) * 100)}% đã đăng ký
-          </div>
-        </div>
-      ),
-    },
+    // Cột số người tham gia đã được yêu cầu bỏ đi
     {
       title: 'Phí tham gia',
       dataIndex: 'price',

@@ -11,6 +11,11 @@ const API_CONFIG = {
   TIMEOUT: 10000,
 };
 
+// ===== DEBUG/SAFETY SWITCH =====
+// Bật cờ này để tạm thời KHÔNG tự clear localStorage/redirect khi refresh thất bại.
+// Mục đích: theo dõi xem có gọi /auth/refresh hay không và tránh bị "văng" ngoài ý muốn.
+const DISABLE_AUTO_LOGOUT = true;
+
 // Export config để sử dụng ở nơi khác nếu cần
 export { API_CONFIG };
 
@@ -26,6 +31,8 @@ const axiosClient = axios.create({
 // ===== FLAG ĐỂ TRÁNH INFINITE LOOP KHI REFRESH TOKEN =====
 let isRefreshing = false;
 let failedQueue = [];
+// đếm số lần 401 liên tiếp (nếu cần dùng cho UI), tạm thời không sử dụng
+// let authFailureCount = 0;
 
 const processQueue = (error, token = null) => {
   failedQueue.forEach(({ resolve, reject }) => {
@@ -39,6 +46,23 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
+// ===== TOKEN UTILS =====
+const getJwtExpiryMs = (token) => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload?.exp ? payload.exp * 1000 : 0;
+  } catch {
+    return 0;
+  }
+};
+
+const isTokenExpiringSoon = (token, thresholdMs = 60_000) => {
+  if (!token) return true;
+  const expMs = getJwtExpiryMs(token);
+  if (!expMs) return false;
+  return Date.now() + thresholdMs >= expMs;
+};
+
 // ===== REQUEST INTERCEPTOR =====
 // Tự động gắn token vào mỗi request
 axiosClient.interceptors.request.use(
@@ -46,7 +70,62 @@ axiosClient.interceptors.request.use(
     if (typeof window !== 'undefined') {
       // Lấy token từ localStorage
       const token = localStorage.getItem("accessToken");
-      
+      const refreshToken = localStorage.getItem("refreshToken");
+
+      // Chủ động refresh nếu token sắp hết hạn để tránh 401 giữa chừng
+      if (token && refreshToken && isTokenExpiringSoon(token) && !isRefreshing) {
+        // Bật cờ refresh để chặn gọi trùng
+        isRefreshing = true;
+        return new Promise((resolve, reject) => {
+          axios.post(
+              `${API_CONFIG.BASE_URL}/auth/refresh`,
+              { refreshToken }
+          ).then((response) => {
+              if (response.data.success && response.data.data) {
+                const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+                localStorage.setItem("accessToken", accessToken);
+                if (newRefreshToken) {
+                  localStorage.setItem("refreshToken", newRefreshToken);
+                }
+
+                // Cập nhật userInfo expiry
+                const userInfo = JSON.parse(localStorage.getItem("userInfo") || '{}');
+                if (userInfo && Object.keys(userInfo).length > 0) {
+                  localStorage.setItem("userInfo", JSON.stringify({
+                    ...userInfo,
+                    expiresIn: response.data.data.expiresIn,
+                    refreshExpiresIn: response.data.data.refreshExpiresIn
+                  }));
+                }
+
+                processQueue(null, accessToken);
+                config.headers.Authorization = `Bearer ${accessToken}`;
+                isRefreshing = false;
+                resolve(config);
+              } else {
+                throw new Error('Refresh token response invalid');
+              }
+          }).catch((err) => {
+            processQueue(err, null);
+            isRefreshing = false;
+            // Chỉ đăng xuất khi refresh bị từ chối (401/403)
+            const status = err?.response?.status;
+            if ((status === 401 || status === 403) && !DISABLE_AUTO_LOGOUT) {
+              localStorage.removeItem("accessToken");
+              localStorage.removeItem("refreshToken");
+              localStorage.removeItem("userInfo");
+              const currentPath = window.location.pathname;
+              if (currentPath.startsWith('/admin')) {
+                window.location.href = '/admin/login';
+              } else {
+                window.location.href = '/login';
+              }
+            }
+            reject(err);
+          });
+        });
+      }
+
       // Nếu có token thì gắn vào header Authorization
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -97,7 +176,7 @@ axiosClient.interceptors.response.use(
           // Gọi API refresh token
           const response = await axios.post(
             `${API_CONFIG.BASE_URL}/auth/refresh`,
-            { refresh_token: refreshToken }
+            { refreshToken }
           );
 
           if (response.data.success && response.data.data) {
@@ -131,36 +210,27 @@ axiosClient.interceptors.response.use(
           console.error("Refresh token failed:", refreshError);
           processQueue(refreshError, null);
           isRefreshing = false;
-          
-          // Clear token và redirect về login
-          localStorage.removeItem("accessToken");
-          localStorage.removeItem("refreshToken");
-          localStorage.removeItem("userInfo");
-          
-          // Kiểm tra current path để redirect đúng
-          const currentPath = window.location.pathname;
-          if (currentPath.startsWith('/admin')) {
-            window.location.href = '/admin/login';
-          } else {
-            window.location.href = '/login';
+
+          // Chỉ đăng xuất khi refresh bị từ chối (401/403)
+          const status = refreshError?.response?.status;
+          if ((status === 401 || status === 403) && !DISABLE_AUTO_LOGOUT) {
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("userInfo");
+            const currentPath = window.location.pathname;
+            if (currentPath.startsWith('/admin')) {
+              window.location.href = '/admin/login';
+            } else {
+              window.location.href = '/login';
+            }
           }
-          
           return Promise.reject(refreshError);
         }
       } else {
-        // Không có refresh token, clear và redirect
+        // Không có refresh token: KHÔNG clear ngay; chỉ trả lỗi về cho caller
+        // để UI xử lý (ví dụ hiển thị thông báo) thay vì redirect tự động.
         isRefreshing = false;
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("userInfo");
-        
-        // Kiểm tra current path để redirect đúng
-        const currentPath = window.location.pathname;
-        if (currentPath.startsWith('/admin')) {
-          window.location.href = '/admin/login';
-        } else {
-          window.location.href = '/login';
-        }
+        return Promise.reject(error.response?.data || error);
       }
     }
 
