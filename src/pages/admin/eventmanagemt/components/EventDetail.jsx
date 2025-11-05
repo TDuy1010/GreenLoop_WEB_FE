@@ -17,6 +17,7 @@ import {
   EnvironmentOutlined,
   TagOutlined
 } from '@ant-design/icons'
+import dayjs from 'dayjs'
 import { getEventById } from '../../../../service/api/eventApi'
 import Vietmap from '../../../../components/Vietmap'
 import heroImg from '../../../../assets/images/herosection.jpg'
@@ -30,34 +31,88 @@ const EventDetail = ({ visible, onClose, event }) => {
       if (!event?.id || !visible) return
       setLoading(true)
       setDetail(null)
-      const res = await getEventById(event.id)
-      const d = res?.data
-      if (d) {
-        setDetail({
-          id: d.id,
-          code: d.code,
-          title: d.name,
-          description: d.description,
-          image: d.imageUrl || heroImg,
-          location: d.locationDetail,
-          address: d.locationDetail,
-          date: d.startTime,
-          startTime: new Date(d.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-          endTime: new Date(d.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-          status: d.status,
-          coordinates: d.latitude && d.longitude ? { lat: Number(d.latitude), lng: Number(d.longitude) } : undefined,
-          totalRegistrations: d.totalRegistrations,
-          totalStaffs: d.totalStaffs,
-          isRegistered: d.isRegistered,
-          isActive: d.isActive,
-          googlePlaceId: d.googlePlaceId,
-          createdBy: d.createByName || d.createdBy,
-          createdAt: d.createdAt,
-          updatedBy: d.updatedByName || d.updatedBy,
-          updatedAt: d.updatedAt,
-        })
+      try {
+        const res = await getEventById(event.id)
+        const d = res?.data?.data || res?.data // Kiểm tra cả nested structure
+        console.log('Event Detail Response:', res)
+        console.log('Event Data:', d)
+        
+        if (d) {
+          // Kiểm tra nhiều tên field khác nhau cho hình ảnh
+          const imageUrl = d.imageUrl || 
+                          d.thumbnail || 
+                          d.thumbnailUrl || 
+                          d.image || 
+                          d.photo ||
+                          (res?.data?.imageUrl) || 
+                          (res?.data?.thumbnail) ||
+                          null
+          
+          console.log('Image URL found:', imageUrl)
+          
+          setDetail({
+            id: d.id,
+            code: d.code,
+            title: d.name,
+            description: d.description,
+            image: imageUrl || heroImg,
+            location: d.locationDetail || d.location,
+            address: d.locationDetail || d.location,
+            date: d.startTime,
+            // Convert UTC time từ backend về GMT+7 (Việt Nam) khi hiển thị
+            // Backend lưu UTC: 7:00 GMT+7 = 00:00 UTC, 10:00 GMT+7 = 03:00 UTC
+            // Cần convert: UTC + 7 giờ = GMT+7
+            startTime: (() => {
+              try {
+                // Parse UTC string (có Z hoặc UTC format)
+                const date = new Date(d.startTime)
+                // Thêm 7 giờ (7 * 60 * 60 * 1000 milliseconds) để convert về GMT+7
+                const vietnamTime = new Date(date.getTime() + (7 * 60 * 60 * 1000))
+                return dayjs(vietnamTime).format('HH:mm')
+              } catch (e) {
+                console.error('Error parsing startTime:', d.startTime, e)
+                // Fallback: thử parse như local time
+                try {
+                  return dayjs(d.startTime).format('HH:mm')
+                } catch {
+                  return '--:--'
+                }
+              }
+            })(),
+            endTime: (() => {
+              try {
+                // Parse UTC string và thêm 7 giờ để convert về GMT+7
+                const date = new Date(d.endTime)
+                const vietnamTime = new Date(date.getTime() + (7 * 60 * 60 * 1000))
+                return dayjs(vietnamTime).format('HH:mm')
+              } catch (e) {
+                console.error('Error parsing endTime:', d.endTime, e)
+                // Fallback: thử parse như local time
+                try {
+                  return dayjs(d.endTime).format('HH:mm')
+                } catch {
+                  return '--:--'
+                }
+              }
+            })(),
+            status: d.status,
+            coordinates: d.latitude && d.longitude ? { lat: Number(d.latitude), lng: Number(d.longitude) } : undefined,
+            totalRegistrations: d.totalRegistrations,
+            totalStaffs: d.totalStaffs,
+            isRegistered: d.isRegistered,
+            isActive: d.isActive,
+            googlePlaceId: d.googlePlaceId,
+            createdBy: d.createByName || d.createdBy,
+            createdAt: d.createdAt,
+            updatedBy: d.updatedByName || d.updatedBy,
+            updatedAt: d.updatedAt,
+          })
+        }
+      } catch (error) {
+        console.error('Error loading event detail:', error)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
     loadDetail()
   }, [event?.id, visible])

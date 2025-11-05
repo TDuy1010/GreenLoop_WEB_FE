@@ -16,6 +16,7 @@ import {
   ClockCircleOutlined,
   TeamOutlined
 } from '@ant-design/icons'
+import dayjs from 'dayjs'
  
 
 import EventTable from './components/EventTable'
@@ -23,7 +24,7 @@ import EventDetail from './components/EventDetail'
 import EventAdd from './components/EventAdd'
 import EventEdit from './components/EventEdit'
 import { getEvents } from '../../../service/api/eventApi'
-import heroImg from '../../../assets/images/herosection.jpg'
+import { API_CONFIG } from '../../../service/instance'
 
 const { Search } = Input
 const { Option } = Select
@@ -37,9 +38,11 @@ const EventManagement = () => {
   const [selectedEvent, setSelectedEvent] = useState(null)
 
   const [eventData, setEventData] = useState([])
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  
   // Load danh sách sự kiện từ API
   useEffect(() => {
     const fetchEvents = async () => {
@@ -47,25 +50,71 @@ const EventManagement = () => {
         setLoading(true)
         const res = await getEvents({ page: 0, size: 50, sortBy: 'createdAt', sortDir: 'DESC' })
         const list = res?.data?.content || []
-        const mapped = list.map(ev => ({
-          id: ev.id,
-          title: ev.name,
-          description: '',
-          date: ev.startTime?.substring(0, 10) || '',
-          startTime: new Date(ev.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-          endTime: new Date(ev.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-          location: ev.location,
-          address: '',
-          coordinates: ev.latitude && ev.longitude ? { lat: Number(ev.latitude), lng: Number(ev.longitude) } : undefined,
-          maxParticipants: ev.maxParticipants || 0,
-          registeredCount: ev.registeredCount || 0,
-          status: ev.status, // CREATED | PUBLISHED | ...
-          category: ev.category || 'workshop',
-          organizer: 'GreenLoop',
-          image: heroImg,
-          tags: [],
-          price: ev.price || 0,
-        }))
+        const mapped = list.map(ev => {
+          // Chuẩn hoá URL ảnh từ backend (ưu tiên các field phổ biến)
+          const rawImage = ev.imageUrl || ev.thumbnail || ev.thumbnailUrl || ev.image || ev.photo || ''
+          const isAbsolute = typeof rawImage === 'string' && /^(http|https):\/\//i.test(rawImage)
+          // Lấy domain API gốc (bỏ /api/v1 nếu có) để ghép cho đường dẫn tương đối
+          const apiRoot = (API_CONFIG?.BASE_URL || '').replace(/\/api\/v1$/i, '')
+          const normalizedImage = (() => {
+            if (!rawImage) return ''
+            if (isAbsolute) return rawImage
+            // Nếu đường dẫn đã bắt đầu bằng /api thì để nguyên (dev proxy sẽ forward)
+            if (rawImage.startsWith('/api')) return rawImage
+            // Ngược lại, ghép với apiRoot nếu có; fallback ghép với BASE_URL
+            if (apiRoot) return `${apiRoot}${rawImage}`
+            return `${API_CONFIG?.BASE_URL || ''}${rawImage}`
+          })()
+          // Convert UTC time từ backend về GMT+7 (Việt Nam) khi hiển thị
+          const convertToVietnamTime = (utcTimeString) => {
+            try {
+              const date = new Date(utcTimeString)
+              // Thêm 7 giờ để convert từ UTC về GMT+7
+              const vietnamTime = new Date(date.getTime() + (7 * 60 * 60 * 1000))
+              return dayjs(vietnamTime).format('HH:mm')
+            } catch {
+              // Fallback: thử parse như local time
+              try {
+                return dayjs(utcTimeString).format('HH:mm')
+              } catch {
+                return '--:--'
+              }
+            }
+          }
+
+          // Convert UTC date về GMT+7 để lấy đúng ngày
+          const convertToVietnamDate = (utcTimeString) => {
+            try {
+              const date = new Date(utcTimeString)
+              // Thêm 7 giờ để convert từ UTC về GMT+7
+              const vietnamTime = new Date(date.getTime() + (7 * 60 * 60 * 1000))
+              return dayjs(vietnamTime).format('YYYY-MM-DD')
+            } catch {
+              // Fallback: lấy 10 ký tự đầu nếu không parse được
+              return utcTimeString?.substring(0, 10) || ''
+            }
+          }
+
+          return {
+            id: ev.id,
+            title: ev.name,
+            description: '',
+            date: convertToVietnamDate(ev.startTime),
+            startTime: convertToVietnamTime(ev.startTime),
+            endTime: convertToVietnamTime(ev.endTime),
+            location: ev.location,
+            address: '',
+            coordinates: ev.latitude && ev.longitude ? { lat: Number(ev.latitude), lng: Number(ev.longitude) } : undefined,
+            maxParticipants: ev.maxParticipants || 0,
+            registeredCount: ev.registeredCount || 0,
+            status: ev.status, // CREATED | PUBLISHED | ...
+            category: ev.category || 'workshop',
+            organizer: 'GreenLoop',
+            image: normalizedImage,
+            tags: [],
+            price: ev.price || 0,
+          }
+        })
         setEventData(mapped)
         setFilteredData(mapped)
       } catch (e) {
@@ -114,8 +163,9 @@ const EventManagement = () => {
     filterData(searchText, value)
   }
 
-  const filterData = (search, status) => {
-    let filtered = eventData
+  const filterData = (search, status, data = null) => {
+    // Sử dụng data được truyền vào hoặc eventData từ state
+    let filtered = data || eventData
 
     if (search) {
       filtered = filtered.filter(event =>
@@ -137,10 +187,104 @@ const EventManagement = () => {
     setAddModalVisible(true)
   }
 
-  const handleAddEvent = (newEvent) => {
-    const updatedData = [...eventData, newEvent]
-    setEventData(updatedData)
-    filterData(searchText, filterStatus)
+  const handleAddEvent = async () => {
+    // Reload danh sách từ API sau khi tạo thành công
+    console.log('EventManagement: handleAddEvent called - reloading event list...')
+    try {
+      setLoading(true)
+      setError('')
+      const res = await getEvents({ page: 0, size: 50, sortBy: 'createdAt', sortDir: 'DESC' })
+      console.log('EventManagement: getEvents response:', res)
+      const list = res?.data?.content || []
+      console.log('EventManagement: Found', list.length, 'events')
+      const mapped = list.map(ev => {
+        const rawImage = ev.imageUrl || ev.thumbnail || ev.thumbnailUrl || ev.image || ev.photo || ''
+        const isAbsolute = typeof rawImage === 'string' && /^(http|https):\/\//i.test(rawImage)
+        const apiRoot = (API_CONFIG?.BASE_URL || '').replace(/\/api\/v1$/i, '')
+        const normalizedImage = (() => {
+          if (!rawImage) return ''
+          if (isAbsolute) return rawImage
+          if (rawImage.startsWith('/api')) return rawImage
+          if (apiRoot) return `${apiRoot}${rawImage}`
+          return `${API_CONFIG?.BASE_URL || ''}${rawImage}`
+        })()
+        // Convert UTC time từ backend về GMT+7 (Việt Nam) khi hiển thị
+        const convertToVietnamTime = (utcTimeString) => {
+          try {
+            const date = new Date(utcTimeString)
+            // Thêm 7 giờ để convert từ UTC về GMT+7
+            const vietnamTime = new Date(date.getTime() + (7 * 60 * 60 * 1000))
+            return dayjs(vietnamTime).format('HH:mm')
+          } catch {
+            // Fallback: thử parse như local time
+            try {
+              return dayjs(utcTimeString).format('HH:mm')
+            } catch {
+              return '--:--'
+            }
+          }
+        }
+
+        // Convert UTC date về GMT+7 để lấy đúng ngày
+        const convertToVietnamDate = (utcTimeString) => {
+          try {
+            const date = new Date(utcTimeString)
+            // Thêm 7 giờ để convert từ UTC về GMT+7
+            const vietnamTime = new Date(date.getTime() + (7 * 60 * 60 * 1000))
+            return dayjs(vietnamTime).format('YYYY-MM-DD')
+          } catch {
+            // Fallback: lấy 10 ký tự đầu nếu không parse được
+            return utcTimeString?.substring(0, 10) || ''
+          }
+        }
+
+        return {
+          id: ev.id,
+          title: ev.name,
+          description: '',
+          date: convertToVietnamDate(ev.startTime),
+          startTime: convertToVietnamTime(ev.startTime),
+          endTime: convertToVietnamTime(ev.endTime),
+          location: ev.location,
+          address: '',
+          coordinates: ev.latitude && ev.longitude ? { lat: Number(ev.latitude), lng: Number(ev.longitude) } : undefined,
+          maxParticipants: ev.maxParticipants || 0,
+          registeredCount: ev.registeredCount || 0,
+          status: ev.status,
+          category: ev.category || 'workshop',
+          organizer: 'GreenLoop',
+          image: normalizedImage,
+          tags: [],
+          price: ev.price || 0,
+        }
+      })
+      // Cập nhật state
+      setEventData(mapped)
+      // Filter với data mới ngay lập tức (không phụ thuộc vào state update)
+      let filtered = mapped
+      if (searchText) {
+        filtered = filtered.filter(event =>
+          event.title?.toLowerCase().includes(searchText.toLowerCase()) ||
+          event.description?.toLowerCase().includes(searchText.toLowerCase()) ||
+          event.location?.toLowerCase().includes(searchText.toLowerCase())
+        )
+      }
+      if (filterStatus !== 'all') {
+        filtered = filtered.filter(event => event.status === filterStatus)
+      }
+      setFilteredData(filtered)
+      // Trigger refresh để đảm bảo component re-render
+      setRefreshTrigger(prev => prev + 1)
+      console.log('EventManagement: Event list updated successfully with', mapped.length, 'events')
+      console.log('EventManagement: Filtered data count:', filtered.length)
+    } catch (error) {
+      console.error('EventManagement: Error reloading events:', error)
+      const errorMsg = error?.message || 'Không thể tải lại danh sách sự kiện'
+      setError(errorMsg)
+      message.error(errorMsg)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleView = (event) => {
@@ -274,6 +418,7 @@ const EventManagement = () => {
 
         {/* Table */}
         <EventTable
+          key={refreshTrigger}
           filteredData={filteredData}
           handleView={handleView}
           handleEdit={handleEdit}
