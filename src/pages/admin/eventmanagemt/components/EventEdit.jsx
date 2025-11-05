@@ -11,6 +11,7 @@ import {
   Upload,
   message,
   Divider,
+  Card,
   Alert,
   Statistic,
   Row,
@@ -23,6 +24,8 @@ import {
   TeamOutlined
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
+import { updateEvent, updateEventThumbnail, updateEventStatus } from '../../../../service/api/eventApi'
+import VietmapInteractive from '../../../../components/VietmapInteractive'
 
 const { TextArea } = Input
 const { Option } = Select
@@ -31,28 +34,29 @@ const EventEdit = ({ visible, onClose, onUpdate, event }) => {
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
   const [imageUrl, setImageUrl] = useState(null)
+  const [thumbnailFile, setThumbnailFile] = useState(null)
+  const [selectedLocation, setSelectedLocation] = useState({ latitude: null, longitude: null, address: '' })
+  const vietmapApiKey = import.meta.env.VITE_VIETMAP_API_KEY || '3aa910999593c14303117e42dc0e62171cd42a0daa6c944c'
 
   useEffect(() => {
     if (event && visible) {
-      // Set form values when event data is loaded
+      const lat = event?.coordinates?.lat != null ? Number(event.coordinates.lat) : (event?.latitude != null ? Number(event.latitude) : null)
+      const lng = event?.coordinates?.lng != null ? Number(event.coordinates.lng) : (event?.longitude != null ? Number(event.longitude) : null)
       form.setFieldsValue({
-        title: event.title,
+        name: event.title || event.name,
         description: event.description,
-        category: event.category,
         status: event.status,
         date: event.date ? dayjs(event.date) : null,
         startTime: event.startTime ? dayjs(event.startTime, 'HH:mm') : null,
         endTime: event.endTime ? dayjs(event.endTime, 'HH:mm') : null,
         location: event.location,
-        address: event.address,
-        organizer: event.organizer,
-        maxParticipants: event.maxParticipants,
-        price: event.price,
-        tags: event.tags,
-        requirements: event.requirements,
-        benefits: event.benefits
+        note: event.note || '',
+        latitude: lat,
+        longitude: lng
       })
+      setSelectedLocation({ latitude: lat, longitude: lng, address: event.location || '' })
       setImageUrl(event.image)
+      setThumbnailFile(null)
     }
   }, [event, visible, form])
 
@@ -61,34 +65,114 @@ const EventEdit = ({ visible, onClose, onUpdate, event }) => {
       setLoading(true)
       const values = await form.validateFields()
       
-      // Format dates and times
-      const formattedValues = {
-        ...event,
-        ...values,
-        date: values.date.format('YYYY-MM-DD'),
-        startTime: values.startTime.format('HH:mm'),
-        endTime: values.endTime.format('HH:mm'),
-        image: imageUrl || event.image
+      // Chuẩn hoá thời gian gửi lên backend (UTC ISO 8601)
+      const dateStr = values.date.format('YYYY-MM-DD')
+      const startTimeStr = values.startTime.format('HH:mm')
+      const endTimeStr = values.endTime.format('HH:mm')
+      const startDateTime = dayjs(`${dateStr} ${startTimeStr}`)
+      const endDateTime = dayjs(`${dateStr} ${endTimeStr}`)
+
+      const latitude = selectedLocation.latitude != null ? Number(selectedLocation.latitude) : (
+        event?.coordinates?.lat != null ? Number(event.coordinates.lat) : (event?.latitude != null ? Number(event.latitude) : null)
+      )
+      const longitude = selectedLocation.longitude != null ? Number(selectedLocation.longitude) : (
+        event?.coordinates?.lng != null ? Number(event.coordinates.lng) : (event?.longitude != null ? Number(event.longitude) : null)
+      )
+
+      const eventData = {
+        name: values.name,
+        description: values.description || '',
+        location: values.location || event.location,
+        latitude: latitude,
+        longitude: longitude,
+        startTime: startDateTime.toISOString(),
+        endTime: endDateTime.toISOString(),
+        status: values.status || event.status,
+        note: values.note || ''
       }
 
-      await onUpdate(formattedValues)
-      message.success('Cập nhật sự kiện thành công!')
-      onClose()
+      // Gọi API cập nhật (JSON)
+      const res = await updateEvent(event.id, eventData)
+      const ok = !!(res && (res.success === true || res.statusCode === 200 || /success/i.test(res.message || '')))
+
+      // Nếu có chọn thumbnail mới thì gọi API riêng để cập nhật ảnh
+      if (ok) {
+        let newImageUrl = imageUrl || event.image
+        // Nếu trạng thái thay đổi, gọi API riêng cập nhật status
+        const statusChanged = (values.status && values.status !== event.status)
+        if (statusChanged) {
+          try {
+            const stRes = await updateEventStatus(event.id, values.status)
+            const stOk = !!(stRes && (stRes.success === true || stRes.statusCode === 200 || /success/i.test(stRes.message || '')))
+            if (!stOk) {
+              message.warning('Cập nhật trạng thái có thể chưa thành công, vui lòng kiểm tra lại!')
+            }
+          } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn('Update status failed:', e)
+            message.warning('Không cập nhật được trạng thái, nhưng dữ liệu khác đã được lưu!')
+          }
+        }
+        if (thumbnailFile) {
+          try {
+            const thumbRes = await updateEventThumbnail(event.id, thumbnailFile)
+            const okThumb = !!(thumbRes && (thumbRes.success === true || thumbRes.statusCode === 200 || /success/i.test(thumbRes.message || '')))
+            // Ưu tiên URL trả về từ API, nếu không có thì thêm cache-busting để thấy ảnh mới
+            const apiUrl = thumbRes?.data?.url || thumbRes?.data?.thumbnailUrl || thumbRes?.url
+            newImageUrl = (okThumb && apiUrl) ? apiUrl : `${newImageUrl}?t=${Date.now()}`
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.warn('Update thumbnail failed:', err)
+            message.warning('Không cập nhật được ảnh, nhưng dữ liệu đã được lưu!')
+            // Dùng cache-busting để ép trình duyệt tải lại ảnh cũ nếu backend ghi đè file cũ
+            newImageUrl = `${newImageUrl}?t=${Date.now()}`
+          }
+        }
+        // Đồng bộ lại dữ liệu bảng phía ngoài
+        const updatedForTable = {
+          ...event,
+          title: values.name,
+          description: values.description,
+          date: dateStr,
+          startTime: startTimeStr,
+          endTime: endTimeStr,
+          location: values.location,
+          status: values.status || event.status,
+          image: newImageUrl,
+        }
+        await onUpdate(updatedForTable)
+        message.success('Cập nhật sự kiện thành công!')
+        onClose()
+      } else {
+        const msg = res?.message || res?.data?.message || 'Cập nhật sự kiện thất bại!'
+        message.error(msg)
+      }
     } catch (error) {
       console.error('Validation failed:', error)
-      message.error('Vui lòng kiểm tra lại thông tin!')
+      message.error(error?.message || 'Vui lòng kiểm tra lại thông tin!')
     } finally {
       setLoading(false)
     }
   }
 
   const handleImageChange = (info) => {
-    if (info.file.status === 'done') {
-      setImageUrl(info.file.response?.url || event.image)
-      message.success('Tải ảnh lên thành công!')
-    } else if (info.file.status === 'error') {
-      message.error('Tải ảnh lên thất bại!')
+    const picked = info.file?.originFileObj || info.fileList?.[0]?.originFileObj || info.file
+    if (picked) {
+      setThumbnailFile(picked)
     }
+  }
+
+  const beforeUpload = (file) => {
+    setThumbnailFile(file)
+    return false
+  }
+
+  const handleLocationSelect = (lat, lng, address) => {
+    setSelectedLocation({ latitude: lat, longitude: lng, address })
+    form.setFieldsValue({
+      latitude: Number(lat),
+      longitude: Number(lng)
+    })
   }
 
   if (!event) return null
@@ -117,8 +201,9 @@ const EventEdit = ({ visible, onClose, onUpdate, event }) => {
           Cập nhật
         </Button>
       ]}
-      width={800}
+      width={1000}
       className="event-edit-modal"
+      destroyOnClose
     >
       {/* Event Info Banner */}
       <Alert
@@ -166,225 +251,85 @@ const EventEdit = ({ visible, onClose, onUpdate, event }) => {
         layout="vertical"
         className="mt-4"
       >
-        {/* Image Upload */}
-        <Form.Item
-          label="Hình ảnh sự kiện"
-          name="image"
-        >
-          <Upload
-            listType="picture-card"
-            maxCount={1}
-            onChange={handleImageChange}
-            beforeUpload={() => false}
-            defaultFileList={imageUrl ? [{
-              uid: '-1',
-              name: 'image.png',
-              status: 'done',
-              url: imageUrl,
-            }] : []}
-          >
-            <div>
-              <UploadOutlined />
-              <div className="mt-2">Tải ảnh lên</div>
-            </div>
-          </Upload>
-        </Form.Item>
+        <Card title="Thông tin cơ bản" className="mb-4" size="small">
+          <div className="grid grid-cols-2 gap-4">
+            <Form.Item label="Tên sự kiện" name="name" rules={[{ required: true, message: 'Vui lòng nhập tên sự kiện!' }, { min: 5, message: 'Tên sự kiện phải có ít nhất 5 ký tự!' }]} className="col-span-2">
+              <Input placeholder="Nhập tên sự kiện" size="large" />
+            </Form.Item>
+            <Form.Item label="Mô tả" name="description" rules={[{ required: true, message: 'Vui lòng nhập mô tả!' }]} className="col-span-2">
+              <TextArea rows={3} placeholder="Nhập mô tả chi tiết về sự kiện" />
+            </Form.Item>
+            <Form.Item label="Trạng thái" name="status" rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}>
+              <Select placeholder="Chọn trạng thái" size="large">
+                <Option value="CREATED">Đã tạo</Option>
+                <Option value="PUBLISHED">Công khai</Option>
+                <Option value="UPCOMING">Sắp diễn ra</Option>
+                <Option value="ONGOING">Đang diễn ra</Option>
+                <Option value="CLOSED">Đã kết thúc</Option>
+                <Option value="CANCELED">Đã hủy</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item label="Ghi chú" name="note">
+              <TextArea rows={2} placeholder="Ghi chú thêm (tùy chọn)" />
+            </Form.Item>
+          </div>
+        </Card>
 
-        {/* Basic Information */}
-        <div className="grid grid-cols-2 gap-4">
-          <Form.Item
-            label="Tên sự kiện"
-            name="title"
-            rules={[
-              { required: true, message: 'Vui lòng nhập tên sự kiện!' },
-              { min: 5, message: 'Tên sự kiện phải có ít nhất 5 ký tự!' }
-            ]}
-            className="col-span-2"
-          >
-            <Input placeholder="Nhập tên sự kiện" size="large" />
-          </Form.Item>
-
-          <Form.Item
-            label="Mô tả"
-            name="description"
-            rules={[
-              { required: true, message: 'Vui lòng nhập mô tả!' }
-            ]}
-            className="col-span-2"
-          >
-            <TextArea 
-              rows={3} 
-              placeholder="Nhập mô tả chi tiết về sự kiện"
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="Danh mục"
-            name="category"
-            rules={[{ required: true, message: 'Vui lòng chọn danh mục!' }]}
-          >
-            <Select placeholder="Chọn danh mục" size="large">
-              <Option value="workshop">Hội thảo</Option>
-              <Option value="collection">Thu gom</Option>
-              <Option value="seminar">Tọa đàm</Option>
-              <Option value="volunteer">Tình nguyện</Option>
-              <Option value="campaign">Chiến dịch</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            label="Trạng thái"
-            name="status"
-            rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
-          >
-            <Select placeholder="Chọn trạng thái" size="large">
-              <Option value="upcoming">Sắp diễn ra</Option>
-              <Option value="active">Đang diễn ra</Option>
-              <Option value="completed">Đã kết thúc</Option>
-              <Option value="cancelled">Đã hủy</Option>
-              <Option value="full">Đã đầy</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            label="Ngày tổ chức"
-            name="date"
-            rules={[{ required: true, message: 'Vui lòng chọn ngày!' }]}
-          >
-            <DatePicker 
-              className="w-full" 
-              size="large"
-              format="DD/MM/YYYY"
-              placeholder="Chọn ngày"
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="Thời gian"
-            className="col-span-1"
-          >
+        <Card title="Thời gian" className="mb-4" size="small">
+          <div className="grid grid-cols-2 gap-4">
+            <Form.Item label="Ngày tổ chức" name="date" rules={[{ required: true, message: 'Vui lòng chọn ngày!' }]}> 
+              <DatePicker className="w-full" size="large" format="DD/MM/YYYY" placeholder="Chọn ngày" />
+            </Form.Item>
             <div className="grid grid-cols-2 gap-2">
-              <Form.Item
-                name="startTime"
-                rules={[{ required: true, message: 'Chọn giờ bắt đầu!' }]}
-                className="mb-0"
-              >
-                <TimePicker 
-                  className="w-full" 
-                  size="large"
-                  format="HH:mm"
-                  placeholder="Giờ bắt đầu"
-                />
+              <Form.Item name="startTime" label="Giờ bắt đầu" rules={[{ required: true, message: 'Chọn giờ bắt đầu!' }]} className="mb-0">
+                <TimePicker className="w-full" size="large" format="HH:mm" placeholder="Giờ bắt đầu" />
               </Form.Item>
-              <Form.Item
-                name="endTime"
-                rules={[{ required: true, message: 'Chọn giờ kết thúc!' }]}
-                className="mb-0"
-              >
-                <TimePicker 
-                  className="w-full" 
-                  size="large"
-                  format="HH:mm"
-                  placeholder="Giờ kết thúc"
-                />
+              <Form.Item name="endTime" label="Giờ kết thúc" rules={[{ required: true, message: 'Chọn giờ kết thúc!' }]} className="mb-0">
+                <TimePicker className="w-full" size="large" format="HH:mm" placeholder="Giờ kết thúc" />
               </Form.Item>
             </div>
-          </Form.Item>
-        </div>
+          </div>
+        </Card>
 
-        {/* Location */}
-        <div className="grid grid-cols-2 gap-4">
-          <Form.Item
-            label="Địa điểm"
-            name="location"
-            rules={[{ required: true, message: 'Vui lòng nhập địa điểm!' }]}
-          >
+        <Card title="Địa điểm" className="mb-4" size="small">
+          <Form.Item label="Tên địa điểm" name="location" rules={[{ required: true, message: 'Vui lòng nhập địa điểm!' }]}> 
             <Input placeholder="Tên địa điểm" size="large" />
           </Form.Item>
-
-          <Form.Item
-            label="Địa chỉ chi tiết"
-            name="address"
-            rules={[{ required: true, message: 'Vui lòng nhập địa chỉ!' }]}
-          >
-            <Input placeholder="Địa chỉ đầy đủ" size="large" />
+          <Form.Item name="latitude" hidden>
+            <Input />
           </Form.Item>
-        </div>
-
-        {/* Organizer & Participants */}
-        <div className="grid grid-cols-2 gap-4">
-          <Form.Item
-            label="Người tổ chức"
-            name="organizer"
-            rules={[{ required: true, message: 'Vui lòng nhập người tổ chức!' }]}
-          >
-            <Input placeholder="Tên người/đơn vị tổ chức" size="large" />
+          <Form.Item name="longitude" hidden>
+            <Input />
           </Form.Item>
+          <div className="mb-2 text-sm font-medium text-gray-700">Chọn vị trí trên bản đồ (click vào map hoặc tìm kiếm địa chỉ)</div>
+          {selectedLocation.latitude && selectedLocation.longitude && (
+            <div className="mb-2 text-xs text-green-600">✓ Đã chọn vị trí: {Number(selectedLocation.latitude).toFixed(6)}, {Number(selectedLocation.longitude).toFixed(6)}</div>
+          )}
+          <VietmapInteractive
+            latitude={selectedLocation.latitude}
+            longitude={selectedLocation.longitude}
+            height="360px"
+            apiKey={vietmapApiKey}
+            onLocationSelect={handleLocationSelect}
+          />
+        </Card>
 
-          <Form.Item
-            label="Số lượng tối đa"
-            name="maxParticipants"
-            rules={[
-              { required: true, message: 'Vui lòng nhập số lượng!' },
-              { type: 'number', min: 1, message: 'Số lượng phải lớn hơn 0!' }
-            ]}
-          >
-            <InputNumber 
-              placeholder="Số người tham gia tối đa" 
-              className="w-full"
-              size="large"
-              min={1}
-            />
+        <Card title="Hình ảnh" className="mb-2" size="small">
+          <Form.Item label="Hình ảnh sự kiện" name="image">
+            <Upload
+              listType="picture-card"
+              maxCount={1}
+              onChange={handleImageChange}
+              beforeUpload={beforeUpload}
+              defaultFileList={imageUrl ? [{ uid: '-1', name: 'image.png', status: 'done', url: imageUrl }] : []}
+            >
+              <div>
+                <UploadOutlined />
+                <div className="mt-2">Tải ảnh lên</div>
+              </div>
+            </Upload>
           </Form.Item>
-
-          <Form.Item
-            label="Phí tham gia (VNĐ)"
-            name="price"
-          >
-            <InputNumber 
-              placeholder="0 = Miễn phí" 
-              className="w-full"
-              size="large"
-              min={0}
-              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={value => value.replace(/\$\s?|(,*)/g, '')}
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="Tags"
-            name="tags"
-          >
-            <Select 
-              mode="tags" 
-              placeholder="Thêm tags (Enter để thêm)"
-              size="large"
-            />
-          </Form.Item>
-        </div>
-
-        {/* Additional Info */}
-        <div className="grid grid-cols-2 gap-4">
-          <Form.Item
-            label="Yêu cầu tham gia"
-            name="requirements"
-          >
-            <TextArea 
-              rows={2} 
-              placeholder="Các yêu cầu đối với người tham gia"
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="Quyền lợi"
-            name="benefits"
-          >
-            <TextArea 
-              rows={2} 
-              placeholder="Quyền lợi khi tham gia sự kiện"
-            />
-          </Form.Item>
-        </div>
+        </Card>
       </Form>
     </Modal>
   )

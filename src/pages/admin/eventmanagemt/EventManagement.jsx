@@ -297,12 +297,87 @@ const EventManagement = () => {
     setEditModalVisible(true)
   }
 
-  const handleUpdateEvent = (updatedEvent) => {
-    const updatedData = eventData.map(event =>
-      event.id === updatedEvent.id ? updatedEvent : event
-    )
-    setEventData(updatedData)
-    filterData(searchText, filterStatus)
+  const handleUpdateEvent = async () => {
+    // Đóng modal ngay để phản hồi nhanh
+    setEditModalVisible(false)
+    setSelectedEvent(null)
+
+    // Tải lại danh sách giống như luồng thêm mới
+    try {
+      setLoading(true)
+      setError('')
+      const res = await getEvents({ page: 0, size: 50, sortBy: 'createdAt', sortDir: 'DESC' })
+      const list = res?.data?.content || []
+      const mapped = list.map(ev => {
+        const rawImage = ev.imageUrl || ev.thumbnail || ev.thumbnailUrl || ev.image || ev.photo || ''
+        const isAbsolute = typeof rawImage === 'string' && /^(http|https):\/\//i.test(rawImage)
+        const apiRoot = (API_CONFIG?.BASE_URL || '').replace(/\/api\/v1$/i, '')
+        const normalizedImage = (() => {
+          if (!rawImage) return ''
+          if (isAbsolute) return rawImage
+          if (rawImage.startsWith('/api')) return rawImage
+          if (apiRoot) return `${apiRoot}${rawImage}`
+          return `${API_CONFIG?.BASE_URL || ''}${rawImage}`
+        })()
+        const convertToVietnamTime = (utcTimeString) => {
+          try {
+            const date = new Date(utcTimeString)
+            const vietnamTime = new Date(date.getTime() + (7 * 60 * 60 * 1000))
+            return dayjs(vietnamTime).format('HH:mm')
+          } catch {
+            try { return dayjs(utcTimeString).format('HH:mm') } catch { return '--:--' }
+          }
+        }
+        const convertToVietnamDate = (utcTimeString) => {
+          try {
+            const date = new Date(utcTimeString)
+            const vietnamTime = new Date(date.getTime() + (7 * 60 * 60 * 1000))
+            return dayjs(vietnamTime).format('YYYY-MM-DD')
+          } catch {
+            return utcTimeString?.substring(0, 10) || ''
+          }
+        }
+        return {
+          id: ev.id,
+          title: ev.name,
+          description: '',
+          date: convertToVietnamDate(ev.startTime),
+          startTime: convertToVietnamTime(ev.startTime),
+          endTime: convertToVietnamTime(ev.endTime),
+          location: ev.location,
+          address: '',
+          coordinates: ev.latitude && ev.longitude ? { lat: Number(ev.latitude), lng: Number(ev.longitude) } : undefined,
+          maxParticipants: ev.maxParticipants || 0,
+          registeredCount: ev.registeredCount || 0,
+          status: ev.status,
+          category: ev.category || 'workshop',
+          organizer: 'GreenLoop',
+          image: normalizedImage,
+          tags: [],
+          price: ev.price || 0,
+        }
+      })
+      setEventData(mapped)
+      // Áp lại bộ lọc hiện tại
+      let filtered = mapped
+      if (searchText) {
+        filtered = filtered.filter(event =>
+          event.title?.toLowerCase().includes(searchText.toLowerCase()) ||
+          event.description?.toLowerCase().includes(searchText.toLowerCase()) ||
+          event.location?.toLowerCase().includes(searchText.toLowerCase())
+        )
+      }
+      if (filterStatus !== 'all') {
+        filtered = filtered.filter(event => event.status === filterStatus)
+      }
+      setFilteredData(filtered)
+      setRefreshTrigger(prev => prev + 1)
+    } catch (e) {
+      setError(e?.message || 'Không thể tải lại danh sách sự kiện')
+      message.error('Không thể tải lại danh sách sự kiện')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleDelete = (id) => {
