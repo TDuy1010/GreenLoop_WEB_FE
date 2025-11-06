@@ -4,6 +4,8 @@ import { useParams, Link } from 'react-router-dom'
 import { getCustomerEventById, registerCustomerToEvent, getMyRegisteredEvents, cancelCustomerRegistration } from '../../../service/api/eventApi'
 import { API_CONFIG } from '../../../service/instance'
 import Vietmap from '../../../components/Vietmap'
+import SuccessModal from '../../../components/SuccessModal'
+import ConfirmModal from '../../../components/ConfirmModal'
 
 const EventDetail = () => {
   const { id } = useParams()
@@ -28,6 +30,10 @@ const EventDetail = () => {
   const [loading, setLoading] = useState(false)
   const [isRegistered, setIsRegistered] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
+  const [successOpen, setSuccessOpen] = useState(false)
+  const [successTitle, setSuccessTitle] = useState('Thành công')
+  const [successMessage, setSuccessMessage] = useState('')
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -79,12 +85,22 @@ const EventDetail = () => {
   useEffect(() => {
     const checkRegistration = async () => {
       try {
-        const res = await getMyRegisteredEvents({ page: 0, size: 50 })
+        const res = await getMyRegisteredEvents({ page: 0, size: 50, status: 'REGISTERED' })
         // axiosClient đã unwrap response.data → res là payload
         const arr = Array.isArray(res?.content)
           ? res.content
           : (Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []))
-        const found = arr.some(item => (item.eventId || item.id) == id)
+
+        const isActiveRegistration = (item) => {
+          const rawStatus = (item?.status || item?.registrationStatus || item?.state || '').toString().toUpperCase()
+          const cancelled = rawStatus.includes('CANCEL') || rawStatus === 'REJECTED' || rawStatus === 'REMOVED' || item?.cancelled === true || item?.canceled === true || item?.isCancelled === true || item?.isCanceled === true
+          const inactive = item?.active === false
+          return !cancelled && !inactive
+        }
+
+        const getEventId = (item) => item?.eventId || item?.id || item?.event?.id
+
+        const found = arr.some(item => String(getEventId(item)) === String(id) && isActiveRegistration(item))
         setIsRegistered(found)
       } catch {
         setIsRegistered(false)
@@ -142,7 +158,9 @@ const EventDetail = () => {
       }
       const note = parts.join('\n')
       await registerCustomerToEvent(event.id, note)
-      alert('Đăng ký tham gia thành công!')
+      setSuccessTitle('Đăng ký thành công')
+      setSuccessMessage('Bạn đã đăng ký tham gia sự kiện này. Hẹn gặp bạn tại sự kiện!')
+      setSuccessOpen(true)
       setShowRegistrationForm(false)
       setRegistrationData({ notes: '', itemCount: 1, itemTypes: [] })
       setIsRegistered(true)
@@ -159,9 +177,18 @@ const EventDetail = () => {
       await cancelCustomerRegistration(event.id)
       setIsRegistered(false)
       setEvent(prev => prev ? { ...prev, attendees: Math.max(0, (prev.attendees || 0) - 1) } : prev)
-      alert('Đã hủy đăng ký sự kiện')
+      setSuccessTitle('Hủy đăng ký thành công')
+      setSuccessMessage('Bạn đã hủy đăng ký tham gia sự kiện này.')
+      setSuccessOpen(true)
     } catch (e) {
-      alert('Hủy đăng ký thất bại, vui lòng thử lại!')
+      const status = e?.response?.status || e?.status
+      if (status === 404) {
+        // Backend báo không tìm thấy đăng ký: coi như đã hủy/không tồn tại
+        setIsRegistered(false)
+        alert('Hệ thống không tìm thấy đăng ký của bạn (có thể đã hủy trước đó).')
+      } else {
+        alert('Hủy đăng ký thất bại, vui lòng thử lại!')
+      }
     } finally {
       setActionLoading(false)
     }
@@ -450,7 +477,7 @@ const EventDetail = () => {
 
                 {isRegistered && (
                   <button
-                    onClick={handleCancelRegistration}
+                    onClick={() => setConfirmOpen(true)}
                     disabled={actionLoading}
                     className="w-full border border-red-500 text-red-600 hover:bg-red-50 font-semibold py-3 rounded-lg transition disabled:opacity-60"
                   >
@@ -471,9 +498,9 @@ const EventDetail = () => {
 
       {/* Registration Modal */}
       {showRegistrationForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10010] p-4">
           <motion.div
-            className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl z-[10011]"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
           >
@@ -570,6 +597,30 @@ const EventDetail = () => {
           </motion.div>
         </div>
       )}
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={successOpen}
+        title={successTitle}
+        message={successMessage}
+        onClose={() => setSuccessOpen(false)}
+        autoCloseMs={2500}
+      />
+
+      {/* Confirm Cancel Registration */}
+      <ConfirmModal
+        isOpen={confirmOpen}
+        title="Xác nhận hủy đăng ký"
+        message="Bạn có chắc chắn muốn hủy đăng ký tham gia sự kiện này không?"
+        confirmText="Hủy đăng ký"
+        cancelText="Giữ lại"
+        type="danger"
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={async () => {
+          setConfirmOpen(false)
+          await handleCancelRegistration()
+        }}
+      />
 
       {/* Donation Modal */}
       {showDonationForm && (

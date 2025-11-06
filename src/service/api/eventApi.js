@@ -62,12 +62,21 @@ export const getMyRegisteredEvents = async (params = {}) => {
     page = 0,
     size = 10,
     sortBy = 'createdAt',
-    sortDir = 'DESC'
+    sortDir = 'DESC',
+    status
   } = params
 
   // Đường dẫn có thể thay đổi theo backend; mặc định dùng endpoint chuyên biệt
   const response = await axiosClient.get('/events/my-events', {
-    params: { page, size, sortBy, sortDir }
+    params: {
+      page,
+      size,
+      sortBy,
+      sortDir,
+      // Một số backend hỗ trợ lọc theo trạng thái đăng ký (REGISTERED, CANCELLED, ...)
+      // Nếu không hỗ trợ, server sẽ bỏ qua tham số này.
+      ...(status ? { status } : {})
+    }
   })
   return response
 }

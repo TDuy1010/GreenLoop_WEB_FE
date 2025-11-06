@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 /**
@@ -7,9 +7,19 @@ import { motion, AnimatePresence } from 'framer-motion'
  * @param {string} title - Tiêu đề
  * @param {string} message - Nội dung
  * @param {function} onClose - Callback khi đóng (optional)
+ * @param {number} autoCloseMs - Tự động đóng sau X ms (0: không tự đóng)
  */
-const SuccessModal = ({ isOpen, title, message, onClose }) => {
+const SuccessModal = ({ isOpen, title, message, onClose, autoCloseMs = 0 }) => {
   if (!isOpen) return null
+
+  // Tự động đóng sau một khoảng thời gian nếu được cấu hình
+  useEffect(() => {
+    if (!isOpen || !autoCloseMs || autoCloseMs <= 0) return
+    const timer = setTimeout(() => {
+      if (typeof onClose === 'function') onClose()
+    }, autoCloseMs)
+    return () => clearTimeout(timer)
+  }, [isOpen, autoCloseMs, onClose])
 
   return (
     <AnimatePresence>
@@ -87,6 +97,8 @@ const SuccessModal = ({ isOpen, title, message, onClose }) => {
                   {message}
                 </motion.p>
               </div>
+
+              {/* Actions removed per UI requirement: modal auto-close or click outside */}
 
               {/* Decorative particles */}
               <div className="absolute inset-0 pointer-events-none">
