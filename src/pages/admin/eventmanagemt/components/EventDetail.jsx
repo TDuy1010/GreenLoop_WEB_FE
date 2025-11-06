@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { 
   Modal, 
   Tag, 
@@ -7,7 +7,10 @@ import {
   Col,
   Card,
   Image,
-  Skeleton
+  Skeleton,
+  Table,
+  Space,
+  Empty
 } from 'antd'
 import {
   CheckCircleOutlined,
@@ -15,16 +18,42 @@ import {
   CalendarOutlined,
   ClockCircleOutlined,
   EnvironmentOutlined,
-  TagOutlined
+  TagOutlined,
+  TeamOutlined
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
-import { getEventById } from '../../../../service/api/eventApi'
+import { getEventById, getEventStaffs } from '../../../../service/api/eventApi'
 import Vietmap from '../../../../components/Vietmap'
 import heroImg from '../../../../assets/images/herosection.jpg'
 
 const EventDetail = ({ visible, onClose, event }) => {
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [assignedStaffs, setAssignedStaffs] = useState([])
+  const [loadingStaffs, setLoadingStaffs] = useState(false)
+
+  // Load danh sách nhân viên đã được assign
+  const loadAssignedStaffs = useCallback(async () => {
+    if (!event?.id || !visible) return
+    try {
+      setLoadingStaffs(true)
+      const res = await getEventStaffs(event.id)
+      const staffList = res?.data?.data || res?.data || (Array.isArray(res) ? res : [])
+      const mapped = staffList.map((s) => ({
+        id: s.staffId || s.id || s.employeeId,
+        fullName: s.fullName || s.name || s.email,
+        email: s.email,
+        storeManager: s.isStoreManager === true || s.storeManager === true,
+        roles: s.roles || []
+      }))
+      setAssignedStaffs(mapped)
+    } catch (err) {
+      console.error('Error loading assigned staffs:', err)
+      setAssignedStaffs([])
+    } finally {
+      setLoadingStaffs(false)
+    }
+  }, [event?.id, visible])
 
   useEffect(() => {
     const loadDetail = async () => {
@@ -115,12 +144,15 @@ const EventDetail = ({ visible, onClose, event }) => {
       }
     }
     loadDetail()
-  }, [event?.id, visible])
+    loadAssignedStaffs()
+  }, [event?.id, visible, loadAssignedStaffs])
 
   useEffect(() => {
     if (!visible) {
       setDetail(null)
       setLoading(false)
+      setAssignedStaffs([])
+      setLoadingStaffs(false)
     }
   }, [visible])
 
@@ -274,6 +306,83 @@ const EventDetail = ({ visible, onClose, event }) => {
           </Col>
         </Row>
         </Skeleton>
+      </Card>
+
+      {/* Assigned Staffs */}
+      <Card 
+        title={
+          <span className="text-base font-semibold text-gray-700">
+            <TeamOutlined className="mr-2" />
+            Nhân viên đã được phân công ({assignedStaffs.length})
+          </span>
+        }
+        className="mb-4 shadow-sm"
+        size="small"
+        loading={loadingStaffs}
+      >
+        {assignedStaffs.length === 0 ? (
+          <Empty 
+            description="Chưa có nhân viên nào được phân công cho sự kiện này"
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+          />
+        ) : (
+          <Table
+            size="small"
+            dataSource={assignedStaffs}
+            rowKey="id"
+            pagination={false}
+            columns={[
+              {
+                title: 'Họ tên',
+                dataIndex: 'fullName',
+                key: 'fullName',
+                render: (text, record) => (
+                  <Space>
+                    <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                    <span>{text}</span>
+                    {record.storeManager && (
+                      <Tag color="gold" size="small">Quản lý</Tag>
+                    )}
+                  </Space>
+                )
+              },
+              {
+                title: 'Email',
+                dataIndex: 'email',
+                key: 'email'
+              },
+              {
+                title: 'Vai trò',
+                dataIndex: 'roles',
+                key: 'roles',
+                render: (roles, record) => {
+                  const roleList = []
+                  // Thêm vai trò từ mảng roles nếu có
+                  if (roles && Array.isArray(roles) && roles.length > 0) {
+                    roleList.push(...roles)
+                  }
+                  // Thêm vai trò "Quản lý cửa hàng" nếu là store manager
+                  if (record.storeManager) {
+                    roleList.push('Quản lý cửa hàng')
+                  }
+                  // Nếu không có vai trò nào, hiển thị "Nhân viên"
+                  if (roleList.length === 0) {
+                    roleList.push('Nhân viên')
+                  }
+                  return (
+                    <Space wrap>
+                      {roleList.map((role, index) => (
+                        <Tag key={index} size="small" color={role === 'Quản lý cửa hàng' ? 'gold' : 'default'}>
+                          {role}
+                        </Tag>
+                      ))}
+                    </Space>
+                  )
+                }
+              }
+            ]}
+          />
+        )}
       </Card>
 
       {/* System Meta */}

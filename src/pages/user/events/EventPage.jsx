@@ -1,17 +1,78 @@
-import React, { useState } from 'react'
+/* eslint-disable no-unused-vars */
+import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { events, eventCategories } from '../../../data/mockData'
+import { eventCategories } from '../../../data/mockData'
+import { getCustomerEvents } from '../../../service/api/eventApi'
+import { API_CONFIG } from '../../../service/instance'
+import { isLoggedIn } from '../../../utils/authHelper'
+import Loading from '../../../components/Loading'
 
 const EventPage = () => {
   const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedView, setSelectedView] = useState('all')
   const [selectedLocation, setSelectedLocation] = useState('all')
+  const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(false)
 
-  // Filter events based on selected category
-  const filteredEvents = events.filter(event => {
-    if (selectedCategory === 'all') return true
-    return event.category.toLowerCase().replace(' ', '-') === selectedCategory
-  })
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setLoading(true)
+        const res = await getCustomerEvents({ page: 0, size: 12, sortBy: 'createdAt', sortDir: 'DESC' })
+        let list = res?.data?.content
+        if (!Array.isArray(list)) {
+          // Một số API trả về data dạng { success, data: [...] }
+          const possible = res?.data?.data || res?.data || []
+          list = Array.isArray(possible) ? possible : []
+        }
+        const apiRoot = (API_CONFIG?.BASE_URL || '').replace(/\/api\/v1$/i, '')
+        const mapped = list.map(ev => {
+          const rawImage = ev.imageUrl || ev.thumbnail || ev.thumbnailUrl || ev.image || ''
+          const isAbsolute = typeof rawImage === 'string' && /^(http|https):\/\//i.test(rawImage)
+          const normalizedImage = (() => {
+            if (!rawImage) return ''
+            if (isAbsolute) return rawImage
+            if (rawImage.startsWith('/api')) return rawImage
+            if (apiRoot) return `${apiRoot}${rawImage}`
+            return `${API_CONFIG?.BASE_URL || ''}${rawImage}`
+          })()
+          const isRegistrationModel = ev.eventId && ev.eventName
+          return {
+            id: isRegistrationModel ? ev.eventId : ev.id,
+            title: isRegistrationModel ? ev.eventName : ev.name,
+            description: ev.description || '',
+            date: ev.startTime || ev.date,
+            startTime: ev.startTime || ev.start,
+            endTime: ev.endTime || ev.end,
+            location: ev.location || '',
+            image: normalizedImage,
+            category: ev.category || 'event',
+            tags: [],
+            attendees: ev.registeredCount || 0,
+            maxAttendees: ev.maxParticipants || 0,
+            organizer: { name: 'GreenLoop', avatar: normalizedImage },
+            isRegistered: ev.isRegistered || false,
+            registrationStatus: ev.registrationStatus || undefined
+          }
+        })
+        setEvents(mapped)
+      } catch {
+        setEvents([])
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchEvents()
+  }, [])
+
+  // Filter events based on current view and category (category kept for future use)
+  const filteredEvents = events
+    .filter(event => {
+      if (selectedCategory === 'all') return true
+      return event.category.toLowerCase().replace(' ', '-') === selectedCategory
+    })
+    // bỏ filter theo đăng ký, vì tab riêng sẽ xử lý
 
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
@@ -38,6 +99,21 @@ const EventPage = () => {
     })
   }
 
+  const formatTime = (dateString) => {
+    if (!dateString) return '--:--'
+    try {
+      if (typeof dateString === 'string') {
+        const hhmm = dateString.slice(11, 16)
+        if (hhmm && hhmm.includes(':')) return hhmm
+      }
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) return '--:--'
+      return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    } catch {
+      return '--:--'
+    }
+  }
+
   const EventCard = ({ event }) => (
     <motion.div
       className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
@@ -56,21 +132,24 @@ const EventPage = () => {
             {event.category}
           </span>
         </div>
-        <div className="absolute bottom-4 right-4 bg-white/90 px-3 py-1 rounded-full text-sm font-semibold text-gray-800">
-          {event.attendees}/{event.maxAttendees} người
-        </div>
+        {/* Ẩn hiển thị số người đã đăng ký trên thẻ */}
       </div>
 
       {/* Event Content */}
       <div className="p-6">
-        {/* Date & Time */}
-        <div className="flex items-center gap-2 text-green-600 mb-3">
+        {/* Date */}
+        <div className="flex items-center gap-2 text-green-600 mb-1">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          <span className="font-semibold text-sm">
-            {formatDate(event.date)} • {event.time}
-          </span>
+          <span className="font-semibold text-sm">{formatDate(event.date)}</span>
+        </div>
+        {/* Time range */}
+        <div className="flex items-center gap-2 text-gray-600 mb-3">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-sm">{formatTime(event.startTime)} - {formatTime(event.endTime)}</span>
         </div>
 
         {/* Title */}
@@ -104,17 +183,7 @@ const EventPage = () => {
           ))}
         </div>
 
-        {/* Organizer */}
-        <div className="flex items-center gap-3 mb-4">
-          <img
-            src={event.organizer.avatar}
-            alt={event.organizer.name}
-            className="w-8 h-8 rounded-full"
-          />
-          <span className="text-sm text-gray-600">
-            Tổ chức bởi <span className="font-semibold">{event.organizer.name}</span>
-          </span>
-        </div>
+        {/* Bỏ phần tổ chức bởi theo yêu cầu */}
 
         {/* Action Button */}
         <Link to={`/events/${event.id}`}>
@@ -193,6 +262,7 @@ const EventPage = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-12">
+        {loading && <Loading message="Đang tải sự kiện..." />}
         {/* Filters */}
         <motion.div
           className="bg-white rounded-lg shadow-md p-6 mb-8"
@@ -200,31 +270,16 @@ const EventPage = () => {
           animate="visible"
           variants={fadeIn}
         >
-          <div className="flex flex-col md:flex-row gap-6">
-            {/* Category Filter */}
+          <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
+            {/* Tabs điều hướng */}
             <div className="flex-1">
-              <h3 className="font-semibold text-gray-800 mb-3">Loại sự kiện:</h3>
-              <div className="flex flex-wrap gap-3">
-                {eventCategories.map((category) => (
-                  <motion.button
-                    key={category.id}
-                    onClick={() => setSelectedCategory(category.id)}
-                    className={`px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 ${
-                      selectedCategory === category.id
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-green-100'
-                    }`}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <span>{category.icon}</span>
-                    <span>{category.name}</span>
-                  </motion.button>
-                ))}
+              <h3 className="font-semibold text-gray-800 mb-3">Chế độ hiển thị:</h3>
+              <div className="inline-flex bg-gray-100 p-1 rounded-xl">
+                <span className="px-4 py-2 rounded-lg bg-white shadow text-green-700">Tất cả sự kiện</span>
               </div>
             </div>
 
-            {/* Location Filter */}
+            {/* Location Filter (giữ nguyên nếu cần) */}
             <div className="md:w-64">
               <h3 className="font-semibold text-gray-800 mb-3">Địa điểm:</h3>
               <select
@@ -245,9 +300,6 @@ const EventPage = () => {
           <div className="mt-6 pt-6 border-t">
             <p className="text-gray-600">
               Hiển thị <span className="font-semibold text-green-600">{filteredEvents.length}</span> sự kiện
-              {selectedCategory !== 'all' && (
-                <span> trong danh mục <span className="font-semibold">{eventCategories.find(c => c.id === selectedCategory)?.name}</span></span>
-              )}
             </p>
           </div>
         </motion.div>

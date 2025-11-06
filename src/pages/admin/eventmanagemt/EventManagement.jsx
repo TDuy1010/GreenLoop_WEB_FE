@@ -20,6 +20,7 @@ import dayjs from 'dayjs'
  
 
 import EventTable from './components/EventTable'
+import EventAssignStaff from './components/EventAssignStaff'
 import EventDetail from './components/EventDetail'
 import EventAdd from './components/EventAdd'
 import EventEdit from './components/EventEdit'
@@ -36,6 +37,8 @@ const EventManagement = () => {
   const [addModalVisible, setAddModalVisible] = useState(false)
   const [editModalVisible, setEditModalVisible] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState(null)
+  const [assignModalVisible, setAssignModalVisible] = useState(false)
+  const [selectedEventForAssign, setSelectedEventForAssign] = useState(null)
 
   const [eventData, setEventData] = useState([])
   const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -297,6 +300,11 @@ const EventManagement = () => {
     setEditModalVisible(true)
   }
 
+  const handleOpenAssign = (event) => {
+    setSelectedEventForAssign(event)
+    setAssignModalVisible(true)
+  }
+
   const handleUpdateEvent = async () => {
     // Đóng modal ngay để phản hồi nhanh
     setEditModalVisible(false)
@@ -498,6 +506,7 @@ const EventManagement = () => {
           handleView={handleView}
           handleEdit={handleEdit}
           handleDelete={handleDelete}
+          handleAssign={handleOpenAssign}
           statusConfig={statusConfig}
         />
         {loading && <div className="text-center py-3 text-gray-500">Đang tải dữ liệu...</div>}
@@ -524,6 +533,14 @@ const EventManagement = () => {
         onClose={handleCloseEdit}
         onUpdate={handleUpdateEvent}
         event={selectedEvent}
+      />
+
+      {/* Assign Staff Modal */}
+      <EventAssignStaff
+        visible={assignModalVisible}
+        onClose={() => { setAssignModalVisible(false); setSelectedEventForAssign(null) }}
+        eventId={selectedEventForAssign?.id}
+        onAssigned={handleAddEvent}
       />
     </div>
   )

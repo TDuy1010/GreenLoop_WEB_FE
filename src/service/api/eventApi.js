@@ -36,6 +36,48 @@ export const getEvents = async (params = {}) => {
   return response
 }
 
+// Lấy danh sách sự kiện cho CUSTOMER theo filter
+export const getCustomerEvents = async (params = {}) => {
+  const {
+    page = 0,
+    size = 10,
+    code,
+    status,
+    search,
+    startTime,
+    endTime,
+    sortBy = 'createdAt',
+    sortDir = 'DESC'
+  } = params
+
+  const response = await axiosClient.get('/events/customers', {
+    params: { page, size, code, status, search, startTime, endTime, sortBy, sortDir }
+  })
+  return response
+}
+
+// Lấy danh sách sự kiện mà người dùng hiện tại đã đăng ký (CUSTOMER)
+export const getMyRegisteredEvents = async (params = {}) => {
+  const {
+    page = 0,
+    size = 10,
+    sortBy = 'createdAt',
+    sortDir = 'DESC'
+  } = params
+
+  // Đường dẫn có thể thay đổi theo backend; mặc định dùng endpoint chuyên biệt
+  const response = await axiosClient.get('/events/my-events', {
+    params: { page, size, sortBy, sortDir }
+  })
+  return response
+}
+
+// Lấy chi tiết sự kiện cho CUSTOMER theo ID
+export const getCustomerEventById = async (id) => {
+  const response = await axiosClient.get(`/events/customers/${id}`)
+  return response
+}
+
 // Lấy chi tiết sự kiện theo ID (ADMIN)
 export const getEventById = async (id) => {
   const response = await axiosClient.get(`/events/admin/${id}`)
@@ -124,6 +166,33 @@ export const updateEventStatus = async (id, status) => {
   return response
 }
 
+// Lấy danh sách nhân viên đã được assign vào sự kiện - GET /events/{eventId}/staffs
+export const getEventStaffs = async (eventId) => {
+  const response = await axiosClient.get(`/events/${eventId}/staffs`)
+  console.log('GetEventStaffs API response:', response)
+  return response
+}
+
+// Gán nhiều nhân sự vào sự kiện - POST /events/staffs
+// Body: { eventId: number, staffAssignments: [{ staffId: number, storeManager: boolean }] }
+export const assignEventStaffs = async (payload) => {
+  const response = await axiosClient.post('/events/staffs', payload, {
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+  })
+  console.log('AssignEventStaffs API response:', response)
+  return response
+}
+
+// Cập nhật nhân sự đã được assign vào sự kiện - PUT /events/{eventId}/staffs
+// Body: { eventId: number, staffAssignments: [{ staffId: number, storeManager: boolean }] }
+export const updateEventStaffs = async (eventId, payload) => {
+  const response = await axiosClient.put(`/events/${eventId}/staffs`, payload, {
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+  })
+  console.log('UpdateEventStaffs API response:', response)
+  return response
+}
+
 // Xóa sự kiện (ADMIN)
 export const deleteEvent = async (id) => {
   // Theo swagger: xóa sự kiện dùng DELETE /events/{id}
@@ -131,14 +200,37 @@ export const deleteEvent = async (id) => {
   return response
 }
 
+// Đăng ký tham gia sự kiện (CUSTOMER) - POST /events/{eventId}/register
+// body: { note: string }
+export const registerCustomerToEvent = async (eventId, note) => {
+  const response = await axiosClient.post(`/events/${eventId}/register`, { note })
+  return response
+}
+
+// Hủy đăng ký tham gia sự kiện của user hiện tại (CUSTOMER)
+// Suy đoán REST: DELETE /events/{eventId}/register
+export const cancelCustomerRegistration = async (eventId) => {
+  // Theo swagger: PUT /events/{eventId}/cancel
+  const response = await axiosClient.put(`/events/${eventId}/cancel`)
+  return response
+}
+
 export default { 
   getEvents, 
+  getCustomerEvents,
+  getMyRegisteredEvents,
+  getCustomerEventById,
   getEventById, 
   createEvent, 
   updateEvent, 
   updateEventThumbnail,
   updateEventStatus,
-  deleteEvent 
+  getEventStaffs,
+  assignEventStaffs,
+  updateEventStaffs,
+  deleteEvent,
+  registerCustomerToEvent,
+  cancelCustomerRegistration 
 }
 
 

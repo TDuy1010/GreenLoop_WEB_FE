@@ -8,6 +8,7 @@ import ShopPage from './pages/user/shop/ShopPage'
 import ProductDetail from './pages/user/shop/ProductDetail'
 import EventPage from './pages/user/events/EventPage'
 import EventDetail from './pages/user/events/EventDetail'
+import MyEventsPage from './pages/user/profile/components/MyEventsPage'
 import LoginPage from './pages/user/loginpage/LoginPage'
 import RegisterPage from './pages/user/registerpage/RegisterPage'
 import ForgotPasswordPage from './pages/user/forgotpassword/ForgotPasswordPage'
@@ -47,6 +48,10 @@ const router = createBrowserRouter([
       {
         path: 'events',
         element: <EventPage />
+      },
+      {
+        path: 'my-events',
+        element: <MyEventsPage />
       },
       {
         path: 'events/:id',

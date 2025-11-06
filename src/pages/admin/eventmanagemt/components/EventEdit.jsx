@@ -15,16 +15,25 @@ import {
   Alert,
   Statistic,
   Row,
-  Col
+  Col,
+  Table,
+  Tag,
+  Switch,
+  Space,
+  Popconfirm
 } from 'antd'
 import { 
   EditOutlined,
   UploadOutlined,
   CalendarOutlined,
-  TeamOutlined
+  TeamOutlined,
+  CheckCircleOutlined,
+  DeleteOutlined,
+  UserOutlined
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
-import { updateEvent, updateEventThumbnail, updateEventStatus } from '../../../../service/api/eventApi'
+import { updateEvent, updateEventThumbnail, updateEventStatus, getEventStaffs, updateEventStaffs } from '../../../../service/api/eventApi'
+import { getEmployees } from '../../../../service/api/employeeApi'
 import VietmapInteractive from '../../../../components/VietmapInteractive'
 
 const { TextArea } = Input
@@ -36,6 +45,10 @@ const EventEdit = ({ visible, onClose, onUpdate, event }) => {
   const [imageUrl, setImageUrl] = useState(null)
   const [thumbnailFile, setThumbnailFile] = useState(null)
   const [selectedLocation, setSelectedLocation] = useState({ latitude: null, longitude: null, address: '' })
+  const [assignedStaffs, setAssignedStaffs] = useState([])
+  const [loadingStaffs, setLoadingStaffs] = useState(false)
+  const [employees, setEmployees] = useState([])
+  const [editStoreManagerIds, setEditStoreManagerIds] = useState(new Set())
   const vietmapApiKey = import.meta.env.VITE_VIETMAP_API_KEY || '3aa910999593c14303117e42dc0e62171cd42a0daa6c944c'
 
   useEffect(() => {
@@ -57,8 +70,90 @@ const EventEdit = ({ visible, onClose, onUpdate, event }) => {
       setSelectedLocation({ latitude: lat, longitude: lng, address: event.location || '' })
       setImageUrl(event.image)
       setThumbnailFile(null)
+      // Load danh sách nhân viên đã được assign
+      loadAssignedStaffs()
+      // Load danh sách employees để lấy roles
+      loadEmployees()
     }
   }, [event, visible, form])
+
+  // Load danh sách nhân viên đã được assign
+  const loadAssignedStaffs = async () => {
+    if (!event?.id) return
+    try {
+      setLoadingStaffs(true)
+      const res = await getEventStaffs(event.id)
+      const staffList = res?.data?.data || res?.data || (Array.isArray(res) ? res : [])
+      const mapped = staffList.map((s) => ({
+        id: s.staffId || s.id || s.employeeId,
+        fullName: s.fullName || s.name || s.email,
+        email: s.email,
+        storeManager: s.storeManager === true,
+        roles: s.roles || []
+      }))
+      setAssignedStaffs(mapped)
+      // Set storeManagerIds
+      const managerIds = new Set()
+      mapped.forEach(s => {
+        if (s.storeManager) {
+          managerIds.add(s.id)
+        }
+      })
+      setEditStoreManagerIds(managerIds)
+    } catch (err) {
+      console.error('Error loading assigned staffs:', err)
+      setAssignedStaffs([])
+    } finally {
+      setLoadingStaffs(false)
+    }
+  }
+
+  // Load danh sách employees để lấy roles
+  const loadEmployees = async () => {
+    try {
+      const res = await getEmployees({ page: 0, size: 100, sortBy: 'createdAt', sortDir: 'DESC' })
+      const list = res?.data?.content || []
+      const mapped = list.map((e) => ({
+        id: e.id,
+        fullName: e.fullName || e.email,
+        email: e.email,
+        roles: e.roles || []
+      }))
+      setEmployees(mapped)
+    } catch (err) {
+      console.error('Error loading employees:', err)
+    }
+  }
+
+  // Xóa nhân viên khỏi danh sách
+  const handleRemoveStaff = (staffId) => {
+    setAssignedStaffs(prev => prev.filter(s => s.id !== staffId))
+    setEditStoreManagerIds(prev => {
+      const next = new Set(prev)
+      next.delete(staffId)
+      return next
+    })
+  }
+
+  // Cập nhật nhân viên đã được assign
+  const updateStaffAssignments = async () => {
+    if (!event?.id) return true
+    
+    try {
+      const payload = {
+        eventId: Number(event.id),
+        staffAssignments: assignedStaffs.map((s) => ({
+          staffId: Number(s.id),
+          storeManager: editStoreManagerIds.has(s.id)
+        }))
+      }
+      const res = await updateEventStaffs(event.id, payload)
+      return res?.success !== false
+    } catch (err) {
+      console.error('Error updating staff assignments:', err)
+      return false
+    }
+  }
 
   const handleSubmit = async () => {
     try {
@@ -94,6 +189,14 @@ const EventEdit = ({ visible, onClose, onUpdate, event }) => {
       // Gọi API cập nhật (JSON)
       const res = await updateEvent(event.id, eventData)
       const ok = !!(res && (res.success === true || res.statusCode === 200 || /success/i.test(res.message || '')))
+      
+      // Cập nhật nhân viên đã được assign nếu có thay đổi
+      if (ok) {
+        const staffUpdateOk = await updateStaffAssignments()
+        if (!staffUpdateOk) {
+          message.warning('Cập nhật thông tin sự kiện thành công, nhưng cập nhật nhân viên có thể chưa thành công!')
+        }
+      }
 
       // Nếu có chọn thumbnail mới thì gọi API riêng để cập nhật ảnh
       if (ok) {
@@ -141,8 +244,8 @@ const EventEdit = ({ visible, onClose, onUpdate, event }) => {
           image: newImageUrl,
         }
         await onUpdate(updatedForTable)
-        message.success('Cập nhật sự kiện thành công!')
-        onClose()
+      message.success('Cập nhật sự kiện thành công!')
+      onClose()
       } else {
         const msg = res?.message || res?.data?.message || 'Cập nhật sự kiện thất bại!'
         message.error(msg)
@@ -314,21 +417,124 @@ const EventEdit = ({ visible, onClose, onUpdate, event }) => {
           />
         </Card>
 
-        <Card title="Hình ảnh" className="mb-2" size="small">
+        <Card title="Hình ảnh" className="mb-4" size="small">
           <Form.Item label="Hình ảnh sự kiện" name="image">
-            <Upload
-              listType="picture-card"
-              maxCount={1}
-              onChange={handleImageChange}
+          <Upload
+            listType="picture-card"
+            maxCount={1}
+            onChange={handleImageChange}
               beforeUpload={beforeUpload}
               defaultFileList={imageUrl ? [{ uid: '-1', name: 'image.png', status: 'done', url: imageUrl }] : []}
-            >
-              <div>
-                <UploadOutlined />
-                <div className="mt-2">Tải ảnh lên</div>
-              </div>
-            </Upload>
-          </Form.Item>
+          >
+            <div>
+              <UploadOutlined />
+              <div className="mt-2">Tải ảnh lên</div>
+            </div>
+          </Upload>
+        </Form.Item>
+        </Card>
+
+        <Card 
+          title={
+            <Space>
+              <UserOutlined />
+              <span>Nhân viên đã được phân công ({assignedStaffs.length})</span>
+            </Space>
+          }
+          className="mb-2"
+          size="small"
+          loading={loadingStaffs}
+        >
+          {assignedStaffs.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
+              Chưa có nhân viên nào được phân công cho sự kiện này
+            </div>
+          ) : (
+            <Table
+              size="small"
+              dataSource={assignedStaffs.map(s => {
+                const employee = employees.find(e => e.id === s.id)
+                return {
+                  ...s,
+                  roles: employee?.roles || s.roles || []
+                }
+              })}
+              rowKey="id"
+              pagination={false}
+              columns={[
+                {
+                  title: 'Họ tên',
+                  dataIndex: 'fullName',
+                  key: 'fullName',
+                  render: (text) => (
+                    <Space>
+                      <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                      <span>{text}</span>
+                    </Space>
+                  )
+                },
+                {
+                  title: 'Email',
+                  dataIndex: 'email',
+                  key: 'email'
+                },
+                {
+                  title: 'Quản lý cửa hàng',
+                  key: 'storeManager',
+                  render: (_, record) => {
+                    const hasStoreManagerRole = (record.roles || []).some(
+                      role => role === 'STORE_MANAGER' || role?.toUpperCase() === 'STORE_MANAGER'
+                    )
+                    
+                    if (!hasStoreManagerRole) {
+                      return <span className="text-gray-400">—</span>
+                    }
+                    
+                    return (
+                      <Switch
+                        size="small"
+                        checked={editStoreManagerIds.has(record.id)}
+                        onChange={(checked) => {
+                          setEditStoreManagerIds((prev) => {
+                            const next = new Set(prev)
+                            if (checked) {
+                              next.add(record.id)
+                            } else {
+                              next.delete(record.id)
+                            }
+                            return next
+                          })
+                        }}
+                      />
+                    )
+                  }
+                },
+                {
+                  title: 'Thao tác',
+                  key: 'action',
+                  render: (_, record) => (
+                    <Popconfirm
+                      title="Xóa nhân viên này khỏi sự kiện?"
+                      description="Nhân viên này sẽ bị xóa khỏi danh sách phân công."
+                      onConfirm={() => handleRemoveStaff(record.id)}
+                      okText="Xóa"
+                      cancelText="Hủy"
+                      okButtonProps={{ danger: true }}
+                    >
+                      <Button
+                        type="link"
+                        danger
+                        icon={<DeleteOutlined />}
+                        size="small"
+                      >
+                        Xóa
+                      </Button>
+                    </Popconfirm>
+                  )
+                }
+              ]}
+            />
+          )}
         </Card>
       </Form>
     </Modal>

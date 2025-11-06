@@ -9,14 +9,18 @@ import {
   Button,
   Upload,
   message,
-  Card
+  Card,
+  Table,
+  Tag,
+  Switch
 } from 'antd'
 import { 
   PlusOutlined,
   UploadOutlined
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
-import { createEvent } from '../../../../service/api/eventApi'
+import { createEvent, assignEventStaffs } from '../../../../service/api/eventApi'
+import { getEmployees } from '../../../../service/api/employeeApi'
 import VietmapInteractive from '../../../../components/VietmapInteractive'
 
 const { TextArea } = Input
@@ -32,6 +36,10 @@ const EventAdd = ({ visible, onClose, onAdd }) => {
     longitude: null,
     address: ''
   })
+  const [employees, setEmployees] = useState([])
+  const [loadingEmployees, setLoadingEmployees] = useState(false)
+  const [selectedStaffIds, setSelectedStaffIds] = useState([])
+  const [storeManagerIds, setStoreManagerIds] = useState(new Set())
   const vietmapApiKey = import.meta.env.VITE_VIETMAP_API_KEY || '3aa910999593c14303117e42dc0e62171cd42a0daa6c944c'
 
   useEffect(() => {
@@ -39,6 +47,29 @@ const EventAdd = ({ visible, onClose, onAdd }) => {
       form.resetFields()
       setThumbnailFile(null)
       setSelectedLocation({ latitude: null, longitude: null, address: '' })
+      // Load employees
+      ;(async () => {
+        try {
+          setLoadingEmployees(true)
+          const res = await getEmployees({ page: 0, size: 100, sortBy: 'createdAt', sortDir: 'DESC' })
+          const list = res?.data?.content || []
+          const mapped = list.map((e) => ({
+            id: e.id,
+            key: e.id,
+            fullName: e.fullName || e.email,
+            email: e.email,
+            roles: e.roles || [],
+            isActive: e.isActive === true
+          }))
+          setEmployees(mapped)
+          setSelectedStaffIds([])
+          setStoreManagerIds(new Set())
+        } catch (err) {
+          message.error('Không tải được danh sách nhân viên')
+        } finally {
+          setLoadingEmployees(false)
+        }
+      })()
     }
   }, [visible, form])
 
@@ -120,12 +151,31 @@ const EventAdd = ({ visible, onClose, onAdd }) => {
         thumbnailFile: thumbnailFile ? `${thumbnailFile.name} (${thumbnailFile.size} bytes)` : 'null'
       })
 
-      // Gọi API
+      // Gọi API tạo sự kiện
       const response = await createEvent(eventData, thumbnailFile)
       
       console.log('API Response:', response)
       
       if (response?.success) {
+        // Gọi assign staffs nếu có chọn nhân sự
+        try {
+          const eventId = response?.data?.id || response?.data?.eventId || response?.data?.event?.id
+          if (eventId && selectedStaffIds.length > 0) {
+            const payload = {
+              eventId: Number(eventId),
+              staffAssignments: selectedStaffIds.map((id) => ({
+                staffId: Number(id),
+                storeManager: storeManagerIds.has(id)
+              }))
+            }
+            const assignRes = await assignEventStaffs(payload)
+            if (!assignRes?.success) {
+              message.warning('Tạo sự kiện thành công, nhưng gán nhân sự có thể chưa hoàn tất')
+            }
+          }
+        } catch (e) {
+          message.warning('Tạo sự kiện thành công, nhưng gán nhân sự thất bại')
+        }
         message.success('Tạo sự kiện thành công!')
         form.resetFields()
         setThumbnailFile(null)
@@ -390,6 +440,49 @@ const EventAdd = ({ visible, onClose, onAdd }) => {
             <div className="text-xs text-gray-600 mt-1">Đã chọn: {thumbnailFile.name} ({thumbnailFile.size} bytes)</div>
           )}
           </Form.Item>
+        </Card>
+
+        {/* Staffs Assignment */}
+        <Card title="Phân công nhân sự" size="small">
+          <Table
+            size="small"
+            loading={loadingEmployees}
+            dataSource={employees}
+            rowKey="id"
+            pagination={{ pageSize: 5 }}
+            rowSelection={{
+              selectedRowKeys: selectedStaffIds,
+              onChange: (keys) => setSelectedStaffIds(keys)
+            }}
+            columns={[
+              { title: 'Họ tên', dataIndex: 'fullName', key: 'fullName' },
+              { title: 'Email', dataIndex: 'email', key: 'email' },
+              {
+                title: 'Vai trò',
+                dataIndex: 'roles',
+                key: 'roles',
+                render: (roles) => (roles || []).map((r) => <Tag key={r}>{r}</Tag>)
+              },
+              {
+                title: 'Quản lý cửa hàng',
+                key: 'storeManager',
+                render: (_, record) => (
+                  <Switch
+                    size="small"
+                    checked={storeManagerIds.has(record.id)}
+                    onChange={(checked) => {
+                      setStoreManagerIds((prev) => {
+                        const next = new Set(prev)
+                        if (checked) next.add(record.id); else next.delete(record.id)
+                        return next
+                      })
+                    }}
+                    disabled={!selectedStaffIds.includes(record.id)}
+                  />
+                )
+              }
+            ]}
+          />
         </Card>
       </Form>
     </Modal>

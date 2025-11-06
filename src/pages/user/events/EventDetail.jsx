@@ -1,18 +1,18 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useParams, Link } from 'react-router-dom'
-import { events } from '../../../data/mockData'
-import GoogleMap from '../../../components/GoogleMap'
+import { getCustomerEventById, registerCustomerToEvent, getMyRegisteredEvents, cancelCustomerRegistration } from '../../../service/api/eventApi'
+import { API_CONFIG } from '../../../service/instance'
+import Vietmap from '../../../components/Vietmap'
 
 const EventDetail = () => {
   const { id } = useParams()
   const [showRegistrationForm, setShowRegistrationForm] = useState(false)
   const [showDonationForm, setShowDonationForm] = useState(false)
   const [registrationData, setRegistrationData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    notes: ''
+    notes: '',
+    itemCount: 1,
+    itemTypes: []
   })
   const [donationData, setDonationData] = useState({
     name: '',
@@ -24,10 +24,84 @@ const EventDetail = () => {
     address: ''
   })
 
-  // Find event by ID - in real app, this would be an API call
-  const event = events.find(e => e.id === parseInt(id))
+  const [event, setEvent] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [isRegistered, setIsRegistered] = useState(false)
+  const [actionLoading, setActionLoading] = useState(false)
 
-  if (!event) {
+  useEffect(() => {
+    const fetchDetail = async () => {
+      try {
+        setLoading(true)
+        const res = await getCustomerEventById(id)
+        const ev = res?.data || res?.data?.data || res?.data?.event || null
+        if (!ev) { setEvent(null); return }
+        const apiRoot = (API_CONFIG?.BASE_URL || '').replace(/\/api\/v1$/i, '')
+        const rawImage = ev.imageUrl || ev.thumbnail || ev.thumbnailUrl || ev.image || ''
+        const isAbsolute = typeof rawImage === 'string' && /^(http|https):\/\//i.test(rawImage)
+        const normalizedImage = (() => {
+          if (!rawImage) return ''
+          if (isAbsolute) return rawImage
+          if (rawImage.startsWith('/api')) return rawImage
+          if (apiRoot) return `${apiRoot}${rawImage}`
+          return `${API_CONFIG?.BASE_URL || ''}${rawImage}`
+        })()
+        const mapped = {
+          id: ev.id,
+          title: ev.name,
+          description: ev.description || '',
+          date: ev.startTime,
+          time: '',
+          startTime: ev.startTime,
+          endTime: ev.endTime,
+          location: ev.location,
+          address: ev.locationDetail || '',
+          image: normalizedImage,
+          category: ev.category || 'event',
+          attendees: (ev.totalRegistrations ?? ev.registeredCount ?? 0),
+          maxAttendees: ev.maxParticipants || 0,
+          tags: [],
+          coordinates: ev.latitude && ev.longitude ? { lat: Number(ev.latitude), lng: Number(ev.longitude) } : null,
+          price: ev.price || 0,
+          organizer: { name: 'GreenLoop', avatar: normalizedImage }
+        }
+        setEvent(mapped)
+      } catch {
+        setEvent(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchDetail()
+  }, [id])
+
+  // Check if current user registered this event
+  useEffect(() => {
+    const checkRegistration = async () => {
+      try {
+        const res = await getMyRegisteredEvents({ page: 0, size: 50 })
+        // axiosClient đã unwrap response.data → res là payload
+        const arr = Array.isArray(res?.content)
+          ? res.content
+          : (Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []))
+        const found = arr.some(item => (item.eventId || item.id) == id)
+        setIsRegistered(found)
+      } catch {
+        setIsRegistered(false)
+      }
+    }
+    if (id) checkRegistration()
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center text-gray-600">Đang tải chi tiết sự kiện...</div>
+      </div>
+    )
+  }
+
+  if (!event && !loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -55,12 +129,42 @@ const EventDetail = () => {
     })
   }
 
-  const handleRegistrationSubmit = (e) => {
+  const handleRegistrationSubmit = async (e) => {
     e.preventDefault()
-    // In real app, this would make an API call
-    alert('Đăng ký thành công! Chúng tôi sẽ liên hệ với bạn sớm.')
-    setShowRegistrationForm(false)
-    setRegistrationData({ name: '', email: '', phone: '', notes: '' })
+    try {
+      const parts = []
+      parts.push(`Số lượng đồ quyên góp: ${registrationData.itemCount}`)
+      if (registrationData.itemTypes?.length) {
+        parts.push(`Loại đồ: ${registrationData.itemTypes.join(', ')}`)
+      }
+      if (registrationData.notes) {
+        parts.push(`Ghi chú: ${registrationData.notes}`)
+      }
+      const note = parts.join('\n')
+      await registerCustomerToEvent(event.id, note)
+      alert('Đăng ký tham gia thành công!')
+      setShowRegistrationForm(false)
+      setRegistrationData({ notes: '', itemCount: 1, itemTypes: [] })
+      setIsRegistered(true)
+      setEvent(prev => prev ? { ...prev, attendees: (prev.attendees || 0) + 1 } : prev)
+    } catch (err) {
+      alert('Đăng ký thất bại. Vui lòng thử lại!')
+    }
+  }
+
+  const handleCancelRegistration = async () => {
+    if (!event?.id || actionLoading) return
+    try {
+      setActionLoading(true)
+      await cancelCustomerRegistration(event.id)
+      setIsRegistered(false)
+      setEvent(prev => prev ? { ...prev, attendees: Math.max(0, (prev.attendees || 0) - 1) } : prev)
+      alert('Đã hủy đăng ký sự kiện')
+    } catch (e) {
+      alert('Hủy đăng ký thất bại, vui lòng thử lại!')
+    } finally {
+      setActionLoading(false)
+    }
   }
 
   const handleDonationSubmit = (e) => {
@@ -99,7 +203,7 @@ const EventDetail = () => {
             <span className="text-gray-400">/</span>
             <Link to="/events" className="text-gray-500 hover:text-green-600">Sự kiện</Link>
             <span className="text-gray-400">/</span>
-            <span className="text-gray-800 font-medium">{event.title}</span>
+            <span className="text-gray-800 font-medium">{event?.title || ''}</span>
           </nav>
         </div>
       </div>
@@ -147,7 +251,7 @@ const EventDetail = () => {
                   <div>
                     <h3 className="font-semibold text-gray-800 mb-1">Thời gian</h3>
                     <p className="text-gray-600">{formatDate(event.date)}</p>
-                    <p className="text-gray-600">{event.time}</p>
+                    <p className="text-gray-600">{(event.startTime || '').slice(11,16)} - {(event.endTime || '').slice(11,16)}</p>
                   </div>
                 </div>
 
@@ -183,7 +287,7 @@ const EventDetail = () => {
                   </div>
                 </div>
 
-                {/* Attendees */}
+                {/* Attendees (không giới hạn) */}
                 <div className="flex items-start gap-4">
                   <div className="bg-orange-100 p-3 rounded-lg">
                     <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -191,14 +295,8 @@ const EventDetail = () => {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-800 mb-1">Số người tham gia</h3>
-                    <p className="text-gray-600">{event.attendees}/{event.maxAttendees} người</p>
-                    <div className="w-32 bg-gray-200 rounded-full h-2 mt-2">
-                      <div 
-                        className="bg-green-600 h-2 rounded-full" 
-                        style={{ width: `${(event.attendees / event.maxAttendees) * 100}%` }}
-                      ></div>
-                    </div>
+                    <h3 className="font-semibold text-gray-800 mb-1">Số người đã đăng ký</h3>
+                    <p className="text-gray-600">{event.attendees} người</p>
                   </div>
                 </div>
               </div>
@@ -246,16 +344,12 @@ const EventDetail = () => {
                 <div>
                   <h3 className="text-xl font-semibold text-gray-800 mb-4">Vị trí sự kiện</h3>
                   <div className="mb-4">
-                    <GoogleMap
-                      center={event.coordinates}
-                      zoom={16}
+                    <Vietmap
+                      latitude={event.coordinates.lat}
+                      longitude={event.coordinates.lng}
                       height="400px"
-                      markers={[
-                        {
-                          position: event.coordinates,
-                          title: event.title
-                        }
-                      ]}
+                      apiKey={import.meta.env.VITE_VIETMAP_API_KEY || '3aa910999593c14303117e42dc0e62171cd42a0daa6c944c'}
+                      zoom={16}
                     />
                   </div>
                   <div className="bg-gray-50 p-4 rounded-lg">
@@ -321,9 +415,9 @@ const EventDetail = () => {
 
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            {/* Registration Card */}
+              {/* Registration Card (không giới hạn chỗ) */}
             <motion.div
-              className="bg-white rounded-xl p-6 mb-6 sticky top-6"
+              className="bg-white rounded-xl p-6 mb-6 sticky top-24 md:top-28 lg:top-32"
               variants={fadeIn}
               transition={{ delay: 0.4 }}
             >
@@ -338,44 +432,31 @@ const EventDetail = () => {
                 <p className="text-gray-600">Mỗi người tham gia</p>
               </div>
 
-              {/* Progress */}
-              <div className="mb-6">
-                <div className="flex justify-between text-sm text-gray-600 mb-2">
-                  <span>{event.attendees} đã đăng ký</span>
-                  <span>{event.maxAttendees - event.attendees} chỗ còn lại</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div 
-                    className="bg-green-600 h-3 rounded-full transition-all duration-300" 
-                    style={{ width: `${(event.attendees / event.maxAttendees) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
+              <div className="mb-6 text-sm text-gray-600">{event.attendees} người đã đăng ký</div>
 
               {/* Action Buttons */}
               <div className="space-y-3">
                 <motion.button
-                  onClick={() => setShowRegistrationForm(true)}
-                  className={`w-full font-bold py-4 rounded-lg transition ${
-                    event.attendees >= event.maxAttendees
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-green-600 hover:bg-green-700 text-white'
+                  onClick={() => !isRegistered && setShowRegistrationForm(true)}
+                  disabled={isRegistered}
+                  className={`w-full font-bold py-4 rounded-lg transition text-white disabled:opacity-60 ${
+                    isRegistered ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
                   }`}
-                  whileHover={event.attendees < event.maxAttendees ? { scale: 1.02 } : {}}
-                  whileTap={event.attendees < event.maxAttendees ? { scale: 0.98 } : {}}
-                  disabled={event.attendees >= event.maxAttendees}
+                  whileHover={{ scale: isRegistered ? 1 : 1.02 }}
+                  whileTap={{ scale: isRegistered ? 1 : 0.98 }}
                 >
-                  {event.attendees >= event.maxAttendees ? 'Đã hết chỗ' : 'Đăng ký tham gia'}
+                  {isRegistered ? 'Bạn đã đăng ký' : 'Đăng ký tham gia'}
                 </motion.button>
 
-                <motion.button
-                  onClick={() => setShowDonationForm(true)}
-                  className="w-full font-bold py-4 border-2 border-green-600 text-green-600 rounded-lg hover:bg-green-50 transition"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Đăng ký quyên góp đồ
-                </motion.button>
+                {isRegistered && (
+                  <button
+                    onClick={handleCancelRegistration}
+                    disabled={actionLoading}
+                    className="w-full border border-red-500 text-red-600 hover:bg-red-50 font-semibold py-3 rounded-lg transition disabled:opacity-60"
+                  >
+                    {actionLoading ? 'Đang hủy...' : 'Hủy đăng ký'}
+                  </button>
+                )}
               </div>
 
               <div className="mt-6 pt-6 border-t text-center">
@@ -410,46 +491,50 @@ const EventDetail = () => {
               </div>
 
               <form onSubmit={handleRegistrationSubmit} className="space-y-4">
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Họ và tên *
+                    Số lượng đồ quyên góp (tùy chọn)
                   </label>
                   <input
-                    type="text"
-                    required
-                    value={registrationData.name}
-                    onChange={(e) => setRegistrationData({...registrationData, name: e.target.value})}
+                    type="number"
+                    min="1"
+                    value={registrationData.itemCount}
+                    onChange={(e) => setRegistrationData({...registrationData, itemCount: parseInt(e.target.value) || 1})}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
-                    placeholder="Nhập họ và tên"
+                    placeholder="Số món đồ"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email *
+                    Loại đồ quyên góp (tùy chọn)
                   </label>
-                  <input
-                    type="email"
-                    required
-                    value={registrationData.email}
-                    onChange={(e) => setRegistrationData({...registrationData, email: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
-                    placeholder="Nhập email"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Số điện thoại *
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={registrationData.phone}
-                    onChange={(e) => setRegistrationData({...registrationData, phone: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
-                    placeholder="Nhập số điện thoại"
-                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    {itemTypeOptions.map((type) => (
+                      <label key={type} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={registrationData.itemTypes.includes(type)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setRegistrationData({
+                                ...registrationData,
+                                itemTypes: [...registrationData.itemTypes, type]
+                              })
+                            } else {
+                              setRegistrationData({
+                                ...registrationData,
+                                itemTypes: registrationData.itemTypes.filter(t => t !== type)
+                              })
+                            }
+                          }}
+                          className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                        />
+                        <span className="text-sm text-gray-700">{type}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
 
                 <div>

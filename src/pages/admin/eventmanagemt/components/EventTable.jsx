@@ -13,6 +13,7 @@ import {
   CalendarOutlined,
   EnvironmentOutlined,
   EyeOutlined,
+  UserAddOutlined,
   ClockCircleOutlined
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
@@ -22,6 +23,7 @@ const EventTable = ({
   handleView, 
   handleEdit, 
   handleDelete,
+  handleAssign,
   statusConfig,
   categoryConfig 
 }) => {
@@ -81,17 +83,7 @@ const EventTable = ({
         return <Tag color={config.color}>{config.text}</Tag>
       },
     },
-    // Cột số người tham gia đã được yêu cầu bỏ đi
-    {
-      title: 'Phí tham gia',
-      dataIndex: 'price',
-      key: 'price',
-      render: (price) => (
-        <span className={`font-medium ${price === 0 ? 'text-green-600' : 'text-blue-600'}`}>
-          {price === 0 ? 'Miễn phí' : `${price.toLocaleString('vi-VN')} VNĐ`}
-        </span>
-      ),
-    },
+    // Bỏ cột Phí tham gia theo yêu cầu
     {
       title: 'Thao tác',
       key: 'action',
@@ -114,6 +106,15 @@ const EventTable = ({
             size="small"
           >
             Sửa
+          </Button>
+          <Button
+            type="text"
+            icon={<UserAddOutlined />}
+            onClick={() => handleAssign(record)}
+            className="text-purple-600 hover:text-purple-700"
+            size="small"
+          >
+            Thêm nhân viên
           </Button>
           <Popconfirm
             title="Xóa sự kiện"
