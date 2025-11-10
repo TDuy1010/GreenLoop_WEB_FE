@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
+import dayjs from 'dayjs'
 import { getMyRegisteredEvents } from '../../../../service/api/eventApi'
 import { API_CONFIG } from '../../../../service/instance'
 import Loading from '../../../../components/Loading'
@@ -73,22 +74,36 @@ const MyEventsPage = () => {
   }
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    if (!dateString) return '--'
+    try {
+      // Convert UTC về GMT+7 (Việt Nam) - tương tự như EventDetail admin
+      const date = new Date(dateString)
+      const vietnamTime = new Date(date.getTime() + (7 * 60 * 60 * 1000))
+      return dayjs(vietnamTime).format('dddd, D [tháng] M [năm] YYYY')
+    } catch (e) {
+      // Fallback: thử parse như local time
+      try {
+        return dayjs(dateString).format('dddd, D [tháng] M [năm] YYYY')
+      } catch {
+        return '--'
+      }
+    }
   }
 
   const formatTime = (dateString) => {
     if (!dateString) return '--:--'
     try {
-      if (typeof dateString === 'string') {
-        const hhmm = dateString.slice(11, 16)
-        if (hhmm && hhmm.includes(':')) return hhmm
-      }
+      // Parse UTC string và thêm 7 giờ để convert về GMT+7
       const date = new Date(dateString)
-      if (isNaN(date.getTime())) return '--:--'
-      return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-    } catch {
-      return '--:--'
+      const vietnamTime = new Date(date.getTime() + (7 * 60 * 60 * 1000))
+      return dayjs(vietnamTime).format('HH:mm')
+    } catch (e) {
+      // Fallback: thử parse như local time
+      try {
+        return dayjs(dateString).format('HH:mm')
+      } catch {
+        return '--:--'
+      }
     }
   }
 

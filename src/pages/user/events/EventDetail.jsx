@@ -6,6 +6,7 @@ import { API_CONFIG } from '../../../service/instance'
 import Vietmap from '../../../components/Vietmap'
 import SuccessModal from '../../../components/SuccessModal'
 import ConfirmModal from '../../../components/ConfirmModal'
+import { formatDateToVN, formatTime } from '../../../utils/dateHelper'
 
 const EventDetail = () => {
   const { id } = useParams()
@@ -135,15 +136,6 @@ const EventDetail = () => {
     visible: { opacity: 1, y: 0 }
   }
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('vi-VN', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
-  }
 
   const handleRegistrationSubmit = async (e) => {
     e.preventDefault()
@@ -165,7 +157,7 @@ const EventDetail = () => {
       setRegistrationData({ notes: '', itemCount: 1, itemTypes: [] })
       setIsRegistered(true)
       setEvent(prev => prev ? { ...prev, attendees: (prev.attendees || 0) + 1 } : prev)
-    } catch (err) {
+    } catch {
       alert('Đăng ký thất bại. Vui lòng thử lại!')
     }
   }
@@ -277,8 +269,8 @@ const EventDetail = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-800 mb-1">Thời gian</h3>
-                    <p className="text-gray-600">{formatDate(event.date)}</p>
-                    <p className="text-gray-600">{(event.startTime || '').slice(11,16)} - {(event.endTime || '').slice(11,16)}</p>
+                    <p className="text-gray-600">{formatDateToVN(event.date || event.startTime)}</p>
+                    <p className="text-gray-600">{formatTime(event.startTime)} - {formatTime(event.endTime)}</p>
                   </div>
                 </div>
 

@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import Loading from '../../../../components/Loading'
 import EventRegistrationDetailModal from './EventRegistrationDetailModal'
+import { formatDateShort, formatTime } from '../../../../utils/dateHelper'
 
 const MyEventsTab = ({ myEvents, loadingMyEvents }) => {
   const [selectedEvent, setSelectedEvent] = useState(null)
@@ -56,7 +57,12 @@ const MyEventsTab = ({ myEvents, loadingMyEvents }) => {
                   </span>
                 </div>
                 <div className="text-sm text-gray-600 mt-1">
-                  {new Date(ev.date).toLocaleDateString('vi-VN')} • {ev.startTime?.slice(11,16)} - {ev.endTime?.slice(11,16)} • {ev.location}
+                  {(() => {
+                    const dateStr = formatDateShort(ev.date || ev.startTime)
+                    const startTimeStr = formatTime(ev.startTime)
+                    const endTimeStr = formatTime(ev.endTime)
+                    return `${dateStr} • ${startTimeStr} - ${endTimeStr} • ${ev.location || ''}`
+                  })()}
                 </div>
                 <div className="mt-2">
                   <button 

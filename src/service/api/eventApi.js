@@ -182,6 +182,53 @@ export const getEventStaffs = async (eventId) => {
   return response
 }
 
+// Lấy danh sách người đăng ký của sự kiện (ADMIN)
+// GET /events/admin/{eventId}/registrations
+export const getEventRegistrations = async (eventId, params = {}) => {
+  const {
+    page = 0,
+    size = 15,
+    sortBy = 'createdAt',
+    sortDir = 'DESC',
+    status,
+    active
+  } = params
+
+  const response = await axiosClient.get(`/events/admin/${eventId}/registrations`, {
+    params: {
+      page,
+      size,
+      sortBy,
+      sortDir,
+      ...(status ? { status } : {}),
+      ...(active !== undefined ? { active } : {})
+    }
+  })
+  return response
+}
+
+// Cập nhật trạng thái đăng ký của một user trong sự kiện (ADMIN)
+// PUT /events/admin/{eventId}/status
+// body: { userId: number, registrationStatus: 'BOOKED' | 'CANCELED' | 'CHECKED_IN' }
+export const updateEventRegistrationStatus = async (eventId, payload) => {
+  // Nếu userId là số an toàn → gửi số; nếu không thì gửi chuỗi để tránh mất chính xác
+  const asNumber = Number(payload?.userId)
+  const isSafe = Number.isFinite(asNumber) && Math.abs(asNumber) <= Number.MAX_SAFE_INTEGER
+  const body = isSafe
+    ? { userId: asNumber, registrationStatus: payload?.registrationStatus }
+    : { userId: String(payload?.userId), registrationStatus: payload?.registrationStatus }
+  const response = await axiosClient.put(`/events/admin/${eventId}/status`, body, {
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }
+  })
+  return response
+}
+
+// Kích hoạt (active) một sự kiện - PUT /events/{id}/activate
+export const activateEvent = async (id) => {
+  const response = await axiosClient.put(`/events/${id}/activate`)
+  return response
+}
+
 // Gán nhiều nhân sự vào sự kiện - POST /events/staffs
 // Body: { eventId: number, staffAssignments: [{ staffId: number, storeManager: boolean }] }
 export const assignEventStaffs = async (payload) => {
@@ -239,7 +286,10 @@ export default {
   updateEventStaffs,
   deleteEvent,
   registerCustomerToEvent,
-  cancelCustomerRegistration 
+  cancelCustomerRegistration,
+  getEventRegistrations,
+  updateEventRegistrationStatus,
+  activateEvent 
 }
 
 

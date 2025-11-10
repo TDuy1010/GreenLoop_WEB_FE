@@ -54,12 +54,12 @@ const Vietmap = ({ latitude, longitude, height = '300px', apiKey, zoom = 16 }) =
   }, [latitude, longitude])
 
   return (
-    <div style={{ width: '100%', height, minHeight: height }} className="rounded-lg overflow-hidden border">
+    <div style={{ width: '100%', height, minHeight: height, position: 'relative', zIndex: 1 }} className="rounded-lg overflow-hidden border">
       <MapContainer
         key={`${center[0]},${center[1]}`}
         center={center}
         zoom={zoom}
-        style={{ width: '100%', height: '100%' }}
+        style={{ width: '100%', height: '100%', position: 'relative', zIndex: 1 }}
         preferCanvas
         whenReady={(ctx) => {
           const m = ctx.target

@@ -229,12 +229,12 @@ const VietmapInteractive = ({
           Tìm
         </Button>
       </div>
-      <div style={{ width: '100%', height, minHeight: height }} className="rounded-lg overflow-hidden border">
+      <div style={{ width: '100%', height, minHeight: height, position: 'relative', zIndex: 1 }} className="rounded-lg overflow-hidden border">
         <MapContainer
           ref={mapRef}
           center={selectedPos}
           zoom={16}
-          style={{ width: '100%', height: '100%' }}
+          style={{ width: '100%', height: '100%', position: 'relative', zIndex: 1 }}
           preferCanvas
           whenReady={(ctx) => {
             const m = ctx.target

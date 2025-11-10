@@ -7,6 +7,7 @@ import { getCustomerEvents } from '../../../service/api/eventApi'
 import { API_CONFIG } from '../../../service/instance'
 import { isLoggedIn } from '../../../utils/authHelper'
 import Loading from '../../../components/Loading'
+import { formatDateToVN, formatTime } from '../../../utils/dateHelper'
 
 const EventPage = () => {
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -89,30 +90,6 @@ const EventPage = () => {
     }
   }
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('vi-VN', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
-  }
-
-  const formatTime = (dateString) => {
-    if (!dateString) return '--:--'
-    try {
-      if (typeof dateString === 'string') {
-        const hhmm = dateString.slice(11, 16)
-        if (hhmm && hhmm.includes(':')) return hhmm
-      }
-      const date = new Date(dateString)
-      if (isNaN(date.getTime())) return '--:--'
-      return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-    } catch {
-      return '--:--'
-    }
-  }
 
   const EventCard = ({ event }) => (
     <motion.div
@@ -142,7 +119,7 @@ const EventPage = () => {
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          <span className="font-semibold text-sm">{formatDate(event.date)}</span>
+          <span className="font-semibold text-sm">{formatDateToVN(event.date || event.startTime)}</span>
         </div>
         {/* Time range */}
         <div className="flex items-center gap-2 text-gray-600 mb-3">

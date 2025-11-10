@@ -10,7 +10,8 @@ import {
   Skeleton,
   Table,
   Space,
-  Empty
+  Empty,
+  Button
 } from 'antd'
 import {
   CheckCircleOutlined,
@@ -22,7 +23,8 @@ import {
   TeamOutlined
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
-import { getEventById, getEventStaffs } from '../../../../service/api/eventApi'
+import { getEventById, getEventStaffs, getEventRegistrations } from '../../../../service/api/eventApi'
+import EventStaffEditor from './EventStaffEditor'
 import Vietmap from '../../../../components/Vietmap'
 import heroImg from '../../../../assets/images/herosection.jpg'
 
@@ -31,6 +33,11 @@ const EventDetail = ({ visible, onClose, event }) => {
   const [loading, setLoading] = useState(false)
   const [assignedStaffs, setAssignedStaffs] = useState([])
   const [loadingStaffs, setLoadingStaffs] = useState(false)
+  const [registrations, setRegistrations] = useState([])
+  const [loadingRegs, setLoadingRegs] = useState(false)
+  const [regsModalOpen, setRegsModalOpen] = useState(false)
+  const [staffsModalOpen, setStaffsModalOpen] = useState(false)
+  const [assignModalOpen, setAssignModalOpen] = useState(false)
 
   // Load danh sách nhân viên đã được assign
   const loadAssignedStaffs = useCallback(async () => {
@@ -40,18 +47,47 @@ const EventDetail = ({ visible, onClose, event }) => {
       const res = await getEventStaffs(event.id)
       const staffList = res?.data?.data || res?.data || (Array.isArray(res) ? res : [])
       const mapped = staffList.map((s) => ({
-        id: s.staffId || s.id || s.employeeId,
+        id: Number(s.staffId || s.id || s.employeeId),
         fullName: s.fullName || s.name || s.email,
         email: s.email,
         storeManager: s.isStoreManager === true || s.storeManager === true,
         roles: s.roles || []
       }))
-      setAssignedStaffs(mapped)
+      // Loại trùng theo id để tránh hiển thị lặp
+      const uniq = Array.from(new Map(mapped.map(it => [it.id, it])).values())
+      setAssignedStaffs(uniq)
     } catch (err) {
       console.error('Error loading assigned staffs:', err)
       setAssignedStaffs([])
     } finally {
       setLoadingStaffs(false)
+    }
+  }, [event?.id, visible])
+
+  // Load danh sách người đăng ký tham gia
+  const loadRegistrations = useCallback(async () => {
+    if (!event?.id || !visible) return
+    try {
+      setLoadingRegs(true)
+      const res = await getEventRegistrations(event.id, { page: 0, size: 50, sortBy: 'createdAt', sortDir: 'DESC' })
+      const page = res?.data?.data || res?.data || {}
+      const list = Array.isArray(page?.content) ? page.content : (Array.isArray(res) ? res : [])
+      const mapped = list.map((r, idx) => ({
+        key: `${r.userId || idx}-${r.createdAt}`,
+        userId: String(r.userId),
+        email: r.email,
+        fullName: r.fullName || r.name || r.email,
+        isActive: r.isActive === true,
+        createdAt: r.createdAt,
+        checkInTime: r.checkInTime,
+        status: (r.registrationStatus || r.status || '').toString().toUpperCase()
+      }))
+      setRegistrations(mapped)
+    } catch (err) {
+      console.error('Error loading registrations:', err)
+      setRegistrations([])
+    } finally {
+      setLoadingRegs(false)
     }
   }, [event?.id, visible])
 
@@ -145,7 +181,8 @@ const EventDetail = ({ visible, onClose, event }) => {
     }
     loadDetail()
     loadAssignedStaffs()
-  }, [event?.id, visible, loadAssignedStaffs])
+    loadRegistrations()
+  }, [event?.id, visible, loadAssignedStaffs, loadRegistrations])
 
   useEffect(() => {
     if (!visible) {
@@ -229,11 +266,6 @@ const EventDetail = ({ visible, onClose, event }) => {
                     {detail.isActive ? 'Đang hoạt động' : 'Không hoạt động'}
                   </Tag>
                 )}
-                {detail?.isRegistered !== undefined && (
-                  <Tag color={detail.isRegistered ? 'blue' : 'default'} className="text-sm px-3 py-1">
-                    {detail.isRegistered ? 'Bạn đã đăng ký' : 'Chưa đăng ký'}
-                  </Tag>
-                )}
               </div>
             </div>
           </div>
@@ -282,11 +314,21 @@ const EventDetail = ({ visible, onClose, event }) => {
           </Col>
           <Col span={12}>
             <div className="text-xs text-gray-500">Tổng đăng ký</div>
-            <div className="text-sm font-medium text-gray-900">{detail?.totalRegistrations ?? 0}</div>
+            <div className="flex items-center gap-2">
+              <div className="text-sm font-medium text-gray-900">{detail?.totalRegistrations ?? 0}</div>
+              <Button type="link" size="small" onClick={() => { setRegsModalOpen(true); loadRegistrations(); }}>
+                Xem danh sách
+              </Button>
+            </div>
           </Col>
           <Col span={12}>
             <div className="text-xs text-gray-500">Tổng nhân sự</div>
-            <div className="text-sm font-medium text-gray-900">{detail?.totalStaffs ?? 0}</div>
+            <div className="flex items-center gap-2">
+              <div className="text-sm font-medium text-gray-900">{detail?.totalStaffs ?? 0}</div>
+              <Button type="link" size="small" onClick={() => { setStaffsModalOpen(true); loadAssignedStaffs(); }}>
+                Xem danh sách
+              </Button>
+            </div>
           </Col>
           <Col span={24}>
             <div className="flex items-start gap-3">
@@ -308,29 +350,30 @@ const EventDetail = ({ visible, onClose, event }) => {
         </Skeleton>
       </Card>
 
-      {/* Assigned Staffs */}
-      <Card 
-        title={
-          <span className="text-base font-semibold text-gray-700">
-            <TeamOutlined className="mr-2" />
-            Nhân viên đã được phân công ({assignedStaffs.length})
-          </span>
-        }
-        className="mb-4 shadow-sm"
-        size="small"
-        loading={loadingStaffs}
+      {/* Modals: Staffs and Registrations (giảm độ dài modal chi tiết) */}
+      <Modal
+        title={(
+          <div className="flex items-center justify-between pr-10">
+            <span>Nhân viên đã được phân công</span>
+            <Button size="small" type="primary" onClick={() => setAssignModalOpen(true)}>
+              Chỉnh sửa
+            </Button>
+          </div>
+        )}
+        open={staffsModalOpen}
+        onCancel={() => setStaffsModalOpen(false)}
+        footer={null}
+        width={700}
       >
         {assignedStaffs.length === 0 ? (
-          <Empty 
-            description="Chưa có nhân viên nào được phân công cho sự kiện này"
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-          />
+          <Empty description="Chưa có nhân viên nào được phân công" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
           <Table
             size="small"
             dataSource={assignedStaffs}
             rowKey="id"
-            pagination={false}
+            loading={loadingStaffs}
+            pagination={{ pageSize: 10 }}
             columns={[
               {
                 title: 'Họ tên',
@@ -340,35 +383,20 @@ const EventDetail = ({ visible, onClose, event }) => {
                   <Space>
                     <CheckCircleOutlined style={{ color: '#52c41a' }} />
                     <span>{text}</span>
-                    {record.storeManager && (
-                      <Tag color="gold" size="small">Quản lý</Tag>
-                    )}
+                    {record.storeManager && (<Tag color="gold" size="small">Quản lý</Tag>)}
                   </Space>
                 )
               },
-              {
-                title: 'Email',
-                dataIndex: 'email',
-                key: 'email'
-              },
+              { title: 'Email', dataIndex: 'email', key: 'email' },
               {
                 title: 'Vai trò',
                 dataIndex: 'roles',
                 key: 'roles',
                 render: (roles, record) => {
                   const roleList = []
-                  // Thêm vai trò từ mảng roles nếu có
-                  if (roles && Array.isArray(roles) && roles.length > 0) {
-                    roleList.push(...roles)
-                  }
-                  // Thêm vai trò "Quản lý cửa hàng" nếu là store manager
-                  if (record.storeManager) {
-                    roleList.push('Quản lý cửa hàng')
-                  }
-                  // Nếu không có vai trò nào, hiển thị "Nhân viên"
-                  if (roleList.length === 0) {
-                    roleList.push('Nhân viên')
-                  }
+                  if (roles && Array.isArray(roles) && roles.length > 0) roleList.push(...roles)
+                  if (record.storeManager) roleList.push('Quản lý cửa hàng')
+                  if (roleList.length === 0) roleList.push('Nhân viên')
                   return (
                     <Space wrap>
                       {roleList.map((role, index) => (
@@ -383,7 +411,64 @@ const EventDetail = ({ visible, onClose, event }) => {
             ]}
           />
         )}
-      </Card>
+      </Modal>
+
+      {/* Modal chỉnh sửa phân công nhân viên */}
+      <EventStaffEditor
+        visible={assignModalOpen}
+        onClose={() => setAssignModalOpen(false)}
+        eventId={detail?.id || event?.id}
+        assigned={assignedStaffs}
+        onSaved={async (updatedList) => {
+          setAssignModalOpen(false)
+          if (Array.isArray(updatedList)) {
+            setAssignedStaffs(updatedList.map(it => ({ id: it.staffId, fullName: it.fullName, email: it.email, storeManager: !!it.storeManager })))
+          }
+          await loadAssignedStaffs()
+        }}
+      />
+
+      <Modal
+        title={( 
+          <div className="flex items-center justify-between pr-12">
+            <span>Danh sách người đăng ký tham gia</span>
+          </div>
+        )}
+        open={regsModalOpen}
+        onCancel={() => setRegsModalOpen(false)}
+        footer={null}
+        width={800}
+      >
+        {registrations.length === 0 ? (
+          <Empty description="Chưa có người đăng ký" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        ) : (
+          <Table
+            size="small"
+            dataSource={registrations}
+            rowKey="key"
+            loading={loadingRegs}
+            pagination={{ pageSize: 10 }}
+            columns={[
+              { title: 'Họ tên', dataIndex: 'fullName', key: 'fullName' },
+              { title: 'Email', dataIndex: 'email', key: 'email' },
+              {
+                title: 'Trạng thái', dataIndex: 'status', key: 'status',
+                render: (_, record) => {
+                  const current = (record.status || '').toUpperCase()
+                  const color = current === 'BOOKED' ? 'green'
+                    : current === 'CHECKED_IN' || current === 'ATTENDED' ? 'blue'
+                    : current === 'NO_SHOW' ? 'orange'
+                    : current === 'BLOCKED' ? 'purple'
+                    : 'red'
+                  return <Tag color={color}>{current || 'UNKNOWN'}</Tag>
+                }
+              },
+              { title: 'Ngày đăng ký', dataIndex: 'createdAt', key: 'createdAt', render: (v) => v ? new Date(v).toLocaleString('vi-VN') : '-' },
+              { title: 'Check-in', dataIndex: 'checkInTime', key: 'checkInTime', render: (v) => v ? new Date(v).toLocaleString('vi-VN') : '-' }
+            ]}
+          />
+        )}
+      </Modal>
 
       {/* System Meta */}
       <Card 

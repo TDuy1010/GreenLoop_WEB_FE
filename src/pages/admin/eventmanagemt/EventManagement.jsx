@@ -53,6 +53,8 @@ const EventManagement = () => {
         setLoading(true)
         const res = await getEvents({ page: 0, size: 50, sortBy: 'createdAt', sortDir: 'DESC' })
         const list = res?.data?.content || []
+        console.log('EventManagement - First event from API:', list[0])
+        console.log('EventManagement - First event description:', list[0]?.description)
         const mapped = list.map(ev => {
           // Chuẩn hoá URL ảnh từ backend (ưu tiên các field phổ biến)
           const rawImage = ev.imageUrl || ev.thumbnail || ev.thumbnailUrl || ev.image || ev.photo || ''
@@ -101,7 +103,7 @@ const EventManagement = () => {
           return {
             id: ev.id,
             title: ev.name,
-            description: '',
+            description: ev.description || '',
             date: convertToVietnamDate(ev.startTime),
             startTime: convertToVietnamTime(ev.startTime),
             endTime: convertToVietnamTime(ev.endTime),
@@ -111,6 +113,7 @@ const EventManagement = () => {
             maxParticipants: ev.maxParticipants || 0,
             registeredCount: ev.registeredCount || 0,
             status: ev.status, // CREATED | PUBLISHED | ...
+            isActive: ev.isActive === true,
             category: ev.category || 'workshop',
             organizer: 'GreenLoop',
             image: normalizedImage,
@@ -244,7 +247,7 @@ const EventManagement = () => {
         return {
           id: ev.id,
           title: ev.name,
-          description: '',
+          description: ev.description || '',
           date: convertToVietnamDate(ev.startTime),
           startTime: convertToVietnamTime(ev.startTime),
           endTime: convertToVietnamTime(ev.endTime),
@@ -254,6 +257,7 @@ const EventManagement = () => {
           maxParticipants: ev.maxParticipants || 0,
           registeredCount: ev.registeredCount || 0,
           status: ev.status,
+          isActive: ev.isActive === true,
           category: ev.category || 'workshop',
           organizer: 'GreenLoop',
           image: normalizedImage,
@@ -348,7 +352,7 @@ const EventManagement = () => {
         return {
           id: ev.id,
           title: ev.name,
-          description: '',
+          description: ev.description || '',
           date: convertToVietnamDate(ev.startTime),
           startTime: convertToVietnamTime(ev.startTime),
           endTime: convertToVietnamTime(ev.endTime),
@@ -358,6 +362,7 @@ const EventManagement = () => {
           maxParticipants: ev.maxParticipants || 0,
           registeredCount: ev.registeredCount || 0,
           status: ev.status,
+          isActive: ev.isActive === true,
           category: ev.category || 'workshop',
           organizer: 'GreenLoop',
           image: normalizedImage,
@@ -508,6 +513,7 @@ const EventManagement = () => {
           handleDelete={handleDelete}
           handleAssign={handleOpenAssign}
           statusConfig={statusConfig}
+          onActivated={handleAddEvent}
         />
         {loading && <div className="text-center py-3 text-gray-500">Đang tải dữ liệu...</div>}
         {error && <div className="text-center py-2 text-red-600">{error}</div>}

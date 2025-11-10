@@ -1,11 +1,13 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { 
   Table, 
   Button, 
   Space, 
   Tag, 
   Image,
-  Popconfirm
+  Popconfirm,
+  Switch,
+  message
 } from 'antd'
 import { 
   EditOutlined, 
@@ -16,6 +18,7 @@ import {
   UserAddOutlined,
   ClockCircleOutlined
 } from '@ant-design/icons'
+import { activateEvent } from '../../../../service/api/eventApi'
 import dayjs from 'dayjs'
 
 const EventTable = ({ 
@@ -25,8 +28,13 @@ const EventTable = ({
   handleDelete,
   handleAssign,
   statusConfig,
-  categoryConfig 
+  categoryConfig,
+  onActivated
 }) => {
+  // Loading per-row khi toggle để mượt mà và tránh spam request
+  const [rowLoading, setRowLoading] = useState({})
+  // Trạng thái tạm thời để UI phản hồi ngay (optimistic update)
+  const [tempActive, setTempActive] = useState({})
   const columns = [
     {
       title: 'Sự kiện',
@@ -73,6 +81,41 @@ const EventTable = ({
           </div>
         </div>
       ),
+    },
+    {
+      title: 'Hoạt động',
+      dataIndex: 'isActive',
+      key: 'isActive',
+      width: 140,
+      render: (_, record) => {
+        const active = record?.isActive === true || record?.active === true
+        const checked = tempActive[record.id] !== undefined ? tempActive[record.id] : active
+        return (
+          <Switch
+            checked={checked}
+            checkedChildren="Bật"
+            unCheckedChildren="Tắt"
+            size="default"
+            loading={rowLoading[record.id] === true}
+            onChange={async (val) => {
+              // Optimistic update
+              setTempActive(prev => ({ ...prev, [record.id]: val }))
+              setRowLoading(prev => ({ ...prev, [record.id]: true }))
+              try {
+                await activateEvent(record.id)
+                // Nếu parent muốn sync lại dữ liệu, gọi refresh sau nhỏ
+                if (typeof onActivated === 'function') onActivated()
+              } catch (e) {
+                // Revert nếu lỗi
+                setTempActive(prev => ({ ...prev, [record.id]: !val }))
+                message.error('Cập nhật trạng thái thất bại')
+              } finally {
+                setRowLoading(prev => ({ ...prev, [record.id]: false }))
+              }
+            }}
+          />
+        )
+      }
     },
     {
       title: 'Trạng thái',

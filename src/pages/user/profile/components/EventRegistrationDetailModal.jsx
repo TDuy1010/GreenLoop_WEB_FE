@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import React from 'react'
 import { Modal } from 'antd'
 import { 
@@ -9,48 +8,11 @@ import {
   QrcodeOutlined,
   CloseCircleOutlined
 } from '@ant-design/icons'
+import { formatDateToVN, formatTime, formatDateTime } from '../../../../utils/dateHelper'
 
 const EventRegistrationDetailModal = ({ visible, onClose, eventData }) => {
   if (!eventData) return null
 
-  const formatDateTime = (dateString) => {
-    if (!dateString) return '—'
-    try {
-      const date = new Date(dateString)
-      return date.toLocaleString('vi-VN', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    } catch {
-      return dateString
-    }
-  }
-
-  const formatTime = (dateString) => {
-    if (!dateString) return '—'
-    try {
-      return new Date(dateString).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-    } catch {
-      return dateString?.slice(11, 16) || '—'
-    }
-  }
-
-  const formatDate = (dateString) => {
-    if (!dateString) return '—'
-    try {
-      return new Date(dateString).toLocaleDateString('vi-VN', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    } catch {
-      return dateString
-    }
-  }
 
   const getStatusConfig = () => {
     if (eventData.registrationStatus === 'CANCELED') {
@@ -134,7 +96,7 @@ const EventRegistrationDetailModal = ({ visible, onClose, eventData }) => {
             <CalendarOutlined className="text-blue-500 text-lg mt-1" />
             <div className="flex-1">
               <div className="text-xs text-gray-500 mb-1">Ngày tổ chức</div>
-              <div className="text-sm font-medium text-gray-900">{formatDate(eventData.startTime || eventData.date)}</div>
+              <div className="text-sm font-medium text-gray-900">{formatDateToVN(eventData.startTime || eventData.date)}</div>
             </div>
           </div>
 
@@ -148,13 +110,13 @@ const EventRegistrationDetailModal = ({ visible, onClose, eventData }) => {
             </div>
           </div>
 
-          <div className="flex items-start gap-3">
+          {/* <div className="flex items-start gap-3">
             <EnvironmentOutlined className="text-red-500 text-lg mt-1" />
             <div className="flex-1">
               <div className="text-xs text-gray-500 mb-1">Địa điểm</div>
               <div className="text-sm font-medium text-gray-900">{eventData.location || '—'}</div>
             </div>
-          </div>
+          </div> */}
         </div>
 
         {/* Thông tin check-in */}

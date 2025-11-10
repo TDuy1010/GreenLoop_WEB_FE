@@ -6,7 +6,6 @@ import {
   Select,
   DatePicker,
   TimePicker,
-  InputNumber,
   Button,
   Upload,
   message,
@@ -15,25 +14,16 @@ import {
   Alert,
   Statistic,
   Row,
-  Col,
-  Table,
-  Tag,
-  Switch,
-  Space,
-  Popconfirm
+  Col
 } from 'antd'
 import { 
   EditOutlined,
   UploadOutlined,
   CalendarOutlined,
-  TeamOutlined,
-  CheckCircleOutlined,
-  DeleteOutlined,
-  UserOutlined
+  TeamOutlined
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
-import { updateEvent, updateEventThumbnail, updateEventStatus, getEventStaffs, updateEventStaffs } from '../../../../service/api/eventApi'
-import { getEmployees } from '../../../../service/api/employeeApi'
+import { updateEvent, updateEventThumbnail, updateEventStatus, getEventById } from '../../../../service/api/eventApi'
 import VietmapInteractive from '../../../../components/VietmapInteractive'
 
 const { TextArea } = Input
@@ -45,115 +35,110 @@ const EventEdit = ({ visible, onClose, onUpdate, event }) => {
   const [imageUrl, setImageUrl] = useState(null)
   const [thumbnailFile, setThumbnailFile] = useState(null)
   const [selectedLocation, setSelectedLocation] = useState({ latitude: null, longitude: null, address: '' })
-  const [assignedStaffs, setAssignedStaffs] = useState([])
-  const [loadingStaffs, setLoadingStaffs] = useState(false)
-  const [employees, setEmployees] = useState([])
-  const [editStoreManagerIds, setEditStoreManagerIds] = useState(new Set())
+  const [loadingDetail, setLoadingDetail] = useState(false)
   const vietmapApiKey = import.meta.env.VITE_VIETMAP_API_KEY || '3aa910999593c14303117e42dc0e62171cd42a0daa6c944c'
 
   useEffect(() => {
-    if (event && visible) {
-      const lat = event?.coordinates?.lat != null ? Number(event.coordinates.lat) : (event?.latitude != null ? Number(event.latitude) : null)
-      const lng = event?.coordinates?.lng != null ? Number(event.coordinates.lng) : (event?.longitude != null ? Number(event.longitude) : null)
-      form.setFieldsValue({
-        name: event.title || event.name,
-        description: event.description,
-        status: event.status,
-        date: event.date ? dayjs(event.date) : null,
-        startTime: event.startTime ? dayjs(event.startTime, 'HH:mm') : null,
-        endTime: event.endTime ? dayjs(event.endTime, 'HH:mm') : null,
-        location: event.location,
-        note: event.note || '',
-        latitude: lat,
-        longitude: lng
-      })
-      setSelectedLocation({ latitude: lat, longitude: lng, address: event.location || '' })
-      setImageUrl(event.image)
-      setThumbnailFile(null)
-      // Load danh sách nhân viên đã được assign
-      loadAssignedStaffs()
-      // Load danh sách employees để lấy roles
-      loadEmployees()
-    }
-  }, [event, visible, form])
-
-  // Load danh sách nhân viên đã được assign
-  const loadAssignedStaffs = async () => {
-    if (!event?.id) return
-    try {
-      setLoadingStaffs(true)
-      const res = await getEventStaffs(event.id)
-      const staffList = res?.data?.data || res?.data || (Array.isArray(res) ? res : [])
-      const mapped = staffList.map((s) => ({
-        id: s.staffId || s.id || s.employeeId,
-        fullName: s.fullName || s.name || s.email,
-        email: s.email,
-        storeManager: s.storeManager === true,
-        roles: s.roles || []
-      }))
-      setAssignedStaffs(mapped)
-      // Set storeManagerIds
-      const managerIds = new Set()
-      mapped.forEach(s => {
-        if (s.storeManager) {
-          managerIds.add(s.id)
+    const loadEventDetail = async () => {
+      if (event?.id && visible) {
+        try {
+          setLoadingDetail(true)
+          console.log('EventEdit - Fetching event detail for id:', event.id)
+          const res = await getEventById(event.id)
+          const d = res?.data?.data || res?.data
+          console.log('EventEdit - Event detail from API:', d)
+          console.log('EventEdit - Event detail description:', d?.description)
+          
+          if (d) {
+            // Map dữ liệu từ API detail vào form
+            const lat = d.latitude != null ? Number(d.latitude) : (event?.coordinates?.lat != null ? Number(event.coordinates.lat) : null)
+            const lng = d.longitude != null ? Number(d.longitude) : (event?.coordinates?.lng != null ? Number(event.coordinates.lng) : null)
+            
+            // Convert UTC time về GMT+7
+            const convertToVietnamTime = (utcTimeString) => {
+              try {
+                const date = new Date(utcTimeString)
+                const vietnamTime = new Date(date.getTime() + (7 * 60 * 60 * 1000))
+                return dayjs(vietnamTime).format('HH:mm')
+              } catch {
+                try { return dayjs(utcTimeString).format('HH:mm') } catch { return null }
+              }
+            }
+            const convertToVietnamDate = (utcTimeString) => {
+              try {
+                const date = new Date(utcTimeString)
+                const vietnamTime = new Date(date.getTime() + (7 * 60 * 60 * 1000))
+                return dayjs(vietnamTime)
+              } catch {
+                return utcTimeString ? dayjs(utcTimeString) : null
+              }
+            }
+            
+            const imageUrl = d.imageUrl || d.thumbnail || d.thumbnailUrl || d.image || d.photo || event?.image || ''
+            const formValues = {
+              name: d.name || event.title || event.name,
+              description: d.description || '',
+              status: d.status || event.status,
+              date: d.startTime ? convertToVietnamDate(d.startTime) : (event.date ? dayjs(event.date) : null),
+              startTime: d.startTime ? dayjs(convertToVietnamTime(d.startTime), 'HH:mm') : (event.startTime ? dayjs(event.startTime, 'HH:mm') : null),
+              endTime: d.endTime ? dayjs(convertToVietnamTime(d.endTime), 'HH:mm') : (event.endTime ? dayjs(event.endTime, 'HH:mm') : null),
+              location: d.locationDetail || d.location || event.location,
+              note: d.note || event.note || '',
+              latitude: lat,
+              longitude: lng
+            }
+            console.log('EventEdit - Setting form values from detail:', formValues)
+            form.setFieldsValue(formValues)
+            setSelectedLocation({ latitude: lat, longitude: lng, address: d.locationDetail || d.location || event.location || '' })
+            setImageUrl(imageUrl)
+            setThumbnailFile(null)
+          }
+        } catch (err) {
+          console.error('EventEdit - Error loading event detail:', err)
+          // Fallback: dùng event object từ list nếu fetch detail thất bại
+          const lat = event?.coordinates?.lat != null ? Number(event.coordinates.lat) : (event?.latitude != null ? Number(event.latitude) : null)
+          const lng = event?.coordinates?.lng != null ? Number(event.coordinates.lng) : (event?.longitude != null ? Number(event.longitude) : null)
+          form.setFieldsValue({
+            name: event.title || event.name,
+            description: event.description || '',
+            status: event.status,
+            date: event.date ? dayjs(event.date) : null,
+            startTime: event.startTime ? dayjs(event.startTime, 'HH:mm') : null,
+            endTime: event.endTime ? dayjs(event.endTime, 'HH:mm') : null,
+            location: event.location,
+            note: event.note || '',
+            latitude: lat,
+            longitude: lng
+          })
+          setSelectedLocation({ latitude: lat, longitude: lng, address: event.location || '' })
+          setImageUrl(event.image)
+          setThumbnailFile(null)
+        } finally {
+          setLoadingDetail(false)
         }
-      })
-      setEditStoreManagerIds(managerIds)
-    } catch (err) {
-      console.error('Error loading assigned staffs:', err)
-      setAssignedStaffs([])
-    } finally {
-      setLoadingStaffs(false)
-    }
-  }
-
-  // Load danh sách employees để lấy roles
-  const loadEmployees = async () => {
-    try {
-      const res = await getEmployees({ page: 0, size: 100, sortBy: 'createdAt', sortDir: 'DESC' })
-      const list = res?.data?.content || []
-      const mapped = list.map((e) => ({
-        id: e.id,
-        fullName: e.fullName || e.email,
-        email: e.email,
-        roles: e.roles || []
-      }))
-      setEmployees(mapped)
-    } catch (err) {
-      console.error('Error loading employees:', err)
-    }
-  }
-
-  // Xóa nhân viên khỏi danh sách
-  const handleRemoveStaff = (staffId) => {
-    setAssignedStaffs(prev => prev.filter(s => s.id !== staffId))
-    setEditStoreManagerIds(prev => {
-      const next = new Set(prev)
-      next.delete(staffId)
-      return next
-    })
-  }
-
-  // Cập nhật nhân viên đã được assign
-  const updateStaffAssignments = async () => {
-    if (!event?.id) return true
-    
-    try {
-      const payload = {
-        eventId: Number(event.id),
-        staffAssignments: assignedStaffs.map((s) => ({
-          staffId: Number(s.id),
-          storeManager: editStoreManagerIds.has(s.id)
-        }))
+      } else if (event && visible) {
+        // Nếu không có id, dùng event object từ list
+        const lat = event?.coordinates?.lat != null ? Number(event.coordinates.lat) : (event?.latitude != null ? Number(event.latitude) : null)
+        const lng = event?.coordinates?.lng != null ? Number(event.coordinates.lng) : (event?.longitude != null ? Number(event.longitude) : null)
+        form.setFieldsValue({
+          name: event.title || event.name,
+          description: event.description || '',
+          status: event.status,
+          date: event.date ? dayjs(event.date) : null,
+          startTime: event.startTime ? dayjs(event.startTime, 'HH:mm') : null,
+          endTime: event.endTime ? dayjs(event.endTime, 'HH:mm') : null,
+          location: event.location,
+          note: event.note || '',
+          latitude: lat,
+          longitude: lng
+        })
+        setSelectedLocation({ latitude: lat, longitude: lng, address: event.location || '' })
+        setImageUrl(event.image)
+        setThumbnailFile(null)
       }
-      const res = await updateEventStaffs(event.id, payload)
-      return res?.success !== false
-    } catch (err) {
-      console.error('Error updating staff assignments:', err)
-      return false
     }
-  }
+    loadEventDetail()
+  }, [event, visible, form])
 
   const handleSubmit = async () => {
     try {
@@ -176,7 +161,7 @@ const EventEdit = ({ visible, onClose, onUpdate, event }) => {
 
       const eventData = {
         name: values.name,
-        description: values.description || '',
+        description: values.description ,
         location: values.location || event.location,
         latitude: latitude,
         longitude: longitude,
@@ -190,14 +175,6 @@ const EventEdit = ({ visible, onClose, onUpdate, event }) => {
       const res = await updateEvent(event.id, eventData)
       const ok = !!(res && (res.success === true || res.statusCode === 200 || /success/i.test(res.message || '')))
       
-      // Cập nhật nhân viên đã được assign nếu có thay đổi
-      if (ok) {
-        const staffUpdateOk = await updateStaffAssignments()
-        if (!staffUpdateOk) {
-          message.warning('Cập nhật thông tin sự kiện thành công, nhưng cập nhật nhân viên có thể chưa thành công!')
-        }
-      }
-
       // Nếu có chọn thumbnail mới thì gọi API riêng để cập nhật ảnh
       if (ok) {
         let newImageUrl = imageUrl || event.image
@@ -211,7 +188,6 @@ const EventEdit = ({ visible, onClose, onUpdate, event }) => {
               message.warning('Cập nhật trạng thái có thể chưa thành công, vui lòng kiểm tra lại!')
             }
           } catch (e) {
-            // eslint-disable-next-line no-console
             console.warn('Update status failed:', e)
             message.warning('Không cập nhật được trạng thái, nhưng dữ liệu khác đã được lưu!')
           }
@@ -224,7 +200,6 @@ const EventEdit = ({ visible, onClose, onUpdate, event }) => {
             const apiUrl = thumbRes?.data?.url || thumbRes?.data?.thumbnailUrl || thumbRes?.url
             newImageUrl = (okThumb && apiUrl) ? apiUrl : `${newImageUrl}?t=${Date.now()}`
           } catch (err) {
-            // eslint-disable-next-line no-console
             console.warn('Update thumbnail failed:', err)
             message.warning('Không cập nhật được ảnh, nhưng dữ liệu đã được lưu!')
             // Dùng cache-busting để ép trình duyệt tải lại ảnh cũ nếu backend ghi đè file cũ
@@ -290,6 +265,7 @@ const EventEdit = ({ visible, onClose, onUpdate, event }) => {
       }
       open={visible}
       onCancel={onClose}
+      confirmLoading={loadingDetail}
       footer={[
         <Button key="cancel" onClick={onClose}>
           Hủy
@@ -432,109 +408,6 @@ const EventEdit = ({ visible, onClose, onUpdate, event }) => {
             </div>
           </Upload>
         </Form.Item>
-        </Card>
-
-        <Card 
-          title={
-            <Space>
-              <UserOutlined />
-              <span>Nhân viên đã được phân công ({assignedStaffs.length})</span>
-            </Space>
-          }
-          className="mb-2"
-          size="small"
-          loading={loadingStaffs}
-        >
-          {assignedStaffs.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
-              Chưa có nhân viên nào được phân công cho sự kiện này
-            </div>
-          ) : (
-            <Table
-              size="small"
-              dataSource={assignedStaffs.map(s => {
-                const employee = employees.find(e => e.id === s.id)
-                return {
-                  ...s,
-                  roles: employee?.roles || s.roles || []
-                }
-              })}
-              rowKey="id"
-              pagination={false}
-              columns={[
-                {
-                  title: 'Họ tên',
-                  dataIndex: 'fullName',
-                  key: 'fullName',
-                  render: (text) => (
-                    <Space>
-                      <CheckCircleOutlined style={{ color: '#52c41a' }} />
-                      <span>{text}</span>
-                    </Space>
-                  )
-                },
-                {
-                  title: 'Email',
-                  dataIndex: 'email',
-                  key: 'email'
-                },
-                {
-                  title: 'Quản lý cửa hàng',
-                  key: 'storeManager',
-                  render: (_, record) => {
-                    const hasStoreManagerRole = (record.roles || []).some(
-                      role => role === 'STORE_MANAGER' || role?.toUpperCase() === 'STORE_MANAGER'
-                    )
-                    
-                    if (!hasStoreManagerRole) {
-                      return <span className="text-gray-400">—</span>
-                    }
-                    
-                    return (
-                      <Switch
-                        size="small"
-                        checked={editStoreManagerIds.has(record.id)}
-                        onChange={(checked) => {
-                          setEditStoreManagerIds((prev) => {
-                            const next = new Set(prev)
-                            if (checked) {
-                              next.add(record.id)
-                            } else {
-                              next.delete(record.id)
-                            }
-                            return next
-                          })
-                        }}
-                      />
-                    )
-                  }
-                },
-                {
-                  title: 'Thao tác',
-                  key: 'action',
-                  render: (_, record) => (
-                    <Popconfirm
-                      title="Xóa nhân viên này khỏi sự kiện?"
-                      description="Nhân viên này sẽ bị xóa khỏi danh sách phân công."
-                      onConfirm={() => handleRemoveStaff(record.id)}
-                      okText="Xóa"
-                      cancelText="Hủy"
-                      okButtonProps={{ danger: true }}
-                    >
-                      <Button
-                        type="link"
-                        danger
-                        icon={<DeleteOutlined />}
-                        size="small"
-                      >
-                        Xóa
-                      </Button>
-                    </Popconfirm>
-                  )
-                }
-              ]}
-            />
-          )}
         </Card>
       </Form>
     </Modal>
