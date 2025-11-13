@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { message } from 'antd'
 import recyclingImage from '../../../assets/images/Uncover the truth about plastic recycling with….jpg'
-import { loginUser } from '../../../service/api/authAPI'
+import { loginUser } from '../../../service/api/authApi'
 import { isValidEmail, redirectAfterLogin, formatAuthError } from '../../../utils/authHelper'
 
 const LoginPage = () => {

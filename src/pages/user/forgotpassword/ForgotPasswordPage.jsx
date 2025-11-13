@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
 import { message } from 'antd'
 import recyclingImage from '../../../assets/images/reformation-hero-image-e1692133079876.jpg'
-import { forgotPassword, resetPassword, resendResetPasswordOTP } from '../../../service/api/authAPI'
+import { forgotPassword, resetPassword, resendResetPasswordOTP } from '../../../service/api/authApi'
 import { isValidEmail } from '../../../utils/authHelper'
 import VerifyEmailModal from '../../../components/VerifyEmailModal'
 

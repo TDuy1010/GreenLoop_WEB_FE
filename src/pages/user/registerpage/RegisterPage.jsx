@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
 import { message } from 'antd'
 import recyclingImage from '../../../assets/images/Uncover the truth about plastic recycling with….jpg'
-import { registerUser, verifyEmail, resendVerifyEmailOTP } from '../../../service/api/authAPI'
+import { registerUser, verifyEmail, resendVerifyEmailOTP } from '../../../service/api/authApi'
 import VerifyEmailModal from '../../../components/VerifyEmailModal'
 import SuccessModal from '../../../components/SuccessModal'
 
