@@ -5,7 +5,9 @@ import {
   Space, 
   Tag, 
   Avatar,
-  Popconfirm
+  Popconfirm,
+  Tooltip,
+  Switch
 } from 'antd'
 import { 
   EditOutlined, 
@@ -19,8 +21,11 @@ import {
 const StaffTable = ({ 
   filteredData,
   handleView, 
-  handleEdit, 
-  handleDelete 
+  handleEdit,
+  handleToggleStatus,
+  handleDelete,
+  pagination,
+  handleTableChange
 }) => {
   const columns = [
     {
@@ -62,39 +67,58 @@ const StaffTable = ({
       title: "Chức vụ",
       dataIndex: "department",
       key: "department",
-      render: (department) => <Tag color="blue">{department}</Tag>,
+      render: (department) => {
+        // Màu sắc theo role
+        const roleColors = {
+          'Quản trị viên': 'red',
+          'Quản lý': 'purple',
+          'Quản lý cửa hàng': 'orange',
+          'Nhân viên hỗ trợ': 'cyan',
+          'Nhân viên': 'blue'
+        };
+        const color = roleColors[department] || 'blue';
+        return <Tag color={color}>{department}</Tag>;
+      },
     },
     {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      render: (status) => (
-        <Tag color={status === "active" ? "green" : "red"}>
-          {status === "active" ? "Đang làm việc" : "Nghỉ việc"}
-        </Tag>
+      render: (status, record) => (
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={status === 'active'}
+            onChange={() => handleToggleStatus(record)}
+            checkedChildren="Active"
+            unCheckedChildren="Inactive"
+            className={status === 'active' ? 'bg-green-600' : ''}
+          />
+        </div>
       ),
     },
     {
       title: "Thao tác",
       key: "action",
       render: (_, record) => (
-        <Space size="middle">
-          <Button
-            type="text"
-            icon={<EyeOutlined />}
-            onClick={() => handleView(record)}
-            className="text-green-600 hover:text-green-700"
-          >
-            Xem
-          </Button>
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-            className="text-blue-600 hover:text-blue-700"
-          >
-            Sửa
-          </Button>
+        <Space size="small">
+          <Tooltip title="Xem chi tiết">
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              onClick={() => handleView(record)}
+              className="text-green-600 hover:text-green-700"
+              size="small"
+            />
+          </Tooltip>
+          <Tooltip title="Chỉnh sửa">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              className="text-blue-600 hover:text-blue-700"
+              size="small"
+            />
+          </Tooltip>
           <Popconfirm
             title="Xóa nhân viên"
             description="Bạn có chắc chắn muốn xóa nhân viên này?"
@@ -103,9 +127,14 @@ const StaffTable = ({
             cancelText="Hủy"
             okButtonProps={{ danger: true }}
           >
-            <Button type="text" icon={<DeleteOutlined />} danger>
-              Xóa
-            </Button>
+            <Tooltip title="Xóa">
+              <Button
+                type="text"
+                icon={<DeleteOutlined />}
+                danger
+                size="small"
+              />
+            </Tooltip>
           </Popconfirm>
         </Space>
       ),
@@ -117,13 +146,17 @@ const StaffTable = ({
       columns={columns}
       dataSource={filteredData}
       rowKey="id"
-      pagination={{
-        pageSize: 10,
+      pagination={pagination ? {
+        current: pagination.current,
+        pageSize: pagination.pageSize,
+        total: pagination.total,
         showSizeChanger: true,
         showQuickJumper: true,
+        pageSizeOptions: ['5', '10', '20', '50'],
         showTotal: (total, range) =>
           `${range[0]}-${range[1]} của ${total} nhân viên`,
-      }}
+      } : false}
+      onChange={handleTableChange}
       scroll={{ x: 1000 }}
     />
   )

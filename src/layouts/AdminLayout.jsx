@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, Link } from 'react-router-dom'
 import { ConfigProvider, theme, Button, message } from 'antd'
 import { MenuUnfoldOutlined, MenuFoldOutlined } from '@ant-design/icons'
 import Sidebar from '../components/Sidebar'
@@ -30,6 +30,7 @@ const AdminLayout = () => {
     const path = location.pathname
     
     if (path.includes('dashboard')) return 'Bảng điều khiển'
+    if (path.includes('profile')) return 'Thông tin cá nhân'
     if (path.includes('staff')) return 'Quản lý nhân viên'
     if (path.includes('users')) return 'Quản lý người dùng'
     if (path.includes('products')) return 'Quản lý sản phẩm'
@@ -121,6 +122,21 @@ const AdminLayout = () => {
                         <p className="text-sm font-semibold text-gray-900">{userInfo?.email || 'admin@greenloop.com'}</p>
                         <p className="text-xs text-gray-500 mt-1">Quản trị viên</p>
                       </div>
+
+                      <Link
+                        to="/admin/profile"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-600 transition no-underline"
+                      >
+                        <div className="flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          Thông tin cá nhân
+                        </div>
+                      </Link>
+
+                      <div className="border-t border-gray-100 my-1"></div>
+
                       <button
                         onClick={() => setShowLogoutModal(true)}
                         type="button"
@@ -158,11 +174,11 @@ const AdminLayout = () => {
               try {
                 await logoutFromServer()
                 message.success('Đăng xuất thành công!')
-                setTimeout(() => window.location.reload(), 300)
+                setTimeout(() => window.location.href = '/login', 300)
               } catch {
                 logoutUser()
                 message.warning('Đã đăng xuất khỏi thiết bị này')
-                setTimeout(() => window.location.reload(), 300)
+                setTimeout(() => window.location.href = '/login', 300)
               }
             }}
             onCancel={() => setShowLogoutModal(false)}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Button,
   Input,
@@ -8,7 +8,8 @@ import {
   Row,
   Col,
   Statistic,
-  Space
+  Space,
+  Spin
 } from "antd";
 import {
   PlusOutlined,
@@ -20,63 +21,14 @@ import StaffTable from "./components/StaffTable";
 import StaffDetail from "./components/StaffDetail";
 import StaffAdd from "./components/StaffAdd";
 import StaffEdit from "./components/StaffEdit";
+import { getEmployees, updateEmployeeStatus } from "../../../service/api/employeeApi";
 
 const { Search } = Input;
 const { Option } = Select;
 
 const StaffManagement = () => {
-  const [staffData, setStaffData] = useState([
-    {
-      id: 1,
-      name: "Nguyễn Văn An",
-      email: "an.nguyen@greenloop.com",
-      phone: "0901234567",
-      position: "Quản lý",
-      department: "Vận hành",
-      status: "active",
-      joinDate: "2023-01-15",
-      avatar: null,
-      salary: 15000000,
-    },
-    {
-      id: 2,
-      name: "Trần Thị Bình",
-      email: "binh.tran@greenloop.com",
-      phone: "0901234568",
-      position: "Nhân viên",
-      department: "Marketing",
-      status: "active",
-      joinDate: "2023-03-20",
-      avatar: null,
-      salary: 12000000,
-    },
-    {
-      id: 3,
-      name: "Lê Văn Cường",
-      email: "cuong.le@greenloop.com",
-      phone: "0901234569",
-      position: "Nhân viên",
-      department: "Kỹ thuật",
-      status: "inactive",
-      joinDate: "2023-02-10",
-      avatar: null,
-      salary: 13000000,
-    },
-    {
-      id: 4,
-      name: "Phạm Thị Dung",
-      email: "dung.pham@greenloop.com",
-      phone: "0901234570",
-      position: "Trưởng phòng",
-      department: "Nhân sự",
-      status: "active",
-      joinDate: "2022-12-05",
-      avatar: null,
-      salary: 18000000,
-    },
-  ]);
-
-  const [filteredData, setFilteredData] = useState(staffData);
+  const [staffData, setStaffData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
   const [searchText, setSearchText] = useState("");
   const [filterDepartment, setFilterDepartment] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -84,6 +36,79 @@ const StaffManagement = () => {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0
+  });
+
+  // Fetch employees from API
+  const fetchEmployees = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = {
+        page: pagination.current - 1,
+        size: pagination.pageSize,
+        search: searchText,
+        status: filterStatus === 'all' ? null : filterStatus === 'active',
+        sortBy: 'createdAt',
+        sortDir: 'DESC'
+      };
+
+      const response = await getEmployees(params);
+      
+      if (response.success && response.data) {
+        // Role mapping
+        const roleMapping = {
+          'ADMIN': 'Quản trị viên',
+          'MANAGER': 'Quản lý',
+          'STORE_MANAGER': 'Quản lý cửa hàng',
+          'SUPPORT_STAFF': 'Nhân viên hỗ trợ',
+          'STAFF': 'Nhân viên'
+        };
+
+        // Map API data to component format
+        const mappedData = response.data.content.map(employee => {
+          // Lấy role từ array roles (API trả về roles là array)
+          const roleName = employee.roles && employee.roles.length > 0 
+            ? employee.roles[0] 
+            : 'STAFF';
+          const roleDisplay = roleMapping[roleName] || roleName;
+          
+          return {
+            id: employee.id,
+            name: employee.fullName,
+            email: employee.email,
+            phone: employee.phoneNumber || 'Chưa có',
+            position: roleDisplay,
+            department: roleDisplay,
+            role: roleName,
+            status: employee.isActive ? 'active' : 'inactive',
+            joinDate: employee.createdAt,
+            avatar: employee.avatarUrl,
+            salary: 0 // API chưa trả về thông tin lương
+          };
+        });
+
+        setStaffData(mappedData);
+        setFilteredData(mappedData);
+        setPagination(prev => ({
+          ...prev,
+          total: response.data.totalElements
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      message.error('Không thể tải danh sách nhân viên!');
+    } finally {
+      setLoading(false);
+    }
+  }, [pagination.current, pagination.pageSize, searchText, filterStatus]);
+
+  useEffect(() => {
+    fetchEmployees();
+  }, [fetchEmployees]);
 
   // Animation variants
   const fadeInUp = {
@@ -92,7 +117,7 @@ const StaffManagement = () => {
   };
 
   // Statistics
-  const totalStaff = staffData.length;
+  const totalStaff = pagination.total || staffData.length;
   const activeStaff = staffData.filter(
     (staff) => staff.status === "active"
   ).length;
@@ -102,127 +127,34 @@ const StaffManagement = () => {
   const departments = [...new Set(staffData.map((staff) => staff.department))]
     .length;
 
-  // Table columns
-  const columns = [
-    {
-      title: "Nhân viên",
-      dataIndex: "name",
-      key: "name",
-      render: (text, record) => (
-        <div className="flex items-center gap-3">
-          <Avatar
-            size={40}
-            icon={<UserOutlined />}
-            src={record.avatar}
-            className="bg-green-100 text-green-600"
-          />
-          <div>
-            <div className="font-medium text-gray-900">{text}</div>
-            <div className="text-sm text-gray-500">{record.position}</div>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Liên hệ",
-      key: "contact",
-      render: (_, record) => (
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-sm">
-            <MailOutlined className="text-gray-400" />
-            <span>{record.email}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <PhoneOutlined className="text-gray-400" />
-            <span>{record.phone}</span>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Chức vụ",
-      dataIndex: "department",
-      key: "department",
-      render: (department) => <Tag color="blue">{department}</Tag>,
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
-      render: (status) => (
-        <Tag color={status === "active" ? "green" : "red"}>
-          {status === "active" ? "Đang làm việc" : "Nghỉ việc"}
-        </Tag>
-      ),
-    },
-
-    {
-      title: "Thao tác",
-      key: "action",
-      render: (_, record) => (
-        <Space size="middle">
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-            className="text-blue-600 hover:text-blue-700"
-          >
-            Sửa
-          </Button>
-          <Popconfirm
-            title="Xóa nhân viên"
-            description="Bạn có chắc chắn muốn xóa nhân viên này?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-            okButtonProps={{ danger: true }}
-          >
-            <Button type="text" icon={<DeleteOutlined />} danger>
-              Xóa
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
-
   // Handle search and filter
   const handleSearch = (value) => {
     setSearchText(value);
-    filterData(value, filterDepartment, filterStatus);
+    setPagination({ ...pagination, current: 1 }); // Reset về trang 1 khi search
   };
 
   const handleDepartmentFilter = (value) => {
     setFilterDepartment(value);
-    filterData(searchText, value, filterStatus);
+    // Filter local data theo department (vì API chưa hỗ trợ)
+    if (value === 'all') {
+      setFilteredData(staffData);
+    } else {
+      const filtered = staffData.filter(staff => staff.department === value);
+      setFilteredData(filtered);
+    }
   };
 
   const handleStatusFilter = (value) => {
     setFilterStatus(value);
-    filterData(searchText, filterDepartment, value);
+    setPagination({ ...pagination, current: 1 }); // Reset về trang 1 khi filter
   };
 
-  const filterData = (search, department, status) => {
-    let filtered = staffData;
-
-    if (search) {
-      filtered = filtered.filter(
-        (staff) =>
-          staff.name.toLowerCase().includes(search.toLowerCase()) ||
-          staff.email.toLowerCase().includes(search.toLowerCase()) ||
-          staff.phone.includes(search)
-      );
-    }
-
-    if (department !== "all") {
-      filtered = filtered.filter((staff) => staff.department === department);
-    }
-
-    if (status !== "all") {
-      filtered = filtered.filter((staff) => staff.status === status);
-    }
-
-    setFilteredData(filtered);
+  const handleTableChange = (paginationInfo) => {
+    setPagination({
+      current: paginationInfo.current,
+      pageSize: paginationInfo.pageSize,
+      total: pagination.total
+    });
   };
 
   // Handle CRUD operations
@@ -230,11 +162,9 @@ const StaffManagement = () => {
     setAddModalVisible(true);
   };
 
-  const handleAddStaff = (newStaff) => {
-    const updatedData = [...staffData, newStaff];
-    setStaffData(updatedData);
-    setFilteredData(updatedData);
-    message.success("Thêm nhân viên thành công!");
+  const handleAddStaff = async () => {
+    // Refresh employee list after successful addition
+    await fetchEmployees();
   };
 
   const handleView = (staff) => {
@@ -247,19 +177,30 @@ const StaffManagement = () => {
     setEditModalVisible(true);
   };
 
-  const handleUpdateStaff = (updatedStaff) => {
-    const updatedData = staffData.map(staff =>
-      staff.id === updatedStaff.id ? updatedStaff : staff
-    );
-    setStaffData(updatedData);
-    filterData(searchText, filterDepartment, filterStatus);
-    message.success("Cập nhật nhân viên thành công!");
+  const handleUpdateStaff = async () => {
+    // Refresh employee list after successful update
+    await fetchEmployees();
+  };
+
+  const handleToggleStatus = async (staff) => {
+    try {
+      const newStatus = staff.status === 'active' ? false : true;
+      await updateEmployeeStatus(staff.id, newStatus);
+      
+      // Cập nhật lại danh sách
+      await fetchEmployees();
+      message.success(`Cập nhật trạng thái thành công!`);
+    } catch (error) {
+      console.error('Error updating employee status:', error);
+      message.error('Không thể cập nhật trạng thái nhân viên!');
+    }
   };
 
   const handleDelete = (id) => {
+    // Tạm thời giữ logic xóa local (cần API xóa employee)
     const newData = staffData.filter((staff) => staff.id !== id);
     setStaffData(newData);
-    filterData(searchText, filterDepartment, filterStatus);
+    setFilteredData(newData);
     message.success("Xóa nhân viên thành công!");
   };
 
@@ -366,10 +307,11 @@ const StaffManagement = () => {
             className="w-full sm:w-48"
           >
             <Option value="all">Tất cả chức vụ</Option>
-            <Option value="Vận hành">Vận hành</Option>
-            <Option value="Marketing">Marketing</Option>
-            <Option value="Kỹ thuật">Kỹ thuật</Option>
-            <Option value="Nhân sự">Nhân sự</Option>
+            <Option value="Quản trị viên">Quản trị viên</Option>
+            <Option value="Quản lý">Quản lý</Option>
+            <Option value="Quản lý cửa hàng">Quản lý cửa hàng</Option>
+            <Option value="Nhân viên hỗ trợ">Nhân viên hỗ trợ</Option>
+            <Option value="Nhân viên">Nhân viên</Option>
           </Select>
           <Select
             placeholder="Lọc theo trạng thái"
@@ -385,12 +327,17 @@ const StaffManagement = () => {
         </div>
 
         {/* Table */}
-        <StaffTable
-          filteredData={filteredData}
-          handleView={handleView}
-          handleEdit={handleEdit}
-          handleDelete={handleDelete}
-        />
+        <Spin spinning={loading} tip="Đang tải dữ liệu...">
+          <StaffTable
+            filteredData={filteredData}
+            handleView={handleView}
+            handleEdit={handleEdit}
+            handleToggleStatus={handleToggleStatus}
+            handleDelete={handleDelete}
+            pagination={pagination}
+            handleTableChange={handleTableChange}
+          />
+        </Spin>
       </Card>
 
       {/* Staff Detail Modal */}

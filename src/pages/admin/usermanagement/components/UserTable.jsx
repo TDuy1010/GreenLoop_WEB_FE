@@ -5,20 +5,16 @@ import {
   Space, 
   Tag, 
   Avatar,
-  Popconfirm,
   Tooltip,
-  Badge
+  Badge,
+  Switch
 } from 'antd'
 import { 
-  EditOutlined, 
-  DeleteOutlined, 
   UserOutlined,
   MailOutlined,
   PhoneOutlined,
   CalendarOutlined,
   EyeOutlined,
-  LockOutlined,
-  UnlockOutlined,
   ShoppingCartOutlined,
   HeartOutlined,
   EnvironmentOutlined
@@ -27,12 +23,11 @@ import {
 const UserTable = ({ 
   filteredData, 
   handleView, 
-  handleEdit, 
   handleToggleStatus,
-  handleDelete,
-  statusConfig,
   accountTypeConfig,
-  genderConfig 
+  genderConfig,
+  pagination,
+  handleTableChange
 }) => {
   const columns = [
     {
@@ -125,10 +120,17 @@ const UserTable = ({
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => {
-        const config = statusConfig[status] || { color: 'default', text: status }
-        return <Tag color={config.color}>{config.text}</Tag>
-      },
+      render: (status, record) => (
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={status === 'active'}
+            onChange={() => handleToggleStatus(record)}
+            checkedChildren="Active"
+            unCheckedChildren="Inactive"
+            className={status === 'active' ? 'bg-green-600' : ''}
+          />
+        </div>
+      ),
     },
     {
       title: 'Thao tác',
@@ -144,41 +146,6 @@ const UserTable = ({
               size="small"
             />
           </Tooltip>
-          <Tooltip title="Chỉnh sửa">
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-              className="text-blue-600 hover:text-blue-700"
-              size="small"
-            />
-          </Tooltip>
-          <Tooltip title={record.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}>
-            <Button
-              type="text"
-              icon={record.status === 'active' ? <LockOutlined /> : <UnlockOutlined />}
-              onClick={() => handleToggleStatus(record)}
-              className={record.status === 'active' ? 'text-orange-600 hover:text-orange-700' : 'text-green-600 hover:text-green-700'}
-              size="small"
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Xóa khách hàng"
-            description="Bạn có chắc chắn muốn xóa khách hàng này?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-            okButtonProps={{ danger: true }}
-          >
-            <Tooltip title="Xóa">
-              <Button
-                type="text"
-                icon={<DeleteOutlined />}
-                danger
-                size="small"
-              />
-            </Tooltip>
-          </Popconfirm>
         </Space>
       ),
     },
@@ -189,13 +156,17 @@ const UserTable = ({
       columns={columns}
       dataSource={filteredData}
       rowKey="id"
-      pagination={{
-        pageSize: 10,
+      pagination={pagination ? {
+        current: pagination.current,
+        pageSize: pagination.pageSize,
+        total: pagination.total,
         showSizeChanger: true,
         showQuickJumper: true,
+        pageSizeOptions: ['5', '10', '20', '50'],
         showTotal: (total, range) =>
           `${range[0]}-${range[1]} của ${total} khách hàng`,
-      }}
+      } : false}
+      onChange={handleTableChange}
       scroll={{ x: 1200 }}
     />
   )

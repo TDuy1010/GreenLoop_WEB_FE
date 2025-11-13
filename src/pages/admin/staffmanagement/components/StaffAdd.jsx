@@ -11,7 +11,11 @@ import {
   message,
   Row,
   Col,
-  Divider
+  Divider,
+  Alert,
+  Typography,
+  Button,
+  Space
 } from 'antd'
 import { 
   UserOutlined,
@@ -20,41 +24,85 @@ import {
   IdcardOutlined,
   DollarOutlined,
   UploadOutlined,
-  PlusOutlined
+  PlusOutlined,
+  CheckCircleOutlined,
+  CopyOutlined
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
+import { createEmployee } from '../../../../service/api/employeeApi'
 
 const { Option } = Select
 const { TextArea } = Input
+const { Paragraph, Text } = Typography
 
 const StaffAdd = ({ visible, onClose, onAdd }) => {
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState(null)
+  const [avatarFile, setAvatarFile] = useState(null)
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false)
+  const [tempPassword, setTempPassword] = useState(null)
+  const [newEmployeeInfo, setNewEmployeeInfo] = useState(null)
+
+  // Role mapping: Tiếng Việt -> API
+  const roleMapping = {
+    'Nhân viên': 'STAFF',
+    'Quản lý cửa hàng': 'STORE_MANAGER',
+    'Nhân viên hỗ trợ': 'SUPPORT_STAFF',
+    'Quản lý': 'MANAGER',
+    'Quản trị viên': 'ADMIN'
+  }
 
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields()
       setLoading(true)
       
-      // Format data
-      const newStaff = {
-        ...values,
-        joinDate: values.joinDate ? values.joinDate.format('YYYY-MM-DD') : null,
-        avatar: avatarUrl,
-        id: Date.now() // Temporary ID generation
+      // Prepare employee data for API
+      const employeeData = {
+        email: values.email,
+        fullName: values.fullName,
+        phone: values.phone,
+        role: roleMapping[values.role] || 'STAFF'
       }
       
-      // Call parent function to add staff
-      onAdd(newStaff)
+      // Call API to create employee
+      const response = await createEmployee(employeeData, avatarFile)
       
-      message.success('Thêm nhân viên thành công!')
-      form.resetFields()
-      setAvatarUrl(null)
-      onClose()
+      if (response.success && response.data) {
+        message.success('Thêm nhân viên thành công!')
+        
+        // Lưu mật khẩu tạm thời và thông tin nhân viên
+        setTempPassword(response.data.temporaryPassword)
+        setNewEmployeeInfo({
+          fullName: values.fullName,
+          email: values.email,
+          role: values.role
+        })
+        
+        // Reset form
+        form.resetFields()
+        setAvatarUrl(null)
+        setAvatarFile(null)
+        
+        // Đóng modal thêm nhân viên
+        onClose()
+        
+        // Hiển thị modal mật khẩu tạm thời
+        setPasswordModalVisible(true)
+        
+        // Refresh employee list
+        if (onAdd) {
+          onAdd()
+        }
+      }
     } catch (error) {
-      console.error('Validation failed:', error)
-      message.error('Vui lòng kiểm tra lại thông tin!')
+      console.error('Error creating employee:', error)
+      if (error.response?.data?.message) {
+        message.error(error.response.data.message)
+      } else {
+        message.error('Không thể thêm nhân viên. Vui lòng thử lại!')
+      }
     } finally {
       setLoading(false)
     }
@@ -63,17 +111,31 @@ const StaffAdd = ({ visible, onClose, onAdd }) => {
   const handleCancel = () => {
     form.resetFields()
     setAvatarUrl(null)
+    setAvatarFile(null)
     onClose()
   }
 
   const handleAvatarChange = (info) => {
-    if (info.file.status === 'done') {
-      // Get this url from response in real world
-      setAvatarUrl(info.file.response?.url || URL.createObjectURL(info.file.originFileObj))
-      message.success('Upload ảnh thành công!')
-    } else if (info.file.status === 'error') {
-      message.error('Upload ảnh thất bại!')
+    const file = info.file.originFileObj || info.file
+    
+    // Validate file
+    const isImage = file.type.startsWith('image/')
+    if (!isImage) {
+      message.error('Chỉ có thể upload file ảnh!')
+      return
     }
+    
+    const isLt2M = file.size / 1024 / 1024 < 2
+    if (!isLt2M) {
+      message.error('Ảnh phải nhỏ hơn 2MB!')
+      return
+    }
+    
+    // Save file and create preview URL
+    setAvatarFile(file)
+    const previewUrl = URL.createObjectURL(file)
+    setAvatarUrl(previewUrl)
+    message.success('Chọn ảnh thành công!')
   }
 
   const uploadButton = (
@@ -90,24 +152,25 @@ const StaffAdd = ({ visible, onClose, onAdd }) => {
   )
 
   return (
-    <Modal
-      title={
-        <div className="flex items-center gap-2 text-lg font-semibold">
-          <UserOutlined className="text-green-600" />
-          <span>Thêm nhân viên mới</span>
-        </div>
-      }
-      open={visible}
-      onOk={handleSubmit}
-      onCancel={handleCancel}
-      width={800}
-      okText="Thêm nhân viên"
-      cancelText="Hủy"
-      confirmLoading={loading}
-      okButtonProps={{
-        className: 'bg-green-600 hover:bg-green-700'
-      }}
-    >
+    <>
+      <Modal
+        title={
+          <div className="flex items-center gap-2 text-lg font-semibold">
+            <UserOutlined className="text-green-600" />
+            <span>Thêm nhân viên mới</span>
+          </div>
+        }
+        open={visible}
+        onOk={handleSubmit}
+        onCancel={handleCancel}
+        width={800}
+        okText="Thêm nhân viên"
+        cancelText="Hủy"
+        confirmLoading={loading}
+        okButtonProps={{
+          className: 'bg-green-600 hover:bg-green-700'
+        }}
+      >
       <Divider className="mt-4 mb-6" />
       
       <Form
@@ -122,32 +185,22 @@ const StaffAdd = ({ visible, onClose, onAdd }) => {
             listType="picture-card"
             className="avatar-uploader"
             showUploadList={false}
-            action="https://api.cloudinary.com/v1_1/demo/upload" // Replace with your upload endpoint
-            beforeUpload={(file) => {
-              const isImage = file.type.startsWith('image/')
-              if (!isImage) {
-                message.error('Chỉ có thể upload file ảnh!')
-              }
-              const isLt2M = file.size / 1024 / 1024 < 2
-              if (!isLt2M) {
-                message.error('Ảnh phải nhỏ hơn 2MB!')
-              }
-              return isImage && isLt2M
-            }}
+            beforeUpload={() => false}
             onChange={handleAvatarChange}
+            accept="image/*"
           >
             {uploadButton}
           </Upload>
           <div className="text-xs text-gray-500 mt-2">
-            Click để tải ảnh đại diện (Tối đa 2MB)
+            Click để tải ảnh đại diện (Tối đa 2MB, không bắt buộc)
           </div>
         </Form.Item>
 
         <Row gutter={16}>
           {/* Họ và tên */}
-          <Col span={12}>
+          <Col span={24}>
             <Form.Item
-              name="name"
+              name="fullName"
               label={
                 <span className="font-medium">
                   <UserOutlined className="mr-2 text-gray-400" />
@@ -213,34 +266,10 @@ const StaffAdd = ({ visible, onClose, onAdd }) => {
             </Form.Item>
           </Col>
 
-          {/* Vị trí */}
-          <Col span={12}>
+          {/* Chức vụ/Role */}
+          <Col span={24}>
             <Form.Item
-              name="position"
-              label={
-                <span className="font-medium">
-                  <IdcardOutlined className="mr-2 text-gray-400" />
-                  Vị trí
-                </span>
-              }
-              rules={[{ required: true, message: 'Vui lòng chọn vị trí!' }]}
-            >
-              <Select 
-                placeholder="Chọn vị trí"
-                size="large"
-              >
-                <Option value="Nhân viên">Nhân viên</Option>
-                <Option value="Quản lý">Quản lý</Option>
-                <Option value="Trưởng phòng">Trưởng phòng</Option>
-                <Option value="Giám đốc">Giám đốc</Option>
-              </Select>
-            </Form.Item>
-          </Col>
-
-          {/* Chức vụ/Phòng ban */}
-          <Col span={12}>
-            <Form.Item
-              name="department"
+              name="role"
               label={
                 <span className="font-medium">
                   <IdcardOutlined className="mr-2 text-gray-400" />
@@ -253,111 +282,117 @@ const StaffAdd = ({ visible, onClose, onAdd }) => {
                 placeholder="Chọn chức vụ"
                 size="large"
               >
-                <Option value="Vận hành">Vận hành</Option>
-                <Option value="Marketing">Marketing</Option>
-                <Option value="Kỹ thuật">Kỹ thuật</Option>
-                <Option value="Nhân sự">Nhân sự</Option>
-                <Option value="Tài chính">Tài chính</Option>
-                <Option value="Kinh doanh">Kinh doanh</Option>
+                <Option value="Quản trị viên">Quản trị viên (ADMIN)</Option>
+                <Option value="Quản lý">Quản lý (MANAGER)</Option>
+                <Option value="Quản lý cửa hàng">Quản lý cửa hàng (STORE MANAGER)</Option>
+                <Option value="Nhân viên hỗ trợ">Nhân viên hỗ trợ (SUPPORT STAFF)</Option>
+                <Option value="Nhân viên">Nhân viên (STAFF)</Option>
               </Select>
-            </Form.Item>
-          </Col>
-
-          {/* Ngày vào làm */}
-          <Col span={12}>
-            <Form.Item
-              name="joinDate"
-              label={
-                <span className="font-medium">
-                  <IdcardOutlined className="mr-2 text-gray-400" />
-                  Ngày vào làm
-                </span>
-              }
-              rules={[{ required: true, message: 'Vui lòng chọn ngày vào làm!' }]}
-            >
-              <DatePicker 
-                placeholder="Chọn ngày"
-                size="large"
-                format="DD/MM/YYYY"
-                className="w-full"
-                disabledDate={(current) => {
-                  // Không cho chọn ngày trong tương lai
-                  return current && current > dayjs().endOf('day')
-                }}
-              />
-            </Form.Item>
-          </Col>
-
-          {/* Mức lương */}
-          <Col span={12}>
-            <Form.Item
-              name="salary"
-              label={
-                <span className="font-medium">
-                  <DollarOutlined className="mr-2 text-gray-400" />
-                  Mức lương (VNĐ)
-                </span>
-              }
-              rules={[
-                { required: true, message: 'Vui lòng nhập mức lương!' },
-                { 
-                  type: 'number', 
-                  min: 0, 
-                  message: 'Mức lương phải lớn hơn 0!' 
-                }
-              ]}
-            >
-              <InputNumber
-                placeholder="15000000"
-                size="large"
-                className="w-full"
-                formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                parser={value => value.replace(/\$\s?|(,*)/g, '')}
-                prefix={<DollarOutlined className="text-gray-400" />}
-              />
-            </Form.Item>
-          </Col>
-
-          {/* Trạng thái */}
-          <Col span={12}>
-            <Form.Item
-              name="status"
-              label={
-                <span className="font-medium">
-                  Trạng thái
-                </span>
-              }
-              initialValue="active"
-              rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
-            >
-              <Select size="large">
-                <Option value="active">Đang làm việc</Option>
-                <Option value="inactive">Nghỉ việc</Option>
-              </Select>
-            </Form.Item>
-          </Col>
-
-          {/* Ghi chú */}
-          <Col span={24}>
-            <Form.Item
-              name="notes"
-              label={
-                <span className="font-medium">
-                  Ghi chú
-                </span>
-              }
-            >
-              <TextArea
-                rows={3}
-                placeholder="Nhập ghi chú về nhân viên (nếu có)..."
-                maxLength={500}
-                showCount
-              />
             </Form.Item>
           </Col>
         </Row>
       </Form>
     </Modal>
+
+    {/* Modal hiển thị mật khẩu tạm thời */}
+    <Modal
+      title={
+        <div className="flex items-center gap-2 text-lg font-semibold text-green-600">
+          <CheckCircleOutlined className="text-2xl" />
+          <span>Tạo nhân viên thành công!</span>
+        </div>
+      }
+      open={passwordModalVisible}
+      onOk={() => {
+        setPasswordModalVisible(false)
+        setTempPassword(null)
+        setNewEmployeeInfo(null)
+      }}
+      onCancel={() => {
+        setPasswordModalVisible(false)
+        setTempPassword(null)
+        setNewEmployeeInfo(null)
+      }}
+      width={600}
+      okText="Đã lưu"
+      cancelText="Đóng"
+      okButtonProps={{
+        className: 'bg-green-600 hover:bg-green-700'
+      }}
+    >
+      <Divider className="mt-4 mb-4" />
+      
+      {newEmployeeInfo && (
+        <div className="space-y-4">
+          {/* Thông tin nhân viên */}
+          <Alert
+            message="Thông tin đăng nhập đã được tạo"
+            description="Vui lòng lưu lại mật khẩu tạm thời và gửi cho nhân viên. Nhân viên nên đổi mật khẩu ngay sau lần đăng nhập đầu tiên."
+            type="success"
+            showIcon
+          />
+
+          <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+            <div>
+              <Text type="secondary" className="text-sm">Họ và tên:</Text>
+              <div className="font-medium text-base">{newEmployeeInfo.fullName}</div>
+            </div>
+            
+            <div>
+              <Text type="secondary" className="text-sm">Email đăng nhập:</Text>
+              <div className="font-medium text-base">{newEmployeeInfo.email}</div>
+            </div>
+
+            <div>
+              <Text type="secondary" className="text-sm">Chức vụ:</Text>
+              <div className="font-medium text-base">{newEmployeeInfo.role}</div>
+            </div>
+          </div>
+
+          {/* Mật khẩu tạm thời */}
+          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+            <div className="mb-2">
+              <Text type="secondary" className="text-sm">Mật khẩu tạm thời:</Text>
+            </div>
+            <Paragraph
+              copyable={{
+                text: tempPassword,
+                icon: [
+                  <CopyOutlined key="copy-icon" className="text-blue-600" />,
+                  <CheckCircleOutlined key="copied-icon" className="text-green-600" />
+                ],
+                tooltips: ['Sao chép', 'Đã sao chép!']
+              }}
+              className="mb-0"
+            >
+              <Text 
+                strong 
+                className="text-2xl font-mono bg-white px-4 py-2 rounded border border-yellow-300"
+                style={{ letterSpacing: '2px' }}
+              >
+                {tempPassword}
+              </Text>
+            </Paragraph>
+          </div>
+
+          {/* Hướng dẫn */}
+          <Alert
+            message="Lưu ý bảo mật"
+            description={
+              <ul className="mb-0 pl-4 space-y-1">
+                <li>Không chia sẻ mật khẩu này qua kênh không an toàn</li>
+                <li>Gửi mật khẩu trực tiếp cho nhân viên qua email hoặc tin nhắn riêng tư</li>
+                <li>Yêu cầu nhân viên đổi mật khẩu ngay sau lần đăng nhập đầu tiên</li>
+              </ul>
+            }
+            type="warning"
+            showIcon
+            className="text-sm"
+          />
+        </div>
+      )}
+    </Modal>
+    </>
   )
 }
 

@@ -133,7 +133,8 @@ const ForgotPasswordPage = () => {
       const response = await resetPassword({
         email: email,
         otp: otp,
-        newPassword: newPassword
+        newPassword: newPassword,
+        confirmPassword: confirmPassword
       })
       
       console.log('✅ [ForgotPassword] Password reset success:', response)

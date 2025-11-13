@@ -13,6 +13,7 @@ import LoginPage from './pages/user/loginpage/LoginPage'
 import RegisterPage from './pages/user/registerpage/RegisterPage'
 import ForgotPasswordPage from './pages/user/forgotpassword/ForgotPasswordPage'
 import DashboardPage from './pages/admin/dashboard/DashboardPage'
+import AdminProfile from './pages/admin/profile/AdminProfile'
 import StaffManagement from './pages/admin/StaffManagement/StaffManagement'
 import EventManagement from './pages/admin/eventmanagemt/EventManagement'
 import UserManagement from './pages/admin/usermanagement/UserManagement'
@@ -94,6 +95,10 @@ const router = createBrowserRouter([
       {
         path: 'dashboard',
         element: <DashboardPage />
+      },
+      {
+        path: 'profile',
+        element: <AdminProfile />
       },
         {
           path: 'staff',

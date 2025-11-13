@@ -9,8 +9,9 @@ import {
   CalendarOutlined
 } from '@ant-design/icons'
 import { message } from 'antd'
-import { getCurrentUserProfile } from '../../../service/api/userApi'
+import { getCurrentUserProfile, updateUserProfile } from '../../../service/api/userApi'
 import { getMyRegisteredEvents } from '../../../service/api/eventApi'
+import { changePassword } from '../../../service/api/authApi'
 import { API_CONFIG } from '../../../service/instance'
 import Loading from '../../../components/Loading'
 import ProfileHeader from './components/ProfileHeader'
@@ -19,12 +20,18 @@ import OrdersTab from './components/OrdersTab'
 import AddressesTab from './components/AddressesTab'
 import MyEventsTab from './components/MyEventsTab'
 import PasswordTab from './components/PasswordTab'
+import PasswordChangeSuccessModal from '../../../components/PasswordChangeSuccessModal'
 
 const ProfilePage = () => {
   const [activeTab, setActiveTab] = useState('personal')
   const [isEditing, setIsEditing] = useState(false)
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [loadingMyEvents, setLoadingMyEvents] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [avatarFile, setAvatarFile] = useState(null)
+  const [avatarPreview, setAvatarPreview] = useState('')
+  const [updatingProfile, setUpdatingProfile] = useState(false)
 
   // Dữ liệu người dùng (sẽ được nạp từ API)
   const [userData, setUserData] = useState({
@@ -181,20 +188,76 @@ const ProfilePage = () => {
     confirmPassword: ''
   })
 
+  const [passwordErrors, setPasswordErrors] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
+
   const handleEdit = () => {
     setIsEditing(true)
     setEditedData(userData)
+    setAvatarFile(null)
+    setAvatarPreview('')
   }
 
-  const handleSave = () => {
-    setUserData(editedData)
-    setIsEditing(false)
-    message.success('Cập nhật thông tin thành công!')
+  const handleSave = async () => {
+    try {
+      setUpdatingProfile(true)
+      
+      // Map gender từ UI sang API format
+      const genderMapping = {
+        'male': 'MALE',
+        'female': 'FEMALE',
+        'other': 'OTHER'
+      }
+      
+      // Prepare data for API
+      const profileData = {
+        fullName: editedData.name,
+        dateOfBirth: editedData.birthday,
+        gender: genderMapping[editedData.gender] || 'OTHER',
+        phoneNumber: editedData.phone
+      }
+      
+      // Call API
+      const response = await updateUserProfile(profileData, avatarFile)
+      
+      // Update local state with new data
+      const updatedData = response?.data || response
+      if (updatedData) {
+        setUserData({
+          ...userData,
+          name: updatedData.fullName || editedData.name,
+          email: updatedData.email || editedData.email,
+          phone: updatedData.phoneNumber || editedData.phone,
+          gender: editedData.gender,
+          birthday: updatedData.dateOfBirth || editedData.birthday,
+          avatar: updatedData.avatarUrl || avatarPreview || userData.avatar
+        })
+      }
+      
+      setIsEditing(false)
+      setAvatarFile(null)
+      setAvatarPreview('')
+      message.success('Cập nhật thông tin thành công!')
+      
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      const errorMessage = error.response?.data?.message 
+        || error.message 
+        || 'Không thể cập nhật thông tin. Vui lòng thử lại!'
+      message.error(errorMessage)
+    } finally {
+      setUpdatingProfile(false)
+    }
   }
 
   const handleCancel = () => {
     setEditedData(userData)
     setIsEditing(false)
+    setAvatarFile(null)
+    setAvatarPreview('')
   }
 
   const handleInputChange = (field, value) => {
@@ -204,25 +267,132 @@ const ProfilePage = () => {
     })
   }
 
-  const handlePasswordChange = (field, value) => {
-    setPasswordData({
-      ...passwordData,
-      [field]: value
-    })
+  const handleAvatarChange = (file) => {
+    setAvatarFile(file)
+    // Create preview URL
+    const previewUrl = URL.createObjectURL(file)
+    setAvatarPreview(previewUrl)
   }
 
-  const handleChangePassword = (e) => {
+  const handlePasswordChange = (field, value) => {
+    const updatedPasswordData = {
+      ...passwordData,
+      [field]: value
+    }
+    
+    setPasswordData(updatedPasswordData)
+
+    // Validate real-time
+    const newErrors = { ...passwordErrors }
+
+    // Validate current password field
+    if (field === 'currentPassword') {
+      newErrors.currentPassword = value.trim() === '' ? 'Vui lòng nhập mật khẩu hiện tại' : ''
+      
+      // Re-validate newPassword if it exists (check if new password matches current)
+      if (updatedPasswordData.newPassword) {
+        if (updatedPasswordData.newPassword === value) {
+          newErrors.newPassword = 'Mật khẩu mới không được trùng với mật khẩu hiện tại'
+        } else if (updatedPasswordData.newPassword.length >= 6) {
+          // Clear error if previously had "duplicate" error but now they're different
+          newErrors.newPassword = ''
+        }
+      }
+    }
+
+    // Validate new password field
+    if (field === 'newPassword') {
+      if (value.trim() === '') {
+        newErrors.newPassword = 'Vui lòng nhập mật khẩu mới'
+      } else if (value.length < 6) {
+        newErrors.newPassword = 'Mật khẩu phải có ít nhất 6 ký tự'
+      } else if (updatedPasswordData.currentPassword && value === updatedPasswordData.currentPassword) {
+        newErrors.newPassword = 'Mật khẩu mới không được trùng với mật khẩu hiện tại'
+      } else {
+        newErrors.newPassword = ''
+      }
+
+      // Re-validate confirmPassword if it has value
+      if (updatedPasswordData.confirmPassword) {
+        if (value !== updatedPasswordData.confirmPassword) {
+          newErrors.confirmPassword = 'Mật khẩu xác nhận không khớp'
+        } else {
+          newErrors.confirmPassword = ''
+        }
+      }
+    }
+
+    // Validate confirm password field
+    if (field === 'confirmPassword') {
+      if (value.trim() === '') {
+        newErrors.confirmPassword = 'Vui lòng xác nhận mật khẩu mới'
+      } else if (value !== updatedPasswordData.newPassword) {
+        newErrors.confirmPassword = 'Mật khẩu xác nhận không khớp'
+      } else {
+        newErrors.confirmPassword = ''
+      }
+    }
+
+    setPasswordErrors(newErrors)
+  }
+
+  const handleChangePassword = async (e) => {
     e.preventDefault()
+    
+    // Validation
+    if (!passwordData.currentPassword) {
+      message.error('Vui lòng nhập mật khẩu hiện tại!')
+      return
+    }
+    
+    if (!passwordData.newPassword) {
+      message.error('Vui lòng nhập mật khẩu mới!')
+      return
+    }
+    
+    if (passwordData.newPassword.length < 6) {
+      message.error('Mật khẩu mới phải có ít nhất 6 ký tự!')
+      return
+    }
+    
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       message.error('Mật khẩu xác nhận không khớp!')
       return
     }
-    message.success('Đổi mật khẩu thành công!')
-    setPasswordData({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    })
+    
+    try {
+      setChangingPassword(true)
+      
+      await changePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+        confirmPassword: passwordData.confirmPassword
+      })
+      
+      // Reset form
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      })
+      setPasswordErrors({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      })
+      
+      // Hiển thị modal thành công
+      setShowSuccessModal(true)
+      
+    } catch (error) {
+      console.error('Error changing password:', error)
+      const errorMessage = error.response?.data?.message 
+        || error.message 
+        || 'Không thể đổi mật khẩu. Vui lòng kiểm tra lại mật khẩu hiện tại!'
+      message.error(errorMessage)
+    } finally {
+      setChangingPassword(false)
+    }
   }
 
 
@@ -292,6 +462,9 @@ const ProfilePage = () => {
                   onSave={handleSave}
                   onCancel={handleCancel}
                   onInputChange={handleInputChange}
+                  avatarPreview={avatarPreview}
+                  onAvatarChange={handleAvatarChange}
+                  updatingProfile={updatingProfile}
                 />
               )}
 
@@ -314,14 +487,23 @@ const ProfilePage = () => {
               {activeTab === 'password' && (
                 <PasswordTab
                   passwordData={passwordData}
+                  passwordErrors={passwordErrors}
                   onPasswordChange={handlePasswordChange}
                   onChangePassword={handleChangePassword}
+                  changingPassword={changingPassword}
                 />
               )}
             </div>
           </motion.div>
         </div>
       </div>
+
+      {/* Modal thông báo đổi mật khẩu thành công */}
+      <PasswordChangeSuccessModal 
+        show={showSuccessModal} 
+        onClose={() => setShowSuccessModal(false)}
+        userType="customer"
+      />
     </div>
   )
 }

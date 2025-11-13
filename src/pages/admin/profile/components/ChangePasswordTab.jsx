@@ -1,7 +1,6 @@
-/* eslint-disable no-unused-vars */
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { LockOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons'
+import { LockOutlined, SafetyOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons'
 
 // Component PasswordInput nội bộ
 const PasswordInput = ({ 
@@ -11,8 +10,7 @@ const PasswordInput = ({
   placeholder, 
   error,
   required = true,
-  minLength,
-  disabled = false
+  minLength
 }) => {
   const [showPassword, setShowPassword] = useState(false)
 
@@ -41,13 +39,11 @@ const PasswordInput = ({
           placeholder={placeholder}
           required={required}
           minLength={minLength}
-          disabled={disabled}
         />
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
-          disabled={disabled}
         >
           {showPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />}
         </button>
@@ -59,12 +55,12 @@ const PasswordInput = ({
   )
 }
 
-const PasswordTab = ({ 
-  passwordData, 
-  passwordErrors = {},
-  onPasswordChange, 
-  onChangePassword, 
-  changingPassword = false 
+const ChangePasswordTab = ({ 
+  passwordData,
+  passwordErrors,
+  changingPassword,
+  onPasswordChange,
+  onSubmit
 }) => {
   return (
     <motion.div
@@ -74,7 +70,7 @@ const PasswordTab = ({
     >
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Đổi mật khẩu</h2>
       
-      <form onSubmit={onChangePassword} className="max-w-md">
+      <form onSubmit={onSubmit} className="max-w-md">
         <div className="space-y-6">
           <PasswordInput
             label="Mật khẩu hiện tại"
@@ -83,7 +79,6 @@ const PasswordTab = ({
             placeholder="Nhập mật khẩu hiện tại"
             error={passwordErrors.currentPassword}
             required
-            disabled={changingPassword}
           />
 
           <PasswordInput
@@ -94,7 +89,6 @@ const PasswordTab = ({
             error={passwordErrors.newPassword}
             required
             minLength={6}
-            disabled={changingPassword}
           />
 
           <PasswordInput
@@ -104,15 +98,14 @@ const PasswordTab = ({
             placeholder="Nhập lại mật khẩu mới"
             error={passwordErrors.confirmPassword}
             required
-            disabled={changingPassword}
           />
 
           <motion.button
             type="submit"
             disabled={changingPassword}
-            className="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            whileHover={{ scale: changingPassword ? 1 : 1.02 }}
-            whileTap={{ scale: changingPassword ? 1 : 0.98 }}
+            className="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 disabled:opacity-50"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
           >
             <LockOutlined /> {changingPassword ? 'Đang xử lý...' : 'Đổi mật khẩu'}
           </motion.button>
@@ -121,7 +114,9 @@ const PasswordTab = ({
 
       {/* Password Tips */}
       <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <h3 className="font-bold text-blue-900 mb-3">Lưu ý khi đổi mật khẩu:</h3>
+        <h3 className="font-bold text-blue-900 mb-3 flex items-center gap-2">
+          <SafetyOutlined /> Lưu ý khi đổi mật khẩu:
+        </h3>
         <ul className="space-y-2 text-sm text-blue-800">
           <li className="flex items-start gap-2">
             <span className="text-blue-600 mt-1">•</span>
@@ -145,5 +140,5 @@ const PasswordTab = ({
   )
 }
 
-export default PasswordTab
+export default ChangePasswordTab
 

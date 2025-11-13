@@ -42,7 +42,7 @@ export const loginUser = async (loginData) => {
 
   // Xử lý response theo structure từ backend
   if (response.success && response.data) {
-    const { accessToken, refreshToken, userId, email, roles, type, expiresIn, refreshExpiresIn } = response.data;
+    const { accessToken, refreshToken, userId, email, roles, type, expiresIn, refreshExpiresIn, fullName } = response.data;
     
     // Lưu tokens
     localStorage.setItem('accessToken', accessToken);
@@ -52,6 +52,7 @@ export const loginUser = async (loginData) => {
     localStorage.setItem('userInfo', JSON.stringify({
       userId,
       email,
+      fullName,
       roles,
       type,
       expiresIn,
@@ -120,14 +121,12 @@ export const refreshAccessToken = async () => {
 // ===== ĐĂNG XUẤT =====
 /**
  * Đăng xuất người dùng (xóa thông tin local)
+ * Note: Không tự động redirect, để component gọi hàm này tự quản lý redirect
  */
 export const logoutUser = () => {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('userInfo');
-  
-  // Redirect về trang login
-  window.location.href = '/login';
 };
 
 // ===== LẤY THÔNG TIN NGƯỜI DÙNG =====
@@ -161,14 +160,39 @@ export const updateUserProfile = async (userData) => {
  * @param {Object} passwordData - Dữ liệu đổi mật khẩu
  * @param {string} passwordData.currentPassword - Mật khẩu hiện tại
  * @param {string} passwordData.newPassword - Mật khẩu mới
+ * @param {string} passwordData.confirmPassword - Xác nhận mật khẩu mới
  * @returns {Promise} Response từ server
  */
 export const changePassword = async (passwordData) => {
-  const response = await axiosClient.post('/auth/change-password', {
-    currentPassword: passwordData.currentPassword,
-    newPassword: passwordData.newPassword
-  });
-  return response;
+  // Import axios để bypass interceptor issues với axiosClient
+  const axios = (await import('axios')).default;
+  
+  const baseURL = import.meta.env.MODE === 'development' 
+    ? 'http://localhost:5173/api/v1'
+    : 'https://api.greenloop.thanhnt-tech.id.vn/api/v1';
+  
+  const token = localStorage.getItem('accessToken');
+  
+  try {
+    const response = await axios.post(
+      `${baseURL}/auth/change-password`,
+      {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+        confirmPassword: passwordData.confirmPassword
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+    
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
 };
 
 // ===== QUÊN MẬT KHẨU =====
@@ -376,13 +400,14 @@ export const exchangeOAuth2 = async (data) => {
   
   // Lưu token nếu đăng nhập thành công qua OAuth
   if (response.success && response.data) {
-    const { accessToken, refreshToken, userId, email, roles, type, expiresIn, refreshExpiresIn } = response.data;
+    const { accessToken, refreshToken, userId, email, roles, type, expiresIn, refreshExpiresIn, fullName } = response.data;
     
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
     localStorage.setItem('userInfo', JSON.stringify({
       userId,
       email,
+      fullName,
       roles,
       type,
       expiresIn,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { message } from 'antd'
-import { isAuthenticated, getUserInfo, logoutUser, logoutFromServer } from '../service/api/authAPI'
+import { isAuthenticated, getUserInfo, logoutUser, logoutFromServer } from '../service/api/authApi'
 import ConfirmModal from './ConfirmModal'
 
 const Header = () => {
@@ -60,9 +60,9 @@ const Header = () => {
       
       message.success('Đăng xuất thành công!')
       
-      console.log('🔄 [Logout] Refreshing page in 300ms...')
+      console.log('🔄 [Logout] Redirecting to home page...')
       setTimeout(() => {
-        window.location.reload()
+        window.location.href = '/'
       }, 300)
     } catch (error) {
       console.error('❌ [Logout] API error:', error)
@@ -79,9 +79,9 @@ const Header = () => {
       
       message.warning('Đã đăng xuất khỏi thiết bị này')
       
-      console.log('🔄 [Logout] Refreshing page in 300ms...')
+      console.log('🔄 [Logout] Redirecting to home page...')
       setTimeout(() => {
-        window.location.reload()
+        window.location.href = '/'
       }, 300)
     }
   }
@@ -150,10 +150,10 @@ const Header = () => {
               <div className="relative group">
                 <button className="flex items-center gap-2 text-gray-600 hover:text-green-600 transition">
                   <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-semibold">
-                    {userInfo?.email?.charAt(0).toUpperCase() || 'U'}
+                    {userInfo?.fullName?.charAt(0).toUpperCase() || 'U'}
                   </div>
                   <span className="hidden md:block text-sm font-medium">
-                    {userInfo?.email?.split('@')[0] || 'User'}
+                    {userInfo?.fullName || 'User'}
                   </span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />

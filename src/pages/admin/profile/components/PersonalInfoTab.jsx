@@ -1,29 +1,24 @@
-/* eslint-disable no-unused-vars */
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Upload } from 'antd'
 import { 
-  UserOutlined,
+  UserOutlined, 
   MailOutlined,
   PhoneOutlined,
   CalendarOutlined,
   EditOutlined,
   SaveOutlined,
-  CloseOutlined,
-  CameraOutlined
+  CloseOutlined
 } from '@ant-design/icons'
 
 const PersonalInfoTab = ({ 
   userData, 
   editedData, 
   isEditing, 
-  onEdit, 
-  onSave, 
-  onCancel, 
-  onInputChange,
-  avatarPreview,
-  onAvatarChange,
-  updatingProfile
+  savingProfile,
+  onEdit,
+  onSave,
+  onCancel,
+  onInputChange 
 }) => {
   return (
     <motion.div
@@ -46,19 +41,19 @@ const PersonalInfoTab = ({
           <div className="flex gap-2">
             <motion.button
               onClick={onSave}
-              disabled={updatingProfile}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-              whileHover={{ scale: updatingProfile ? 1 : 1.05 }}
-              whileTap={{ scale: updatingProfile ? 1 : 0.95 }}
+              disabled={savingProfile}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition disabled:opacity-50"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              <SaveOutlined /> {updatingProfile ? 'Đang lưu...' : 'Lưu'}
+              <SaveOutlined /> {savingProfile ? 'Đang lưu...' : 'Lưu'}
             </motion.button>
             <motion.button
               onClick={onCancel}
-              disabled={updatingProfile}
-              className="flex items-center gap-2 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-              whileHover={{ scale: updatingProfile ? 1 : 1.05 }}
-              whileTap={{ scale: updatingProfile ? 1 : 0.95 }}
+              disabled={savingProfile}
+              className="flex items-center gap-2 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition disabled:opacity-50"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
               <CloseOutlined /> Hủy
             </motion.button>
@@ -66,38 +61,10 @@ const PersonalInfoTab = ({
         )}
       </div>
 
-      {/* Avatar Upload */}
-      {isEditing && (
-        <div className="mb-6 flex justify-center">
-          <div className="relative">
-            <img
-              src={avatarPreview || userData.avatar}
-              alt="Avatar"
-              className="w-32 h-32 rounded-full object-cover border-4 border-gray-200"
-            />
-            <Upload
-              accept="image/*"
-              showUploadList={false}
-              beforeUpload={(file) => {
-                onAvatarChange(file)
-                return false
-              }}
-            >
-              <button
-                type="button"
-                className="absolute bottom-0 right-0 bg-green-600 hover:bg-green-700 text-white p-2 rounded-full transition"
-              >
-                <CameraOutlined className="text-lg" />
-              </button>
-            </Upload>
-          </div>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Họ và tên
+            Họ và tên *
           </label>
           <div className="relative">
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -105,17 +72,17 @@ const PersonalInfoTab = ({
             </span>
             <input
               type="text"
-              value={isEditing ? editedData.name : userData.name}
-              onChange={(e) => onInputChange('name', e.target.value)}
+              value={isEditing ? editedData.fullName : userData.fullName}
+              onChange={(e) => onInputChange('fullName', e.target.value)}
               disabled={!isEditing}
-              className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white shadow-inner focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 transition"
+              className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 transition"
             />
           </div>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Email
+            Email (không thể thay đổi)
           </label>
           <div className="relative">
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -123,10 +90,9 @@ const PersonalInfoTab = ({
             </span>
             <input
               type="email"
-              value={isEditing ? editedData.email : userData.email}
-              onChange={(e) => onInputChange('email', e.target.value)}
-              disabled={!isEditing}
-              className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white shadow-inner focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 transition"
+              value={userData.email}
+              disabled
+              className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 bg-gray-100 cursor-not-allowed"
             />
           </div>
         </div>
@@ -141,10 +107,11 @@ const PersonalInfoTab = ({
             </span>
             <input
               type="tel"
-              value={isEditing ? editedData.phone : userData.phone}
-              onChange={(e) => onInputChange('phone', e.target.value)}
+              value={isEditing ? editedData.phoneNumber : userData.phoneNumber}
+              onChange={(e) => onInputChange('phoneNumber', e.target.value)}
               disabled={!isEditing}
-              className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white shadow-inner focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 transition"
+              className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 transition"
+              placeholder="Nhập số điện thoại"
             />
           </div>
         </div>
@@ -159,10 +126,10 @@ const PersonalInfoTab = ({
             </span>
             <input
               type="date"
-              value={isEditing ? editedData.birthday : userData.birthday}
-              onChange={(e) => onInputChange('birthday', e.target.value)}
+              value={isEditing ? editedData.dateOfBirth : userData.dateOfBirth}
+              onChange={(e) => onInputChange('dateOfBirth', e.target.value)}
               disabled={!isEditing}
-              className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white shadow-inner focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 transition"
+              className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 transition"
             />
           </div>
         </div>
@@ -171,20 +138,20 @@ const PersonalInfoTab = ({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Giới tính
           </label>
-          <div className="inline-flex gap-2 bg-gray-100 p-1 rounded-xl">
+          <div className="inline-flex gap-2 bg-gray-100 p-1 rounded-lg">
             {[
               { key: 'male', label: 'Nam' },
               { key: 'female', label: 'Nữ' },
               { key: 'other', label: 'Khác' },
             ].map((g) => {
-              const current = (isEditing ? editedData.gender : userData.gender)
+              const current = isEditing ? editedData.gender : userData.gender
               const active = current === g.key
               return (
                 <button
                   key={g.key}
                   type="button"
                   onClick={() => isEditing && onInputChange('gender', g.key)}
-                  className={`${active ? 'bg-white shadow text-green-700' : 'text-gray-600'} px-4 py-2 rounded-lg transition`}
+                  className={`${active ? 'bg-white shadow text-green-700 font-medium' : 'text-gray-600'} px-6 py-2 rounded-lg transition`}
                   disabled={!isEditing}
                 >
                   {g.label}

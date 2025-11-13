@@ -11,7 +11,8 @@ import {
   message,
   Row,
   Col,
-  Divider
+  Divider,
+  Switch
 } from 'antd'
 import { 
   UserOutlined,
@@ -20,9 +21,12 @@ import {
   IdcardOutlined,
   DollarOutlined,
   EditOutlined,
-  PlusOutlined
+  PlusOutlined,
+  ManOutlined,
+  WomanOutlined
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
+import { updateEmployee } from '../../../../service/api/employeeApi'
 
 const { Option } = Select
 const { TextArea } = Input
@@ -31,22 +35,51 @@ const StaffEdit = ({ visible, onClose, onUpdate, staff }) => {
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState(null)
+  const [avatarFile, setAvatarFile] = useState(null)
+
+  // Role mapping
+  const roleMapping = {
+    'Nhân viên': 'STAFF',
+    'Quản lý cửa hàng': 'STORE_MANAGER',
+    'Nhân viên hỗ trợ': 'SUPPORT_STAFF',
+    'Quản lý': 'MANAGER',
+    'Quản trị viên': 'ADMIN'
+  }
+
+  const reverseRoleMapping = {
+    'STAFF': 'Nhân viên',
+    'STORE_MANAGER': 'Quản lý cửa hàng',
+    'SUPPORT_STAFF': 'Nhân viên hỗ trợ',
+    'MANAGER': 'Quản lý',
+    'ADMIN': 'Quản trị viên'
+  }
+
+  const genderMapping = {
+    'Nam': 'MALE',
+    'Nữ': 'FEMALE',
+    'Khác': 'OTHER'
+  }
+
+  const reverseGenderMapping = {
+    'MALE': 'Nam',
+    'FEMALE': 'Nữ',
+    'OTHER': 'Khác'
+  }
 
   // Load dữ liệu staff vào form khi modal mở
   useEffect(() => {
     if (visible && staff) {
       form.setFieldsValue({
-        name: staff.name,
+        fullName: staff.name,
         email: staff.email,
         phone: staff.phone,
-        position: staff.position,
-        department: staff.department,
-        joinDate: staff.joinDate ? dayjs(staff.joinDate) : null,
-        salary: staff.salary,
-        status: staff.status,
-        notes: staff.notes || ''
+        role: reverseRoleMapping[staff.role] || staff.department,
+        dateOfBirth: staff.dateOfBirth ? dayjs(staff.dateOfBirth) : null,
+        gender: reverseGenderMapping[staff.gender] || 'Nam',
+        isActive: staff.status === 'active'
       })
       setAvatarUrl(staff.avatar)
+      setAvatarFile(null)
     }
   }, [visible, staff, form])
 
@@ -55,22 +88,37 @@ const StaffEdit = ({ visible, onClose, onUpdate, staff }) => {
       const values = await form.validateFields()
       setLoading(true)
       
-      // Format data
-      const updatedStaff = {
-        ...staff,
-        ...values,
-        joinDate: values.joinDate ? values.joinDate.format('YYYY-MM-DD') : staff.joinDate,
-        avatar: avatarUrl
+      // Prepare employee data for API
+      const employeeData = {
+        email: values.email,
+        fullName: values.fullName,
+        phone: values.phone,
+        dateOfBirth: values.dateOfBirth ? values.dateOfBirth.format('YYYY-MM-DD') : null,
+        gender: genderMapping[values.gender] || 'MALE',
+        role: roleMapping[values.role] || 'STAFF',
+        isActive: values.isActive
       }
       
-      // Call parent function to update staff
-      onUpdate(updatedStaff)
+      // Call API to update employee
+      const response = await updateEmployee(staff.id, employeeData, avatarFile)
       
-      message.success('Cập nhật nhân viên thành công!')
-      onClose()
+      if (response.success) {
+        message.success('Cập nhật nhân viên thành công!')
+        
+        // Refresh employee list
+        if (onUpdate) {
+          onUpdate()
+        }
+        
+        onClose()
+      }
     } catch (error) {
-      console.error('Validation failed:', error)
-      message.error('Vui lòng kiểm tra lại thông tin!')
+      console.error('Error updating employee:', error)
+      if (error.response?.data?.message) {
+        message.error(error.response.data.message)
+      } else {
+        message.error('Không thể cập nhật nhân viên. Vui lòng thử lại!')
+      }
     } finally {
       setLoading(false)
     }
@@ -79,17 +127,31 @@ const StaffEdit = ({ visible, onClose, onUpdate, staff }) => {
   const handleCancel = () => {
     form.resetFields()
     setAvatarUrl(null)
+    setAvatarFile(null)
     onClose()
   }
 
   const handleAvatarChange = (info) => {
-    if (info.file.status === 'done') {
-      // Get this url from response in real world
-      setAvatarUrl(info.file.response?.url || URL.createObjectURL(info.file.originFileObj))
-      message.success('Upload ảnh thành công!')
-    } else if (info.file.status === 'error') {
-      message.error('Upload ảnh thất bại!')
+    const file = info.file.originFileObj || info.file
+    
+    // Validate file
+    const isImage = file.type.startsWith('image/')
+    if (!isImage) {
+      message.error('Chỉ có thể upload file ảnh!')
+      return
     }
+    
+    const isLt2M = file.size / 1024 / 1024 < 2
+    if (!isLt2M) {
+      message.error('Ảnh phải nhỏ hơn 2MB!')
+      return
+    }
+    
+    // Save file and create preview URL
+    setAvatarFile(file)
+    const previewUrl = URL.createObjectURL(file)
+    setAvatarUrl(previewUrl)
+    message.success('Chọn ảnh thành công!')
   }
 
   const uploadButton = (
@@ -149,32 +211,22 @@ const StaffEdit = ({ visible, onClose, onUpdate, staff }) => {
             listType="picture-card"
             className="avatar-uploader"
             showUploadList={false}
-            action="https://api.cloudinary.com/v1_1/demo/upload" // Replace with your upload endpoint
-            beforeUpload={(file) => {
-              const isImage = file.type.startsWith('image/')
-              if (!isImage) {
-                message.error('Chỉ có thể upload file ảnh!')
-              }
-              const isLt2M = file.size / 1024 / 1024 < 2
-              if (!isLt2M) {
-                message.error('Ảnh phải nhỏ hơn 2MB!')
-              }
-              return isImage && isLt2M
-            }}
+            beforeUpload={() => false}
             onChange={handleAvatarChange}
+            accept="image/*"
           >
             {uploadButton}
           </Upload>
           <div className="text-xs text-gray-500 mt-2">
-            Click để thay đổi ảnh đại diện (Tối đa 2MB)
+            Click để thay đổi ảnh đại diện (Tối đa 2MB, không bắt buộc)
           </div>
         </Form.Item>
 
         <Row gutter={16}>
           {/* Họ và tên */}
-          <Col span={12}>
+          <Col span={24}>
             <Form.Item
-              name="name"
+              name="fullName"
               label={
                 <span className="font-medium">
                   <UserOutlined className="mr-2 text-gray-400" />
@@ -240,34 +292,10 @@ const StaffEdit = ({ visible, onClose, onUpdate, staff }) => {
             </Form.Item>
           </Col>
 
-          {/* Vị trí */}
+          {/* Chức vụ/Role */}
           <Col span={12}>
             <Form.Item
-              name="position"
-              label={
-                <span className="font-medium">
-                  <IdcardOutlined className="mr-2 text-gray-400" />
-                  Vị trí
-                </span>
-              }
-              rules={[{ required: true, message: 'Vui lòng chọn vị trí!' }]}
-            >
-              <Select 
-                placeholder="Chọn vị trí"
-                size="large"
-              >
-                <Option value="Nhân viên">Nhân viên</Option>
-                <Option value="Quản lý">Quản lý</Option>
-                <Option value="Trưởng phòng">Trưởng phòng</Option>
-                <Option value="Giám đốc">Giám đốc</Option>
-              </Select>
-            </Form.Item>
-          </Col>
-
-          {/* Chức vụ/Phòng ban */}
-          <Col span={12}>
-            <Form.Item
-              name="department"
+              name="role"
               label={
                 <span className="font-medium">
                   <IdcardOutlined className="mr-2 text-gray-400" />
@@ -280,30 +308,28 @@ const StaffEdit = ({ visible, onClose, onUpdate, staff }) => {
                 placeholder="Chọn chức vụ"
                 size="large"
               >
-                <Option value="Vận hành">Vận hành</Option>
-                <Option value="Marketing">Marketing</Option>
-                <Option value="Kỹ thuật">Kỹ thuật</Option>
-                <Option value="Nhân sự">Nhân sự</Option>
-                <Option value="Tài chính">Tài chính</Option>
-                <Option value="Kinh doanh">Kinh doanh</Option>
+                <Option value="Quản trị viên">Quản trị viên (ADMIN)</Option>
+                <Option value="Quản lý">Quản lý (MANAGER)</Option>
+                <Option value="Quản lý cửa hàng">Quản lý cửa hàng (STORE MANAGER)</Option>
+                <Option value="Nhân viên hỗ trợ">Nhân viên hỗ trợ (SUPPORT STAFF)</Option>
+                <Option value="Nhân viên">Nhân viên (STAFF)</Option>
               </Select>
             </Form.Item>
           </Col>
 
-          {/* Ngày vào làm */}
+          {/* Ngày sinh */}
           <Col span={12}>
             <Form.Item
-              name="joinDate"
+              name="dateOfBirth"
               label={
                 <span className="font-medium">
                   <IdcardOutlined className="mr-2 text-gray-400" />
-                  Ngày vào làm
+                  Ngày sinh
                 </span>
               }
-              rules={[{ required: true, message: 'Vui lòng chọn ngày vào làm!' }]}
             >
               <DatePicker 
-                placeholder="Chọn ngày"
+                placeholder="Chọn ngày sinh"
                 size="large"
                 format="DD/MM/YYYY"
                 className="w-full"
@@ -315,69 +341,44 @@ const StaffEdit = ({ visible, onClose, onUpdate, staff }) => {
             </Form.Item>
           </Col>
 
-          {/* Mức lương */}
+          {/* Giới tính */}
           <Col span={12}>
             <Form.Item
-              name="salary"
+              name="gender"
               label={
                 <span className="font-medium">
-                  <DollarOutlined className="mr-2 text-gray-400" />
-                  Mức lương (VNĐ)
+                  Giới tính
                 </span>
               }
-              rules={[
-                { required: true, message: 'Vui lòng nhập mức lương!' },
-                { 
-                  type: 'number', 
-                  min: 0, 
-                  message: 'Mức lương phải lớn hơn 0!' 
-                }
-              ]}
+              rules={[{ required: true, message: 'Vui lòng chọn giới tính!' }]}
             >
-              <InputNumber
-                placeholder="15000000"
-                size="large"
-                className="w-full"
-                formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                parser={value => value.replace(/\$\s?|(,*)/g, '')}
-                prefix={<DollarOutlined className="text-gray-400" />}
-              />
+              <Select size="large" placeholder="Chọn giới tính">
+                <Option value="Nam">
+                  <ManOutlined className="mr-2" /> Nam
+                </Option>
+                <Option value="Nữ">
+                  <WomanOutlined className="mr-2" /> Nữ
+                </Option>
+                <Option value="Khác">Khác</Option>
+              </Select>
             </Form.Item>
           </Col>
 
           {/* Trạng thái */}
           <Col span={12}>
             <Form.Item
-              name="status"
+              name="isActive"
               label={
                 <span className="font-medium">
-                  Trạng thái
+                  Trạng thái hoạt động
                 </span>
               }
-              rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
+              valuePropName="checked"
             >
-              <Select size="large">
-                <Option value="active">Đang làm việc</Option>
-                <Option value="inactive">Nghỉ việc</Option>
-              </Select>
-            </Form.Item>
-          </Col>
-
-          {/* Ghi chú */}
-          <Col span={24}>
-            <Form.Item
-              name="notes"
-              label={
-                <span className="font-medium">
-                  Ghi chú
-                </span>
-              }
-            >
-              <TextArea
-                rows={3}
-                placeholder="Nhập ghi chú về nhân viên (nếu có)..."
-                maxLength={500}
-                showCount
+              <Switch 
+                checkedChildren="Active" 
+                unCheckedChildren="Inactive"
+                className="bg-gray-400"
               />
             </Form.Item>
           </Col>
