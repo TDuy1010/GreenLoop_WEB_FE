@@ -4,10 +4,10 @@ import axios from "axios";
 // Domain chính của API
 const API_CONFIG = {
   // Trong development: sử dụng proxy (/api) để bypass CORS
-  // Trong production: sử dụng URL đầy đủ
+  // Trong production: sử dụng URL từ env variable hoặc mặc định
   BASE_URL: import.meta.env.MODE === 'development' 
     ? '/api/v1'  // Proxy sẽ forward đến https://api.greenloop.thanhnt-tech.id.vn/api/v1
-    : 'https://api.greenloop.thanhnt-tech.id.vn/api/v1',
+    : (import.meta.env.VITE_API_URL || 'https://api.greenloop.thanhnt-tech.id.vn/api/v1'),
   TIMEOUT: 10000,
 };
 
