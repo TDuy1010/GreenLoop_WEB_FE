@@ -21,6 +21,7 @@ import AddressesTab from './components/AddressesTab'
 import MyEventsTab from './components/MyEventsTab'
 import PasswordTab from './components/PasswordTab'
 import PasswordChangeSuccessModal from '../../../components/PasswordChangeSuccessModal'
+import ProfileUpdateSuccessModal from '../../../components/ProfileUpdateSuccessModal'
 
 const ProfilePage = () => {
   const [activeTab, setActiveTab] = useState('personal')
@@ -28,7 +29,8 @@ const ProfilePage = () => {
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [loadingMyEvents, setLoadingMyEvents] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
-  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [showPasswordSuccessModal, setShowPasswordSuccessModal] = useState(false)
+  const [showProfileSuccessModal, setShowProfileSuccessModal] = useState(false)
   const [avatarFile, setAvatarFile] = useState(null)
   const [avatarPreview, setAvatarPreview] = useState('')
   const [updatingProfile, setUpdatingProfile] = useState(false)
@@ -55,12 +57,16 @@ const ProfilePage = () => {
         const res = await getCurrentUserProfile()
         const data = res?.data || res?.profile || res
         if (!data) return
+        
+        // Backend trả về UPPERCASE (MALE/FEMALE/OTHER), chuyển về lowercase để hiển thị
+        const processedGender = data.gender ? data.gender.toLowerCase() : 'other'
+        
         setUserData(prev => ({
           ...prev,
           name: data.fullName || data.name || prev.name,
           email: data.email || prev.email,
           phone: data.phoneNumber || prev.phone,
-          gender: data.gender || prev.gender,
+          gender: processedGender,
           birthday: data.dateOfBirth || prev.birthday,
           avatar: data.avatarUrl || prev.avatar,
         }))
@@ -69,10 +75,12 @@ const ProfilePage = () => {
           name: data.fullName || data.name || prev.name,
           email: data.email || prev.email,
           phone: data.phoneNumber || prev.phone,
-          gender: data.gender || prev.gender,
+          gender: processedGender,
           birthday: data.dateOfBirth || prev.birthday,
           avatar: data.avatarUrl || prev.avatar,
         }))
+        
+        console.log('🔍 [ProfilePage] Fetched gender:', data.gender, '→ Processed:', processedGender)
       } catch {
         message.error('Không tải được hồ sơ người dùng')
       } finally {
@@ -226,12 +234,17 @@ const ProfilePage = () => {
       // Update local state with new data
       const updatedData = response?.data || response
       if (updatedData) {
+        // Backend có thể trả về gender UPPERCASE, cần chuyển về lowercase
+        const updatedGender = updatedData.gender 
+          ? updatedData.gender.toLowerCase() 
+          : editedData.gender
+          
         setUserData({
           ...userData,
           name: updatedData.fullName || editedData.name,
           email: updatedData.email || editedData.email,
           phone: updatedData.phoneNumber || editedData.phone,
-          gender: editedData.gender,
+          gender: updatedGender,
           birthday: updatedData.dateOfBirth || editedData.birthday,
           avatar: updatedData.avatarUrl || avatarPreview || userData.avatar
         })
@@ -240,7 +253,9 @@ const ProfilePage = () => {
       setIsEditing(false)
       setAvatarFile(null)
       setAvatarPreview('')
-      message.success('Cập nhật thông tin thành công!')
+      
+      // Hiển thị modal thông báo thành công
+      setShowProfileSuccessModal(true)
       
     } catch (error) {
       console.error('Error updating profile:', error)
@@ -382,7 +397,7 @@ const ProfilePage = () => {
       })
       
       // Hiển thị modal thành công
-      setShowSuccessModal(true)
+      setShowPasswordSuccessModal(true)
       
     } catch (error) {
       console.error('Error changing password:', error)
@@ -500,9 +515,15 @@ const ProfilePage = () => {
 
       {/* Modal thông báo đổi mật khẩu thành công */}
       <PasswordChangeSuccessModal 
-        show={showSuccessModal} 
-        onClose={() => setShowSuccessModal(false)}
+        show={showPasswordSuccessModal} 
+        onClose={() => setShowPasswordSuccessModal(false)}
         userType="customer"
+      />
+
+      {/* Modal thông báo cập nhật thông tin thành công */}
+      <ProfileUpdateSuccessModal 
+        show={showProfileSuccessModal} 
+        onClose={() => setShowProfileSuccessModal(false)}
       />
     </div>
   )

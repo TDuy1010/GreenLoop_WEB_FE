@@ -11,6 +11,7 @@ import ProfileHeader from './components/ProfileHeader'
 import PersonalInfoTab from './components/PersonalInfoTab'
 import ChangePasswordTab from './components/ChangePasswordTab'
 import PasswordChangeSuccessModal from '../../../components/PasswordChangeSuccessModal'
+import ProfileUpdateSuccessModal from '../../../components/ProfileUpdateSuccessModal'
 
 const AdminProfile = () => {
   const [activeTab, setActiveTab] = useState('personal')
@@ -43,7 +44,8 @@ const AdminProfile = () => {
     confirmPassword: ''
   })
 
-  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [showPasswordSuccessModal, setShowPasswordSuccessModal] = useState(false)
+  const [showProfileSuccessModal, setShowProfileSuccessModal] = useState(false)
 
   // Nạp thông tin admin từ API
   useEffect(() => {
@@ -58,10 +60,14 @@ const AdminProfile = () => {
           fullName: data.fullName || '—',
           email: data.email || '—',
           phoneNumber: data.phoneNumber || '',
-          gender: data.gender || 'other',
+          // Backend trả về UPPERCASE (MALE/FEMALE/OTHER), chuyển về lowercase để hiển thị
+          gender: data.gender ? data.gender.toLowerCase() : 'other',
           dateOfBirth: data.dateOfBirth || '',
           avatar: data.avatarUrl || ''
         }
+
+        console.log('🔍 [AdminProfile] Fetched profile:', data)
+        console.log('🔍 [AdminProfile] Processed profile:', profile)
 
         setUserData(profile)
         setEditedData(profile)
@@ -88,7 +94,9 @@ const AdminProfile = () => {
       
       setUserData(editedData)
       setIsEditing(false)
-      message.success('Cập nhật thông tin thành công!')
+      
+      // Hiển thị modal thông báo thành công
+      setShowProfileSuccessModal(true)
     } catch (error) {
       console.error('Error updating profile:', error)
       message.error('Không thể cập nhật thông tin!')
@@ -189,7 +197,7 @@ const AdminProfile = () => {
       })
       
       // Hiển thị modal thành công
-      setShowSuccessModal(true)
+      setShowPasswordSuccessModal(true)
       
       // Reset form
       setPasswordData({
@@ -289,9 +297,15 @@ const AdminProfile = () => {
 
       {/* Modal thông báo đổi mật khẩu thành công */}
       <PasswordChangeSuccessModal 
-        show={showSuccessModal} 
-        onClose={() => setShowSuccessModal(false)}
+        show={showPasswordSuccessModal} 
+        onClose={() => setShowPasswordSuccessModal(false)}
         userType="admin"
+      />
+
+      {/* Modal thông báo cập nhật thông tin thành công */}
+      <ProfileUpdateSuccessModal 
+        show={showProfileSuccessModal} 
+        onClose={() => setShowProfileSuccessModal(false)}
       />
     </div>
   )

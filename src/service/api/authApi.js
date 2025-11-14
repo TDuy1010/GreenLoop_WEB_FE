@@ -144,14 +144,47 @@ export const getCurrentUser = async () => {
  * Cập nhật thông tin cá nhân người dùng
  * @param {Object} userData - Dữ liệu cập nhật
  * @param {string} userData.fullName - Họ và tên
- * @param {string} userData.phone - Số điện thoại
+ * @param {string} userData.phoneNumber - Số điện thoại
  * @param {string} userData.gender - Giới tính (male/female/other)
- * @param {string} userData.dob - Ngày sinh (YYYY-MM-DD)
+ * @param {string} userData.dateOfBirth - Ngày sinh (YYYY-MM-DD)
  * @returns {Promise} Response từ server
  */
 export const updateUserProfile = async (userData) => {
-  const response = await axiosClient.put('/auth/updatedetails', userData);
-  return response;
+  try {
+    const formData = new FormData();
+    
+    // Tạo request object với đúng format backend yêu cầu
+    const request = {
+      fullName: userData.fullName,
+      dateOfBirth: userData.dateOfBirth || null,
+      // Backend yêu cầu gender phải UPPERCASE (MALE/FEMALE/OTHER)
+      gender: userData.gender ? userData.gender.toUpperCase() : null,
+      phoneNumber: userData.phoneNumber || null
+    };
+    
+    // Log để debug
+    console.log('🔍 [updateUserProfile] userData:', userData);
+    console.log('🔍 [updateUserProfile] request:', request);
+    console.log('🔍 [updateUserProfile] request JSON:', JSON.stringify(request));
+    
+    // Append request as JSON blob (bắt buộc với multipart/form-data)
+    formData.append('request', new Blob([JSON.stringify(request)], {
+      type: 'application/json'
+    }));
+    
+    // Gửi request với Content-Type: multipart/form-data
+    const response = await axiosClient.put('/users/profile', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    
+    return response;
+  } catch (error) {
+    console.error('❌ [updateUserProfile] Error:', error);
+    console.error('❌ [updateUserProfile] Error response:', error.response?.data);
+    throw error;
+  }
 };
 
 // ===== ĐỔI MẬT KHẨU =====
@@ -230,25 +263,6 @@ export const resetPassword = async (resetData) => {
   })
   const response = await axiosClient.post('/auth/reset-password', resetData);
   console.log('✅ [API] Reset password response:', response)
-  return response;
-};
-
-// ===== UPLOAD AVATAR =====
-/**
- * Upload ảnh đại diện người dùng
- * @param {File} file - File ảnh
- * @returns {Promise} Response với URL ảnh
- */
-export const uploadAvatar = async (file) => {
-  const formData = new FormData();
-  formData.append('avatar', file);
-
-  const response = await axiosClient.post('/upload/avatar', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-
   return response;
 };
 
@@ -430,7 +444,6 @@ export default {
   changePassword,
   forgotPassword,
   resetPassword,
-  uploadAvatar,
   isAuthenticated,
   getUserInfo,
   hasRole,

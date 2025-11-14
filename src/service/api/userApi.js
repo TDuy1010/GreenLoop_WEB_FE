@@ -18,10 +18,13 @@ export const updateUserProfile = async (userData, avatar = null) => {
     // Tạo request object
     const request = {
       fullName: userData.fullName,
-      dateOfBirth: userData.dateOfBirth,
-      gender: userData.gender,
-      phoneNumber: userData.phoneNumber
+      dateOfBirth: userData.dateOfBirth || null,
+      // Backend yêu cầu gender phải UPPERCASE (MALE/FEMALE/OTHER)
+      gender: userData.gender ? userData.gender.toUpperCase() : null,
+      phoneNumber: userData.phoneNumber || null
     }
+    
+    console.log('🔍 [userApi updateUserProfile] request:', request)
     
     // Append request as JSON blob
     formData.append('request', new Blob([JSON.stringify(request)], {
