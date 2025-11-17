@@ -196,7 +196,7 @@ const CartPage = () => {
               {product.description || 'Không có mô tả chi tiết.'}
             </p>
             <div className="flex flex-wrap gap-2 mt-3 text-xs">
-              <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600">
+              <span className="px-3 py-1 rounded-full bg-emerald-50 text-[#22C55E]">
                 {product.categoryName || 'Sản phẩm tái chế'}
               </span>
               {product.conditionGrade && (
@@ -212,7 +212,7 @@ const CartPage = () => {
             <p className="text-xs uppercase tracking-widest text-slate-400">
               Giá bán
             </p>
-            <p className="text-2xl font-bold text-emerald-600">
+            <p className="text-2xl font-bold text-[#22C55E]">
               {(item.price || 0).toLocaleString('vi-VN')}đ
             </p>
           </div>
@@ -289,7 +289,7 @@ const CartPage = () => {
   return (
     <section className="max-w-6xl mx-auto px-4 py-10">
       <div className="mb-10">
-        <p className="text-emerald-600 font-semibold uppercase text-sm tracking-[0.2em]">
+        <p className="text-[#22C55E] font-semibold uppercase text-sm tracking-[0.2em]">
           GreenLoop Cart
         </p>
         <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mt-2">
@@ -305,7 +305,7 @@ const CartPage = () => {
           className={`mb-6 rounded-2xl px-4 py-3 text-sm font-medium ${
             toast.type === 'error'
               ? 'bg-red-50 text-red-600'
-              : 'bg-emerald-50 text-emerald-600'
+              : 'bg-emerald-50 text-[#22C55E]'
           }`}
         >
           {toast.text}
@@ -327,27 +327,27 @@ const CartPage = () => {
             </div>
             <div className="flex justify-between">
               <span>Tổng eco points</span>
-              <span className="font-semibold text-emerald-600">
+              <span className="font-semibold text-[#22C55E]">
                 {totalEcoPoints}
               </span>
             </div>
             <hr className="border-slate-100" />
             <div className="flex justify-between text-base">
               <span>Tạm tính</span>
-              <span className="text-xl font-bold text-emerald-600">
+              <span className="text-xl font-bold text-[#22C55E]">
                 {subtotal.toLocaleString('vi-VN')}đ
               </span>
             </div>
           </div>
           <button
-            className="mt-6 w-full py-3 rounded-full bg-emerald-600 text-white font-semibold disabled:opacity-50"
+            className="mt-6 w-full py-3 rounded-full bg-[#22C55E] text-white font-semibold disabled:opacity-50"
             disabled={!cartItems.length}
           >
             Tiến hành thanh toán
           </button>
           <a
             href="/shop"
-            className="mt-3 block text-center text-sm text-slate-500 hover:text-emerald-600"
+            className="mt-3 block text-center text-sm text-slate-500 hover:text-[#22C55E]"
           >
             Tiếp tục mua sắm
           </a>
