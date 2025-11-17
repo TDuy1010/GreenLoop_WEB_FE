@@ -1,18 +1,167 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
-import { productDetail, relatedProducts } from "../../../data/mockData";
+import { Link, useParams } from "react-router-dom";
+import { relatedProducts } from "../../../data/mockData";
+import { getProductById } from "../../../service/api/productApi";
 
 const ProductDetail = () => {
+  const { id } = useParams(); // Lấy product ID từ URL
   const [selectedImage, setSelectedImage] = useState(0);
+  
+  // Data states
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Use mock data from imported file - replace with API call
-  const product = productDetail;
+  // Fetch product detail from API
+  useEffect(() => {
+    const fetchProductDetail = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        console.log('🔍 Fetching product detail for ID:', id);
+
+        const response = await getProductById(id);
+        
+        console.log('✅ Product detail response:', response);
+
+        if (response.success && response.data) {
+          // Transform API data to match UI format
+          const apiProduct = response.data;
+          
+          const transformedProduct = {
+            id: apiProduct.id,
+            code: apiProduct.code,
+            name: apiProduct.name,
+            description: apiProduct.description,
+            price: apiProduct.price,
+            category: apiProduct.categoryName,
+            brand: 'N/A', // API không có brand
+            size: 'N/A', // API không có size
+            color: 'N/A', // API không có color
+            material: 'N/A', // API không có material
+            condition: apiProduct.conditionGrade === 'LIKE_NEW' ? 'Như mới' : 
+                      apiProduct.conditionGrade === 'GOOD' ? 'Tốt' :
+                      apiProduct.conditionGrade === 'FAIR' ? 'Khá' : 'Đã qua sử dụng',
+            ecoPoints: apiProduct.ecoPointValue,
+            isAvailable: apiProduct.status === 'AVAILABLE',
+            type: apiProduct.type === 'DONATION' ? 'Quyên góp' : 'Mua bán',
+            images: apiProduct.imageUrls && apiProduct.imageUrls.length > 0 
+              ? apiProduct.imageUrls 
+              : [
+                  'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600',
+                  'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600'
+                ],
+            features: [
+              apiProduct.description,
+              `Tình trạng: ${apiProduct.conditionGrade}`,
+              `Loại: ${apiProduct.type === 'DONATION' ? 'Quyên góp' : 'Mua bán'}`,
+              'Đã được vệ sinh, khử trùng'
+            ],
+            // Mock donor data vì API không có
+            donor: {
+              name: 'Người quyên góp',
+              avatar: 'https://ui-avatars.com/api/?name=Donor&background=10b981&color=fff',
+              donatedItems: 0,
+              joinedDate: '2024',
+              verified: false,
+              ecoScore: 0
+            }
+          };
+
+          setProduct(transformedProduct);
+        }
+      } catch (err) {
+        console.error('❌ Error fetching product detail:', err);
+        setError('Không thể tải thông tin sản phẩm. Vui lòng thử lại sau.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchProductDetail();
+    }
+  }, [id]);
+
+  // Reset selected image when product changes
+  useEffect(() => {
+    setSelectedImage(0);
+  }, [product]);
 
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 },
   };
+
+  // Loading State
+  if (loading) {
+    return (
+      <div className="bg-gray-50 min-h-screen">
+        <div className="max-w-7xl mx-auto px-6 py-20">
+          <div className="flex flex-col items-center justify-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-green-600 mb-4"></div>
+            <p className="text-gray-600 font-semibold">Đang tải thông tin sản phẩm...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error State
+  if (error) {
+    return (
+      <div className="bg-gray-50 min-h-screen">
+        <div className="max-w-7xl mx-auto px-6 py-20">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center max-w-md mx-auto">
+            <svg className="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 className="text-xl font-bold text-red-700 mb-2">Không thể tải sản phẩm</h3>
+            <p className="text-red-600 mb-6">{error}</p>
+            <div className="flex gap-4 justify-center">
+              <Link
+                to="/shop"
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+              >
+                Về cửa hàng
+              </Link>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition"
+              >
+                Thử lại
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Not Found State
+  if (!product) {
+    return (
+      <div className="bg-gray-50 min-h-screen">
+        <div className="max-w-7xl mx-auto px-6 py-20">
+          <div className="bg-gray-100 border border-gray-200 rounded-lg p-8 text-center max-w-md mx-auto">
+            <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+            <h3 className="text-xl font-bold text-gray-700 mb-2">Không tìm thấy sản phẩm</h3>
+            <p className="text-gray-600 mb-6">Sản phẩm này có thể đã bị xóa hoặc không tồn tại.</p>
+            <Link
+              to="/shop"
+              className="inline-block px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+            >
+              Về cửa hàng
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -190,46 +339,7 @@ const ProductDetail = () => {
                 </div>
               </div>
 
-              {/* Availability Status */}
-              <div className="mb-6">
-                {product.isAvailable ? (
-                  <div className="flex items-center gap-2 text-green-600 bg-green-50 px-4 py-3 rounded-lg">
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <span className="font-semibold">
-                      Sản phẩm còn hàng - Số lượng: 1
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-red-600 bg-red-50 px-4 py-3 rounded-lg">
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <span className="font-semibold">Sản phẩm đã được bán</span>
-                  </div>
-                )}
-              </div>
+              
 
               {/* Action Buttons */}
               <div className="flex gap-4 mb-8">
@@ -336,87 +446,6 @@ const ProductDetail = () => {
           </motion.div>
         </div>
 
-        {/* Donor Information */}
-        <motion.div
-          className="bg-white rounded-xl shadow-lg p-6 mb-8"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={fadeIn}
-        >
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-            <svg
-              className="w-6 h-6 text-green-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              />
-            </svg>
-            Thông tin người quyên góp
-          </h2>
-
-          <div className="flex items-center gap-6">
-            <img
-              src={product.donor.avatar}
-              alt={product.donor.name}
-              className="w-20 h-20 rounded-full border-4 border-green-100"
-            />
-
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-xl font-bold text-gray-900">
-                  {product.donor.name}
-                </h3>
-                {product.donor.verified && (
-                  <svg
-                    className="w-6 h-6 text-blue-500"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                )}
-              </div>
-
-              <div className="grid grid-cols-3 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-600">Đã quyên góp</p>
-                  <p className="font-bold text-green-600">
-                    {product.donor.donatedItems} sản phẩm
-                  </p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Tham gia từ</p>
-                  <p className="font-semibold text-gray-800">01/2024</p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Điểm sinh thái</p>
-                  <p className="font-bold text-green-600">
-                    {product.donor.ecoScore} điểm
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <motion.button
-              className="px-6 py-3 bg-green-100 text-green-700 font-semibold rounded-lg hover:bg-green-200 transition"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Xem trang cá nhân
-            </motion.button>
-          </div>
-        </motion.div>
         {/* Related Products */}
         <motion.div
           initial="hidden"

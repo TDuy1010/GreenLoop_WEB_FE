@@ -1,25 +1,19 @@
 import React from 'react'
-import { 
-  Modal, 
-  Tag, 
-  Divider,
+import {
+  Modal,
+  Tag,
   Row,
   Col,
   Card,
-  Space,
-  Image,
-  Badge
+  Image
 } from 'antd'
-import { 
+import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ShoppingOutlined,
   TagOutlined,
-  HomeOutlined,
   CalendarOutlined,
   DollarOutlined,
-  EyeOutlined,
-  HeartOutlined,
   StarOutlined,
   InfoCircleOutlined,
   AppstoreOutlined
@@ -52,11 +46,9 @@ const ProductDetail = ({ visible, onClose, product }) => {
       width={900}
       className="product-detail-modal"
     >
-      {/* Header Section with Images */}
       <div className="py-6 bg-gradient-to-r from-green-50 to-emerald-50 -mt-6 -mx-6 mb-6 rounded-t-lg">
         <div className="px-6">
           <div className="flex gap-4 mb-4">
-            {/* Main Image */}
             <div className="flex-shrink-0">
               <Image
                 width={200}
@@ -68,45 +60,36 @@ const ProductDetail = ({ visible, onClose, product }) => {
               />
             </div>
 
-            {/* Product Info */}
             <div className="flex-1 min-w-0">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
                 {product.name}
               </h2>
               <p className="text-gray-600 mb-3 line-clamp-3">{product.description}</p>
-              
-              <div className="flex flex-wrap gap-2 mb-3">
-                {product.tags?.map(tag => (
-                  <Tag key={tag} color="blue" icon={<TagOutlined />}>
-                    {tag}
-                  </Tag>
-                ))}
-              </div>
+
+              {product.code && (
+                <div className="text-sm text-gray-500 mb-3">
+                  Mã sản phẩm: <span className="font-medium">{product.code}</span>
+                </div>
+              )}
 
               <div className="flex items-center gap-4">
-                <Tag 
+                <Tag
                   color={statusConfig[product.status]?.color || 'default'}
                   icon={statusConfig[product.status]?.icon}
                   className="text-sm px-3 py-1"
                 >
                   {statusConfig[product.status]?.text || product.status}
                 </Tag>
-                <Tag 
+                <Tag
                   color={conditionConfig[product.condition]?.color || 'default'}
                   className="text-sm px-3 py-1"
                 >
                   {conditionConfig[product.condition]?.text || product.condition}
                 </Tag>
-                {product.isApproved && (
-                  <Tag color="green" icon={<CheckCircleOutlined />} className="text-sm px-3 py-1">
-                    Đã duyệt
-                  </Tag>
-                )}
               </div>
             </div>
           </div>
 
-          {/* Thumbnail Images */}
           {product.images?.length > 1 && (
             <div className="flex gap-2 overflow-x-auto">
               {product.images.slice(1).map((img, index) => (
@@ -124,8 +107,7 @@ const ProductDetail = ({ visible, onClose, product }) => {
         </div>
       </div>
 
-      {/* Product Information */}
-      <Card 
+      <Card
         title={
           <span className="text-base font-semibold text-gray-700">
             <AppstoreOutlined className="mr-2" />
@@ -145,132 +127,53 @@ const ProductDetail = ({ visible, onClose, product }) => {
               </div>
             </div>
           </Col>
-          <Col span={12}>
-            <div className="flex items-center gap-3">
-              <TagOutlined className="text-purple-500 text-lg" />
-              <div className="flex-1">
-                <div className="text-xs text-gray-500">Thương hiệu</div>
-                <div className="text-sm font-medium text-gray-900">{product.brand}</div>
-              </div>
-            </div>
-          </Col>
-          <Col span={8}>
-            <div className="flex items-center gap-3">
-              <InfoCircleOutlined className="text-cyan-500 text-lg" />
-              <div className="flex-1">
-                <div className="text-xs text-gray-500">Size</div>
-                <div className="text-sm font-medium text-gray-900">{product.size}</div>
-              </div>
-            </div>
-          </Col>
-          <Col span={8}>
-            <div className="flex items-center gap-3">
-              <InfoCircleOutlined className="text-pink-500 text-lg" />
-              <div className="flex-1">
-                <div className="text-xs text-gray-500">Màu sắc</div>
-                <div className="text-sm font-medium text-gray-900">{product.color}</div>
-              </div>
-            </div>
-          </Col>
-          <Col span={8}>
-            <div className="flex items-center gap-3">
-              <InfoCircleOutlined className="text-orange-500 text-lg" />
-              <div className="flex-1">
-                <div className="text-xs text-gray-500">Chất liệu</div>
-                <div className="text-sm font-medium text-gray-900">{product.material}</div>
-              </div>
-            </div>
-          </Col>
-          <Col span={12}>
-            <div className="flex items-center gap-3">
-              <InfoCircleOutlined className="text-gray-500 text-lg" />
-              <div className="flex-1">
-                <div className="text-xs text-gray-500">Trọng lượng</div>
-                <div className="text-sm font-medium text-gray-900">{product.weight} kg</div>
-              </div>
-            </div>
-          </Col>
-          <Col span={12}>
-            <div className="flex items-center gap-3">
-              <InfoCircleOutlined className="text-gray-500 text-lg" />
-              <div className="flex-1">
-                <div className="text-xs text-gray-500">Kích thước</div>
-                <div className="text-sm font-medium text-gray-900">{product.dimensions}</div>
-              </div>
-            </div>
-          </Col>
-        </Row>
-      </Card>
-
-      {/* Location & Dates */}
-      <Card 
-        title={
-          <span className="text-base font-semibold text-gray-700">
-            <HomeOutlined className="mr-2" />
-            Vị trí & Thời gian
-          </span>
-        }
-        className="mb-4 shadow-sm"
-        size="small"
-      >
-        <Row gutter={[16, 16]}>
-          <Col span={12}>
-            <div className="flex items-center gap-3">
-              <HomeOutlined className="text-green-500 text-lg" />
-              <div className="flex-1">
-                <div className="text-xs text-gray-500">Kho lưu trữ</div>
-                <div className="text-sm font-medium text-gray-900">
-                  <Tag color="purple">{product.location}</Tag>
-                </div>
-              </div>
-            </div>
-          </Col>
-          <Col span={12}>
-            <div className="flex items-center gap-3">
-              <CalendarOutlined className="text-orange-500 text-lg" />
-              <div className="flex-1">
-                <div className="text-xs text-gray-500">Ngày quyên góp</div>
-                <div className="text-sm font-medium text-gray-900">
-                  {new Date(product.donationDate).toLocaleDateString('vi-VN', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </div>
-              </div>
-            </div>
-          </Col>
-          {product.approvedDate && (
+          {product.type && (
             <Col span={12}>
               <div className="flex items-center gap-3">
-                <CalendarOutlined className="text-green-500 text-lg" />
+                <TagOutlined className="text-purple-500 text-lg" />
                 <div className="flex-1">
-                  <div className="text-xs text-gray-500">Ngày duyệt</div>
+                  <div className="text-xs text-gray-500">Loại sản phẩm</div>
+                  <Tag color={product.type === 'DONATION' ? 'green' : 'blue'}>
+                    {product.type === 'DONATION' ? 'Quyên góp' : 'Mua'}
+                  </Tag>
+                </div>
+              </div>
+            </Col>
+          )}
+          {product.code && (
+            <Col span={12}>
+              <div className="flex items-center gap-3">
+                <InfoCircleOutlined className="text-cyan-500 text-lg" />
+                <div className="flex-1">
+                  <div className="text-xs text-gray-500">Mã sản phẩm</div>
+                  <div className="text-sm font-medium text-gray-900">{product.code}</div>
+                </div>
+              </div>
+            </Col>
+          )}
+          {product.createdAt && (
+            <Col span={12}>
+              <div className="flex items-center gap-3">
+                <CalendarOutlined className="text-orange-500 text-lg" />
+                <div className="flex-1">
+                  <div className="text-xs text-gray-500">Ngày tạo</div>
                   <div className="text-sm font-medium text-gray-900">
-                    {new Date(product.approvedDate).toLocaleDateString('vi-VN')}
+                    {new Date(product.createdAt).toLocaleDateString('vi-VN', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
                   </div>
                 </div>
               </div>
             </Col>
           )}
-          {product.approvedBy && (
-            <Col span={12}>
-              <div className="flex items-center gap-3">
-                <CheckCircleOutlined className="text-green-500 text-lg" />
-                <div className="flex-1">
-                  <div className="text-xs text-gray-500">Người duyệt</div>
-                  <div className="text-sm font-medium text-gray-900">{product.approvedBy}</div>
-                </div>
-              </div>
-            </Col>
-          )}
         </Row>
       </Card>
 
-      {/* Pricing & Statistics */}
       <Row gutter={16} className="mb-4">
         <Col span={12}>
-          <Card 
+          <Card
             title={
               <span className="text-base font-semibold text-gray-700">
                 <DollarOutlined className="mr-2" />
@@ -287,46 +190,31 @@ const ProductDetail = ({ visible, onClose, product }) => {
                   {product.price?.toLocaleString('vi-VN')} VNĐ
                 </span>
               </div>
-              <Divider className="my-2" />
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Giá gốc:</span>
-                <span className="text-sm line-through text-gray-400">
-                  {product.originalPrice?.toLocaleString('vi-VN')} VNĐ
-                </span>
-              </div>
-              <div className="p-2 bg-green-50 rounded text-center">
-                <span className="text-sm text-green-700 font-medium">
-                  Tiết kiệm {(((product.originalPrice - product.price) / product.originalPrice) * 100).toFixed(0)}%
-                </span>
-              </div>
             </div>
           </Card>
         </Col>
-         <Col span={12}>
-           <Card 
-             title={
-               <span className="text-base font-semibold text-gray-700">
-                 <StarOutlined className="mr-2" />
-                 Thống kê
-               </span>
-             }
-             className="shadow-sm"
-             size="small"
-           >
-             <div className="text-center ">
-               <div className="inline-flex items-center justify-center w-8 h-8 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-full mb-3">
-                 <StarOutlined className="text-xl text-yellow-600" />
-               </div>
-               <div className="text-xl font-bold text-yellow-600 mb-1">
-                 {product.ecoPoints || 0}
-               </div>
-               <div className="text-sm text-gray-600 font-medium">Eco Points</div>
-               <div className="mt-3 text-xs text-gray-500">
-                 Điểm thưởng cho sản phẩm thân thiện môi trường
-               </div>
-             </div>
-           </Card>
-         </Col>
+        <Col span={12}>
+          <Card
+            title={
+              <span className="text-base font-semibold text-gray-700">
+                <StarOutlined className="mr-2" />
+                Thống kê
+              </span>
+            }
+            className="shadow-sm"
+            size="small"
+          >
+            <div className="text-center ">
+              <div className="inline-flex items-center justify-center w-8 h-8 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-full mb-3">
+                <StarOutlined className="text-xl text-yellow-600" />
+              </div>
+              <div className="text-xl font-bold text-yellow-600 mb-1">
+                {product.ecoPoints || 0}
+              </div>
+              <div className="text-sm text-gray-600 font-medium">Eco Points</div>
+            </div>
+          </Card>
+        </Col>
       </Row>
     </Modal>
   )

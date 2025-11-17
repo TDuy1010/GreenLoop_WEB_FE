@@ -1,5 +1,6 @@
 import React from 'react'
 import { motion } from 'framer-motion'
+import { Link } from 'react-router-dom'
 
 const ItemsCard = ({ item }) => {
   return (
@@ -11,14 +12,15 @@ const ItemsCard = ({ item }) => {
       transition={{ duration: 0.3 }}
     >
       {/* Image Container */}
-      <div className="relative overflow-hidden h-64 bg-gray-100">
-        <motion.img
-          src={item.image}
-          alt={item.name}
-          className="w-full h-full object-cover"
-          whileHover={{ scale: 1.1 }}
-          transition={{ duration: 0.3 }}
-        />
+      <Link to={`/shop/product/${item.id}`}>
+        <div className="relative overflow-hidden h-64 bg-gray-100">
+          <motion.img
+            src={item.image}
+            alt={item.name}
+            className="w-full h-full object-cover"
+            whileHover={{ scale: 1.1 }}
+            transition={{ duration: 0.3 }}
+          />
         
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-2">
@@ -40,29 +42,7 @@ const ItemsCard = ({ item }) => {
         </div>
 
         {/* Quick Actions */}
-        <div className="absolute top-3 right-3 flex flex-col gap-2">
-          <motion.button
-            className="bg-white p-2 rounded-full shadow-md hover:bg-green-50 transition"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            title="Yêu thích"
-          >
-            <svg className="w-5 h-5 text-gray-600 hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-          </motion.button>
-          <motion.button
-            className="bg-white p-2 rounded-full shadow-md hover:bg-green-50 transition"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            title="Xem nhanh"
-          >
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-          </motion.button>
-        </div>
+       
 
         {/* Eco Points Badge */}
         {item.ecoPoints && (
@@ -73,7 +53,8 @@ const ItemsCard = ({ item }) => {
             <span className="text-xs font-semibold text-green-600">+{item.ecoPoints} điểm</span>
           </div>
         )}
-      </div>
+        </div>
+      </Link>
 
       {/* Content */}
       <div className="p-4">
@@ -81,9 +62,11 @@ const ItemsCard = ({ item }) => {
         <p className="text-xs text-gray-500 mb-1 uppercase tracking-wide">{item.category}</p>
         
         {/* Title */}
-        <h3 className="font-semibold text-gray-800 mb-2 line-clamp-2 hover:text-green-600 transition cursor-pointer">
-          {item.name}
-        </h3>
+        <Link to={`/shop/product/${item.id}`}>
+          <h3 className="font-semibold text-gray-800 mb-2 line-clamp-2 hover:text-green-600 transition cursor-pointer">
+            {item.name}
+          </h3>
+        </Link>
 
         {/* Condition */}
         <div className="flex items-center gap-2 mb-3">

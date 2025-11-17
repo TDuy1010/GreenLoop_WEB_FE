@@ -1,193 +1,37 @@
-import React, { useState } from 'react'
-import { 
-  Button, 
-  Input, 
-  Select, 
+import React, { useState, useEffect } from 'react'
+import {
+  Button,
+  Input,
+  Select,
   message,
   Card,
   Row,
   Col,
-  Statistic
+  Statistic,
+  Spin
 } from 'antd'
-import { 
-  PlusOutlined, 
+import {
+  PlusOutlined,
   SearchOutlined,
   ShoppingOutlined,
   CheckCircleOutlined,
-  GiftOutlined,
-  EyeOutlined
+  GiftOutlined
 } from '@ant-design/icons'
 import { motion } from 'framer-motion'
 import ProductTable from './components/ProductTable'
 import ProductDetail from './components/ProductDetail'
 import ProductAdd from './components/ProductAdd'
 import ProductEdit from './components/ProductEdit'
+import { getProducts, getProductById } from '../../../service/api/productApi'
 
 const { Search } = Input
 const { Option } = Select
-const { TextArea } = Input
+const MotionDiv = motion.div
 
 const ProductManagement = () => {
-  const [productData, setProductData] = useState([
-    {
-      id: 1,
-      name: 'Áo Khoác Denim Vintage',
-      description: 'Áo khoác denim màu xanh vintage, phong cách retro, phù hợp cho cả nam và nữ',
-      category: 'Thời trang',
-      condition: 'Tốt',
-      size: 'M',
-      color: 'Xanh denim',
-      material: 'Cotton',
-      brand: 'Levi\'s',
-      donorName: 'Nguyễn Văn An',
-      donorEmail: 'an.nguyen@gmail.com',
-      donorPhone: '0901234567',
-      donationDate: '2024-01-10',
-      status: 'available',
-      isApproved: true,
-      approvedBy: 'Admin',
-      approvedDate: '2024-01-11',
-      price: 150000,
-      originalPrice: 800000,
-      images: [
-        'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400',
-        'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400'
-      ],
-      tags: ['Vintage', 'Denim', 'Unisex'],
-      weight: 0.5,
-      dimensions: '60x50x2 cm',
-      ecoPoints: 75,
-      views: 156,
-      likes: 23,
-      location: 'Kho TP.HCM'
-    },
-    {
-      id: 2,
-      name: 'Giày Sneaker Nike Air Max',
-      description: 'Giày thể thao Nike Air Max màu trắng, ít sử dụng, còn rất mới',
-      category: 'Giày dép',
-      condition: 'Rất tốt',
-      size: '42',
-      color: 'Trắng',
-      material: 'Da tổng hợp',
-      brand: 'Nike',
-      donorName: 'Trần Thị Bình',
-      donorEmail: 'binh.tran@gmail.com',
-      donorPhone: '0901234568',
-      donationDate: '2024-01-08',
-      status: 'sold',
-      isApproved: true,
-      approvedBy: 'Admin',
-      approvedDate: '2024-01-09',
-      price: 300000,
-      originalPrice: 1200000,
-      images: [
-        'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400'
-      ],
-      tags: ['Nike', 'Thể thao', 'Sneaker'],
-      weight: 0.8,
-      dimensions: '30x20x12 cm',
-      ecoPoints: 150,
-      views: 234,
-      likes: 45,
-      location: 'Kho Hà Nội'
-    },
-    {
-      id: 3,
-      name: 'Túi Xách Tote Canvas',
-      description: 'Túi xách tote bằng canvas màu be, thiết kế đơn giản, thân thiện môi trường',
-      category: 'Phụ kiện',
-      condition: 'Tốt',
-      size: 'One Size',
-      color: 'Be',
-      material: 'Canvas',
-      brand: 'Handmade',
-      donorName: 'Lê Văn Cường',
-      donorEmail: 'cuong.le@gmail.com',
-      donorPhone: '0901234569',
-      donationDate: '2024-01-12',
-      status: 'pending',
-      isApproved: false,
-      approvedBy: null,
-      approvedDate: null,
-      price: 80000,
-      originalPrice: 200000,
-      images: [
-        'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400'
-      ],
-      tags: ['Canvas', 'Eco-friendly', 'Handmade'],
-      weight: 0.3,
-      dimensions: '40x35x10 cm',
-      ecoPoints: 40,
-      views: 89,
-      likes: 12,
-      location: 'Kho TP.HCM'
-    },
-    {
-      id: 4,
-      name: 'Đầm Maxi Hoa Nhí',
-      description: 'Đầm maxi họa tiết hoa nhí, chất liệu voan mềm mại, phù hợp mùa hè',
-      category: 'Thời trang',
-      condition: 'Rất tốt',
-      size: 'S',
-      color: 'Hoa nhí xanh',
-      material: 'Voan',
-      brand: 'Zara',
-      donorName: 'Phạm Thị Dung',
-      donorEmail: 'dung.pham@gmail.com',
-      donorPhone: '0901234570',
-      donationDate: '2024-01-15',
-      status: 'available',
-      isApproved: true,
-      approvedBy: 'Admin',
-      approvedDate: '2024-01-16',
-      price: 200000,
-      originalPrice: 600000,
-      images: [
-        'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400'
-      ],
-      tags: ['Maxi', 'Hoa nhí', 'Mùa hè'],
-      weight: 0.4,
-      dimensions: '50x120x2 cm',
-      ecoPoints: 100,
-      views: 178,
-      likes: 34,
-      location: 'Kho Đà Nẵng'
-    },
-    {
-      id: 5,
-      name: 'Sách "Kinh tế Tuần hoàn"',
-      description: 'Sách về kinh tế tuần hoàn và phát triển bền vững, tác giả nổi tiếng',
-      category: 'Sách & Văn phòng phẩm',
-      condition: 'Tốt',
-      size: 'Standard',
-      color: 'Trắng',
-      material: 'Giấy',
-      brand: 'NXB Trẻ',
-      donorName: 'Hoàng Minh Tuấn',
-      donorEmail: 'tuan.hoang@gmail.com',
-      donorPhone: '0901234571',
-      donationDate: '2024-01-05',
-      status: 'rejected',
-      isApproved: false,
-      approvedBy: 'Admin',
-      approvedDate: '2024-01-06',
-      price: 50000,
-      originalPrice: 150000,
-      images: [
-        'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400'
-      ],
-      tags: ['Sách', 'Kinh tế', 'Bền vững'],
-      weight: 0.2,
-      dimensions: '20x15x2 cm',
-      ecoPoints: 25,
-      views: 67,
-      likes: 8,
-      location: 'Kho Hà Nội'
-    }
-  ])
-
-  const [filteredData, setFilteredData] = useState(productData)
+  const [productData, setProductData] = useState([])
+  const [filteredData, setFilteredData] = useState([])
+  const [loading, setLoading] = useState(false)
   const [searchText, setSearchText] = useState('')
   const [filterCategory, setFilterCategory] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
@@ -203,21 +47,75 @@ const ProductManagement = () => {
     visible: { opacity: 1, y: 0 }
   }
 
+  // Map API response to UI data
+  const mapApiProductToComponent = (apiProduct) => {
+    const conditionMap = {
+      LIKE_NEW: 'Rất tốt',
+      GOOD: 'Tốt',
+      FAIR: 'Khá',
+      POOR: 'Cần sửa chữa'
+    }
+
+    const statusMap = {
+      AVAILABLE: 'available',
+      SOLD: 'sold',
+      PENDING: 'pending',
+      REJECTED: 'rejected',
+      RESERVED: 'reserved'
+    }
+
+    return {
+      id: apiProduct.id,
+      code: apiProduct.code,
+      name: apiProduct.name,
+      description: apiProduct.description || '',
+      category: apiProduct.categoryName || 'Chưa phân loại',
+      condition: conditionMap[apiProduct.conditionGrade] || 'Tốt',
+      status: statusMap[apiProduct.status] || 'available',
+      isApproved: apiProduct.status === 'AVAILABLE' || apiProduct.status === 'SOLD',
+      price: apiProduct.price || 0,
+      images:
+        apiProduct.imageUrls && apiProduct.imageUrls.length > 0
+          ? apiProduct.imageUrls
+          : ['https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400'],
+      ecoPoints: apiProduct.ecoPointValue || 0,
+      categoryId: apiProduct.categoryId,
+      type: apiProduct.type,
+      donationItemId: apiProduct.donationItemId,
+      createdAt: apiProduct.createdAt,
+      updatedAt: apiProduct.updatedAt
+    }
+  }
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true)
+        const response = await getProducts({ page: 0, size: 100 })
+
+        if (response.success && response.data) {
+          const products = response.data.content.map(mapApiProductToComponent)
+          setProductData(products)
+          setFilteredData(products)
+        } else {
+          message.error(response.message || 'Không thể tải danh sách sản phẩm')
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error)
+        message.error(error.message || 'Có lỗi xảy ra khi tải danh sách sản phẩm')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProducts()
+  }, [])
+
   // Statistics
   const totalProducts = productData.length
   const availableProducts = productData.filter(product => product.status === 'available').length
   const soldProducts = productData.filter(product => product.status === 'sold').length
-  const pendingProducts = productData.filter(product => product.status === 'pending').length
-  const totalViews = productData.reduce((sum, product) => sum + product.views, 0)
-
-  // Status mapping
-  const statusConfig = {
-    available: { color: 'green', text: 'Có sẵn' },
-    sold: { color: 'blue', text: 'Đã bán' },
-    pending: { color: 'orange', text: 'Chờ duyệt' },
-    rejected: { color: 'red', text: 'Từ chối' },
-    reserved: { color: 'purple', text: 'Đã đặt' }
-  }
+  const totalEcoPoints = productData.reduce((sum, product) => sum + (product.ecoPoints || 0), 0)
 
   // Condition mapping
   const conditionConfig = {
@@ -226,152 +124,6 @@ const ProductManagement = () => {
     'Khá': { color: 'orange', text: 'Khá' },
     'Cần sửa chữa': { color: 'red', text: 'Cần sửa chữa' }
   }
-
-  // Table columns
-  const columns = [
-    {
-      title: 'Sản phẩm',
-      key: 'product',
-      width: 300,
-      render: (_, record) => (
-        <div className="flex gap-3">
-          <Image
-            width={60}
-            height={60}
-            src={record.images[0]}
-            alt={record.name}
-            className="rounded-lg object-cover"
-            fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN"
-          />
-          <div className="flex-1 min-w-0">
-            <div className="font-medium text-gray-900 truncate">{record.name}</div>
-            <div className="text-sm text-gray-500 line-clamp-2">{record.description}</div>
-            <div className="flex flex-wrap gap-1 mt-1">
-              {record.tags.slice(0, 2).map(tag => (
-                <Tag key={tag} size="small" color="blue">{tag}</Tag>
-              ))}
-            </div>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: 'Thông tin sản phẩm',
-      key: 'info',
-      width: 280,
-      render: (_, record) => (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-600 w-24">Danh mục:</span>
-            <span className="text-sm text-gray-900">{record.category}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-600 w-24">Thương hiệu:</span>
-            <span className="text-sm text-gray-900">{record.brand}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-600 w-24">Size:</span>
-            <span className="text-sm text-gray-900">{record.size}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-600 w-24">Màu sắc:</span>
-            <span className="text-sm text-gray-900">{record.color}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-600 w-24">Chất liệu:</span>
-            <span className="text-sm text-gray-900">{record.material}</span>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: 'Tình trạng',
-      dataIndex: 'condition',
-      key: 'condition',
-      render: (condition) => {
-        const config = conditionConfig[condition] || { color: 'default', text: condition }
-        return <Tag color={config.color}>{config.text}</Tag>
-      },
-    },
-    {
-      title: 'Giá',
-      dataIndex: 'price',
-      key: 'price',
-      render: (price) => (
-        <div className="text-center">
-          <div className="font-medium text-green-600">
-            {price.toLocaleString('vi-VN')} VNĐ
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: 'Kho',
-      dataIndex: 'location',
-      key: 'location',
-      render: (location) => (
-        <Tag color="purple">{location}</Tag>
-      ),
-    },
-    {
-      title: 'Thao tác',
-      key: 'action',
-      render: (_, record) => (
-        <Space size="small" direction="vertical">
-          <Space size="small">
-            <Button
-              type="text"
-              icon={<EyeOutlined />}
-              onClick={() => handleView(record)}
-              className="text-green-600 hover:text-green-700"
-              size="small"
-            >
-              Xem
-            </Button>
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-              className="text-blue-600 hover:text-blue-700"
-              size="small"
-            >
-              Sửa
-            </Button>
-          </Space>
-          <Space size="small">
-            {!record.isApproved && (
-              <Button
-                type="text"
-                icon={<CheckCircleOutlined />}
-                onClick={() => handleApprove(record)}
-                className="text-green-600 hover:text-green-700"
-                size="small"
-              >
-                Duyệt
-              </Button>
-            )}
-            <Popconfirm
-              title="Xóa sản phẩm"
-              description="Bạn có chắc chắn muốn xóa sản phẩm này?"
-              onConfirm={() => handleDelete(record.id)}
-              okText="Xóa"
-              cancelText="Hủy"
-              okButtonProps={{ danger: true }}
-            >
-              <Button
-                type="text"
-                icon={<DeleteOutlined />}
-                danger
-                size="small"
-              >
-                Xóa
-              </Button>
-            </Popconfirm>
-          </Space>
-        </Space>
-      ),
-    },
-  ]
 
   // Handle search and filter
   const handleSearch = (value) => {
@@ -399,11 +151,9 @@ const ProductManagement = () => {
 
     if (search) {
       filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(search.toLowerCase()) ||
-        product.description.toLowerCase().includes(search.toLowerCase()) ||
-        product.brand.toLowerCase().includes(search.toLowerCase()) ||
-        product.donorName.toLowerCase().includes(search.toLowerCase()) ||
-        product.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase()))
+        product.name?.toLowerCase().includes(search.toLowerCase()) ||
+        product.description?.toLowerCase().includes(search.toLowerCase()) ||
+        product.code?.toLowerCase().includes(search.toLowerCase())
       )
     }
 
@@ -434,9 +184,28 @@ const ProductManagement = () => {
     message.success("Thêm sản phẩm thành công!")
   }
 
-  const handleView = (product) => {
-    setSelectedProduct(product)
-    setDetailModalVisible(true)
+  const handleView = async (product) => {
+    try {
+      setLoading(true)
+      const response = await getProductById(product.id)
+
+      if (response.success && response.data) {
+        const mappedProduct = mapApiProductToComponent(response.data)
+        setSelectedProduct(mappedProduct)
+        setDetailModalVisible(true)
+      } else {
+        message.error(response.message || 'Không thể tải chi tiết sản phẩm')
+        setSelectedProduct(product)
+        setDetailModalVisible(true)
+      }
+    } catch (error) {
+      console.error('Error fetching product detail:', error)
+      message.error(error.message || 'Có lỗi xảy ra khi tải chi tiết sản phẩm')
+      setSelectedProduct(product)
+      setDetailModalVisible(true)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleEdit = (product) => {
@@ -490,7 +259,7 @@ const ProductManagement = () => {
   }
 
   return (
-    <motion.div
+    <MotionDiv
       initial="hidden"
       animate="visible"
       variants={fadeInUp}
@@ -532,9 +301,9 @@ const ProductManagement = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Tổng lượt xem"
-              value={totalViews}
-              prefix={<EyeOutlined className="text-orange-600" />}
+              title="Tổng Eco Points"
+              value={totalEcoPoints}
+              prefix={<GiftOutlined className="text-orange-600" />}
               valueStyle={{ color: '#fa8c16' }}
             />
           </Card>
@@ -563,7 +332,7 @@ const ProductManagement = () => {
         {/* Filters */}
         <div className="mb-4 flex flex-col lg:flex-row gap-4">
           <Search
-            placeholder="Tìm kiếm theo tên, mô tả, thương hiệu, tags..."
+            placeholder="Tìm kiếm theo tên, mô tả, mã sản phẩm..."
             allowClear
             enterButton={<SearchOutlined />}
             size="large"
@@ -615,14 +384,16 @@ const ProductManagement = () => {
         </div>
 
         {/* Table */}
-        <ProductTable
-          filteredData={filteredData}
-          handleView={handleView}
-          handleEdit={handleEdit}
-          handleApprove={handleApprove}
-          handleDelete={handleDelete}
-          conditionConfig={conditionConfig}
-        />
+        <Spin spinning={loading}>
+          <ProductTable
+            filteredData={filteredData}
+            handleView={handleView}
+            handleEdit={handleEdit}
+            handleApprove={handleApprove}
+            handleDelete={handleDelete}
+            conditionConfig={conditionConfig}
+          />
+        </Spin>
       </Card>
 
       {/* Product Detail Modal */}
@@ -647,7 +418,7 @@ const ProductManagement = () => {
         product={selectedProduct}
       />
 
-    </motion.div>
+    </MotionDiv>
   )
 }
 
