@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { Link, useParams } from "react-router-dom";
 import { relatedProducts } from "../../../data/mockData";
 import { getProductById } from "../../../service/api/productApi";
+import { addToCart } from "../../../service/api/cartApi";
+import { notifyCartUpdated } from "../../../utils/cartEvents";
 
 const ProductDetail = () => {
   const { id } = useParams(); // Lấy product ID từ URL
@@ -12,6 +14,29 @@ const ProductDetail = () => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const [toast, setToast] = useState(null);
+  const showToast = (type, text) => {
+    setToast({ type, text });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleAddToCart = async () => {
+    if (!product?.id || adding || !product.isAvailable) return;
+
+    try {
+      setAdding(true);
+      await addToCart(product.id);
+      showToast("success", "Đã thêm sản phẩm vào giỏ hàng");
+      notifyCartUpdated();
+    } catch (err) {
+      const message = err?.message || "Không thể thêm vào giỏ hàng";
+      showToast("error", message);
+    } finally {
+      setAdding(false);
+    }
+  };
+
 
   // Fetch product detail from API
   useEffect(() => {
@@ -345,13 +370,18 @@ const ProductDetail = () => {
               <div className="flex gap-4 mb-8">
                 <motion.button
                   className={`flex-1 font-bold py-4 rounded-lg flex items-center justify-center gap-2 shadow-lg transition ${
-                    product.isAvailable
-                      ? "bg-green-600 hover:bg-green-700 text-white"
-                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    !product.isAvailable || adding
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-green-600 hover:bg-green-700 text-white"
                   }`}
-                  whileHover={product.isAvailable ? { scale: 1.02 } : {}}
-                  whileTap={product.isAvailable ? { scale: 0.98 } : {}}
-                  disabled={!product.isAvailable}
+                  whileHover={
+                    product.isAvailable && !adding ? { scale: 1.02 } : {}
+                  }
+                  whileTap={
+                    product.isAvailable && !adding ? { scale: 0.98 } : {}
+                  }
+                  disabled={!product.isAvailable || adding}
+                  onClick={handleAddToCart}
                 >
                   <svg
                     className="w-6 h-6"
@@ -366,7 +396,11 @@ const ProductDetail = () => {
                       d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
                     />
                   </svg>
-                  {product.isAvailable ? "Thêm vào giỏ hàng" : "Hết hàng"}
+                  {!product.isAvailable
+                    ? "Hết hàng"
+                    : adding
+                    ? "Đang thêm..."
+                    : "Thêm vào giỏ hàng"}
                 </motion.button>
                 <motion.button
                   className="px-6 py-4 border-2 border-green-600 text-green-600 rounded-lg hover:bg-green-50 transition"
@@ -483,6 +517,17 @@ const ProductDetail = () => {
           </div>
         </motion.div>
       </div>
+      {toast && (
+        <div
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-2xl text-sm font-semibold shadow-lg ${
+            toast.type === "error"
+              ? "bg-red-600 text-white"
+              : "bg-emerald-600 text-white"
+          }`}
+        >
+          {toast.text}
+        </div>
+      )}
     </div>
   );
 };

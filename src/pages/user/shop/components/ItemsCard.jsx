@@ -1,8 +1,37 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
+import { addToCart } from '../../../../service/api/cartApi'
+import { notifyCartUpdated } from '../../../../utils/cartEvents'
 
 const ItemsCard = ({ item }) => {
+  const [adding, setAdding] = useState(false)
+  const [toast, setToast] = useState(null)
+
+  const showToast = (type, text) => {
+    setToast({ type, text })
+    setTimeout(() => setToast(null), 2500)
+  }
+
+  const handleAddToCart = async (event) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (adding) return
+
+    try {
+      setAdding(true)
+      await addToCart(item.id)
+      showToast('success', 'Đã thêm sản phẩm vào giỏ hàng')
+      notifyCartUpdated()
+    } catch (error) {
+      const message = error?.message || 'Không thể thêm vào giỏ hàng'
+      showToast('error', message)
+    } finally {
+      setAdding(false)
+    }
+  }
+
   return (
     <motion.div
       className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300"
@@ -97,15 +126,30 @@ const ItemsCard = ({ item }) => {
     
         {/* Add to Cart Button */}
         <motion.button
-          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          className={`w-full text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2 ${
+            adding ? 'bg-gray-400 cursor-wait' : 'bg-green-600 hover:bg-green-700'
+          }`}
+          whileHover={!adding ? { scale: 1.02 } : {}}
+          whileTap={!adding ? { scale: 0.98 } : {}}
+          disabled={adding}
+          onClick={handleAddToCart}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
-          Thêm vào giỏ
+          {adding ? 'Đang thêm...' : 'Thêm vào giỏ'}
         </motion.button>
+        {toast && (
+          <div
+            className={`mt-3 text-sm font-medium px-3 py-2 rounded-lg ${
+              toast.type === 'error'
+                ? 'bg-red-50 text-red-600'
+                : 'bg-emerald-50 text-emerald-600'
+            }`}
+          >
+            {toast.text}
+          </div>
+        )}
       </div>
     </motion.div>
   )

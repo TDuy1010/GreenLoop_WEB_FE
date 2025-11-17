@@ -27,6 +27,7 @@ import AboutUsPage from './pages/user/aboutus/AboutUsPage'
 import BlogPage from './pages/user/blog/BlogPage'
 import ChatPage from './pages/user/chat/ChatPage'
 import ProfilePage from './pages/user/profile/ProfilePage'
+import CartPage from './pages/user/cart/CartPage'
 
 const router = createBrowserRouter([
   // User routes with MainLayout
@@ -73,6 +74,10 @@ const router = createBrowserRouter([
       {
         path: 'profile',
         element: <ProfilePage />
+      },
+      {
+        path: 'cart',
+        element: <CartPage />
       }
         
     ],

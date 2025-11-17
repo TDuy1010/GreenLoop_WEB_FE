@@ -1,13 +1,27 @@
-import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import React, { useState, useEffect, useCallback } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { message } from 'antd'
 import { isAuthenticated, getUserInfo, logoutUser, logoutFromServer } from '../service/api/authApi'
 import ConfirmModal from './ConfirmModal'
+import { getCart } from '../service/api/cartApi'
+import { CART_UPDATED_EVENT } from '../utils/cartEvents'
 
 const Header = () => {
+  const navigate = useNavigate()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userInfo, setUserInfo] = useState(null)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [cartCount, setCartCount] = useState(0)
+
+  const fetchCartCount = useCallback(async () => {
+    try {
+      const response = await getCart()
+      const items = response?.data?.items || response?.items || []
+      setCartCount(Array.isArray(items) ? items.length : 0)
+    } catch {
+      setCartCount(0)
+    }
+  }, [])
 
   useEffect(() => {
     // Kiểm tra trạng thái đăng nhập
@@ -16,6 +30,7 @@ const Header = () => {
         setIsLoggedIn(true)
         const info = getUserInfo()
         setUserInfo(info)
+        fetchCartCount()
       } else {
         setIsLoggedIn(false)
         setUserInfo(null)
@@ -26,11 +41,29 @@ const Header = () => {
 
     // Listen for storage changes (khi login/logout ở tab khác)
     window.addEventListener('storage', checkAuth)
+
+    const handleCartUpdated = (event) => {
+      if (typeof event.detail === 'number') {
+        setCartCount(event.detail)
+      } else {
+        fetchCartCount()
+      }
+    }
+
+    window.addEventListener(CART_UPDATED_EVENT, handleCartUpdated)
+    
+    const interval = setInterval(() => {
+      if (isAuthenticated()) {
+        fetchCartCount()
+      }
+    }, 30000)
     
     return () => {
       window.removeEventListener('storage', checkAuth)
+      window.removeEventListener(CART_UPDATED_EVENT, handleCartUpdated)
+      clearInterval(interval)
     }
-  }, [])
+  }, [fetchCartCount])
 
   const handleLogoutClick = () => {
     console.log('🚪 [Logout] User clicked logout button')
@@ -123,6 +156,26 @@ const Header = () => {
 
           {/* Right Icons */}
           <div className=" px-4 flex items-center gap-6">
+            {isLoggedIn && (
+              <button
+                className="relative text-gray-600 hover:text-green-600 transition"
+                onClick={() => navigate('/cart')}
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                {cartCount > 0 && (
+                  <span className="absolute -top-2 -right-2 px-2 min-w-[20px] h-5 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 text-white text-xs font-semibold flex items-center justify-center shadow-lg shadow-emerald-500/40 border border-white">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+            )}
             {/* Notification - Chỉ hiện khi đã đăng nhập */}
             {isLoggedIn && (
               <button className="relative text-gray-600 hover:text-green-600 transition">
