@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   getCart,
   removeCartItem,
   clearCart,
 } from '../../../service/api/cartApi';
+import { isAuthenticated } from '../../../service/api/authApi';
 import { notifyCartUpdated } from '../../../utils/cartEvents';
 
 const fallbackImage =
@@ -55,6 +57,7 @@ const CartPage = () => {
   const [clearing, setClearing] = useState(false);
   const [toast, setToast] = useState(null);
   const [confirmModal, setConfirmModal] = useState(null);
+  const navigate = useNavigate();
 
   const showToast = (type, text) => {
     setToast({ type, text });
@@ -81,8 +84,14 @@ const CartPage = () => {
   }, []);
 
   useEffect(() => {
+    if (!isAuthenticated()) {
+      showToast('error', 'Vui lòng đăng nhập để xem giỏ hàng');
+      navigate('/login', { replace: true, state: { from: '/cart' } });
+      return;
+    }
+
     fetchCart();
-  }, [fetchCart]);
+  }, [fetchCart, navigate]);
 
   const handleRemoveItem = (itemId) => {
     setConfirmModal({
