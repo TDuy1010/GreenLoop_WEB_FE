@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { message } from 'antd'
 import { isAuthenticated, getUserInfo, logoutUser, logoutFromServer } from '../service/api/authApi'
+import { getCurrentUserProfile } from '../service/api/userApi'
 import ConfirmModal from './ConfirmModal'
 import { getCart } from '../service/api/cartApi'
 import { CART_UPDATED_EVENT } from '../utils/cartEvents'
@@ -23,13 +24,28 @@ const Header = () => {
     }
   }, [])
 
+  const fetchUserProfile = useCallback(async () => {
+    try {
+      const response = await getCurrentUserProfile()
+      const data = response?.data || response
+      if (data) {
+        setUserInfo(data)
+        // đồng bộ lại localStorage để các nơi khác dùng chung
+        localStorage.setItem('userInfo', JSON.stringify(data))
+      }
+    } catch (error) {
+      console.warn('[Header] Không lấy được hồ sơ người dùng từ API, dùng dữ liệu localStorage', error)
+      const info = getUserInfo()
+      setUserInfo(info)
+    }
+  }, [])
+
   useEffect(() => {
     // Kiểm tra trạng thái đăng nhập
     const checkAuth = () => {
       if (isAuthenticated()) {
         setIsLoggedIn(true)
-        const info = getUserInfo()
-        setUserInfo(info)
+        fetchUserProfile()
         fetchCartCount()
       } else {
         setIsLoggedIn(false)
@@ -63,7 +79,7 @@ const Header = () => {
       window.removeEventListener(CART_UPDATED_EVENT, handleCartUpdated)
       clearInterval(interval)
     }
-  }, [fetchCartCount])
+  }, [fetchCartCount, fetchUserProfile])
 
   const handleLogoutClick = () => {
     console.log('🚪 [Logout] User clicked logout button')
@@ -202,8 +218,21 @@ const Header = () => {
               // User Profile Dropdown - Khi đã đăng nhập
               <div className="relative group">
                 <button className="flex items-center gap-2 text-gray-600 hover:text-green-600 transition">
-                  <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white font-semibold">
-                    {userInfo?.fullName?.charAt(0).toUpperCase() || 'U'}
+                  <div className="w-9 h-9 rounded-full border border-emerald-100 overflow-hidden bg-green-100 flex items-center justify-center text-white font-semibold">
+                    {userInfo?.avatarUrl ? (
+                      <img
+                        src={userInfo.avatarUrl}
+                        alt={userInfo?.fullName || 'Avatar'}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none'
+                        }}
+                      />
+                    ) : (
+                      <span className="text-green-700">
+                        {userInfo?.fullName?.charAt(0)?.toUpperCase() || 'U'}
+                      </span>
+                    )}
                   </div>
                   <span className="hidden md:block text-sm font-medium">
                     {userInfo?.fullName || 'User'}
@@ -218,6 +247,25 @@ const Header = () => {
                   <div className="py-2">
                     {/* User Info Header */}
                     <div className="px-4 py-3 border-b border-gray-100">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-12 h-12 rounded-full border border-emerald-100 overflow-hidden bg-green-50 flex items-center justify-center text-white font-semibold">
+                          {userInfo?.avatarUrl ? (
+                            <img
+                              src={userInfo.avatarUrl}
+                              alt={userInfo?.fullName || 'Avatar'}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-green-700 text-lg">
+                              {userInfo?.fullName?.charAt(0)?.toUpperCase() || 'U'}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{userInfo?.fullName}</p>
+                          <p className="text-xs text-gray-500">{userInfo?.email}</p>
+                        </div>
+                      </div>
                       <p className="text-sm font-semibold text-gray-900">{userInfo?.email}</p>
                       <p className="text-xs text-gray-500 mt-1">
                         {userInfo?.roles?.includes('ADMIN') ? 'Quản trị viên' : 
