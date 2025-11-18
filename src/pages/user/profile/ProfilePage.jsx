@@ -11,6 +11,7 @@ import {
 import { message } from 'antd'
 import { getCurrentUserProfile, updateUserProfile } from '../../../service/api/userApi'
 import { getMyRegisteredEvents } from '../../../service/api/eventApi'
+import { getMyOrders } from '../../../service/api/orderApi'
 import { changePassword } from '../../../service/api/authApi'
 import { API_CONFIG } from '../../../service/instance'
 import Loading from '../../../components/Loading'
@@ -48,6 +49,17 @@ const ProfilePage = () => {
 
   const [editedData, setEditedData] = useState(userData)
   const [myEvents, setMyEvents] = useState([])
+  const [orders, setOrders] = useState([])
+  const [ordersLoading, setOrdersLoading] = useState(false)
+  const [ordersError, setOrdersError] = useState(null)
+  const [ordersPage, setOrdersPage] = useState({
+    page: 0,
+    size: 10,
+    total: 0,
+    totalPages: 0,
+    hasNext: false
+  })
+  const [ordersReloadKey, setOrdersReloadKey] = useState(0)
 
   // Nạp hồ sơ người dùng từ API
   useEffect(() => {
@@ -144,33 +156,47 @@ const ProfilePage = () => {
     fetchMyEvents()
   }, [activeTab])
 
-  // Mock order history
-  const orders = [
-    {
-      id: '#GL001234',
-      date: '2024-11-01',
-      items: 3,
-      total: '450,000₫',
-      status: 'delivered',
-      statusText: 'Đã giao hàng'
-    },
-    {
-      id: '#GL001235',
-      date: '2024-10-28',
-      items: 2,
-      total: '320,000₫',
-      status: 'shipping',
-      statusText: 'Đang vận chuyển'
-    },
-    {
-      id: '#GL001236',
-      date: '2024-10-15',
-      items: 1,
-      total: '180,000₫',
-      status: 'processing',
-      statusText: 'Đang xử lý'
+  // Nạp danh sách đơn hàng khi mở tab Đơn hàng
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (activeTab !== 'orders') return
+      try {
+        setOrdersLoading(true)
+        setOrdersError(null)
+        const response = await getMyOrders({
+          page: ordersPage.page,
+          size: ordersPage.size,
+          sortBy: 'createdAt',
+          sortDirection: 'DESC'
+        })
+        const payload = response?.data ?? response ?? {}
+        const data = payload.data ?? payload
+        const content = Array.isArray(data?.content)
+          ? data.content
+          : Array.isArray(data?.data?.content)
+          ? data.data.content
+          : Array.isArray(payload?.content)
+          ? payload.content
+          : []
+
+        setOrders(content)
+        setOrdersPage((prev) => ({
+          page: data.pageNumber ?? prev.page,
+          size: data.pageSize ?? prev.size,
+          total: data.totalElements ?? content.length ?? prev.total,
+          totalPages: data.totalPages ?? prev.totalPages,
+          hasNext: !(data.last ?? true)
+        }))
+      } catch (error) {
+        console.error('Không thể tải đơn hàng:', error)
+        setOrders([])
+        setOrdersError(error?.message || 'Không thể tải danh sách đơn hàng.')
+      } finally {
+        setOrdersLoading(false)
+      }
     }
-  ]
+    fetchOrders()
+  }, [activeTab, ordersPage.page, ordersPage.size, ordersReloadKey])
 
   // Mock addresses
   const [addresses] = useState([
@@ -428,7 +454,7 @@ const ProfilePage = () => {
         )}
 
         {/* Profile Header */}
-        <ProfileHeader userData={userData} ordersCount={orders.length} />
+        <ProfileHeader userData={userData} ordersCount={ordersPage.total || orders.length} />
 
         {/* Tab Navigation */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -485,7 +511,13 @@ const ProfilePage = () => {
 
               {/* Orders Tab */}
               {activeTab === 'orders' && (
-                <OrdersTab orders={orders} />
+                <OrdersTab
+                  orders={orders}
+                  loading={ordersLoading}
+                  error={ordersError}
+                  onReload={() => setOrdersReloadKey((prev) => prev + 1)}
+                  pagination={ordersPage}
+                />
               )}
 
               {/* Addresses Tab */}

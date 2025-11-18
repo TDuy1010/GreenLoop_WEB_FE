@@ -238,8 +238,15 @@ const PaymentPage = () => {
       }
 
       if (selectedPaymentMethod === 'PAYOS' && result.paymentUrl) {
-        window.open(result.paymentUrl, '_blank', 'noopener,noreferrer')
+        // Chuyển hướng sang trang thanh toán PayOS trên cùng tab
+        window.location.href = result.paymentUrl
+      } else if (selectedPaymentMethod === 'COD') {
+        // Đặt hàng bằng COD -> chuyển sang trang đặt hàng thành công
+        navigate('/orders/success', {
+          state: { orderId: result.orderId, orderCode: result.orderCode }
+        })
       } else {
+        // Các phương thức khác (nếu sau này có)
         navigate('/orders', {
           state: { success: true, orderId: result.orderId, orderCode: result.orderCode }
         })
