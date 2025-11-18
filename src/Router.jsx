@@ -28,6 +28,9 @@ import BlogPage from './pages/user/blog/BlogPage'
 import ChatPage from './pages/user/chat/ChatPage'
 import ProfilePage from './pages/user/profile/ProfilePage'
 import CartPage from './pages/user/cart/CartPage'
+import PaymentPage from './pages/user/payment/PaymentPage'
+import PaymentSuccessPage from './pages/user/payment/PaymentSuccessPage'
+import PaymentFailPage from './pages/user/payment/PaymentFailPage'
 
 const router = createBrowserRouter([
   // User routes with MainLayout
@@ -78,6 +81,18 @@ const router = createBrowserRouter([
       {
         path: 'cart',
         element: <CartPage />
+      },
+      {
+        path: 'payment',
+        element: <PaymentPage />
+      },
+      {
+        path: 'payments/success',
+        element: <PaymentSuccessPage />
+      },
+      {
+        path: 'payments/fail',
+        element: <PaymentFailPage />
       }
         
     ],

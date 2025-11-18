@@ -95,11 +95,53 @@ export const clearCart = async () => {
   return response;
 };
 
+export const estimateShipping = async ({ cityCode, districtCode }) => {
+  const userId = getUserId();
+  if (!userId) {
+    throw new Error("Vui lòng đăng nhập để ước tính phí vận chuyển");
+  }
+  if (!cityCode || !districtCode) {
+    throw new Error("Thiếu thông tin tỉnh/thành hoặc quận/huyện");
+  }
+
+  const response = await axiosClient.post(
+    "/carts/estimate-shipping",
+    {
+      cityCode,
+      districtCode,
+    },
+    {
+      headers: {
+        "X-User-ID": userId,
+      },
+    },
+  );
+
+  return response;
+};
+
+export const checkoutCart = async (payload) => {
+  const userId = getUserId();
+  if (!userId) {
+    throw new Error("Vui lòng đăng nhập để thanh toán giỏ hàng");
+  }
+
+  const response = await axiosClient.post("/carts/checkout", payload, {
+    headers: {
+      "X-User-ID": userId,
+    },
+  });
+
+  return response;
+};
+
 export default {
   addToCart,
   getCart,
   updateCartItem,
   removeCartItem,
   clearCart,
+  estimateShipping,
+  checkoutCart,
 };
 

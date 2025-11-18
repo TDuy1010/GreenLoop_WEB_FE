@@ -230,6 +230,14 @@ const CartPage = () => {
     );
   };
 
+  const handleCheckout = () => {
+    if (!cartItems.length) {
+      showToast('error', 'Giỏ hàng của bạn đang trống.')
+      return
+    }
+    navigate('/payment', { state: { from: '/cart' } })
+  }
+
   const renderCartContent = () => {
     if (loading) {
       return (
@@ -342,6 +350,7 @@ const CartPage = () => {
           <button
             className="mt-6 w-full py-3 rounded-full bg-[#22C55E] text-white font-semibold disabled:opacity-50"
             disabled={!cartItems.length}
+            onClick={handleCheckout}
           >
             Tiến hành thanh toán
           </button>
