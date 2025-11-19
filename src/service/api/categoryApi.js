@@ -11,7 +11,7 @@ export const createCategory = async (categoryData) => {
 };
 
 export const updateCategory = async (categoryId, categoryData) => {
-  const response = await axiosClient.post(`/categories/${categoryId}`, categoryData);
+  const response = await axiosClient.put(`/categories/${categoryId}`, categoryData);
   return response;
 };
 
