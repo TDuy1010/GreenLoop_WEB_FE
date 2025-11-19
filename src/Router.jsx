@@ -18,9 +18,14 @@ import StaffManagement from './pages/admin/staffmanagement/StaffManagement'
 import EventManagement from './pages/admin/eventmanagemt/EventManagement'
 import UserManagement from './pages/admin/usermanagement/UserManagement'
 import ProductManagement from './pages/admin/productmanagement/ProductManagement'
+import CategoryManagement from './pages/admin/categorymanagement/CategoryManagement'
+import EcoPointRuleManagement from './pages/admin/ecopointrulemanagement/EcoPointRuleManagement'
+import BlogManagement from './pages/admin/blogmanagement/BlogManagement'
+import NotificationManagement from './pages/admin/notificationmanagement/NotificationManagement'
 import WarehouseManagement from './pages/admin/warehousemanagement/WarehouseManagement'
 import DonationManagement from './pages/admin/donationmanagement/DonationManagement'
 import OrderManagement from './pages/admin/ordermanagement/OrderManagement'
+import VoucherManagement from './pages/admin/vouchermanagement/VoucherManagement'
 import AdminErrorPage from './pages/admin/AdminErrorPage'
 import ErrorPage from './pages/ErrorPage'
 import AboutUsPage from './pages/user/aboutus/AboutUsPage'
@@ -138,6 +143,22 @@ const router = createBrowserRouter([
           element: <ProductManagement />
         },
         {
+          path: 'categories',
+          element: <CategoryManagement />
+        },
+        {
+          path: 'eco-rules',
+          element: <EcoPointRuleManagement />
+        },
+        {
+          path: 'blogs',
+          element: <BlogManagement />
+        },
+        {
+          path: 'notifications',
+          element: <NotificationManagement />
+        },
+        {
           path: 'warehouses',
           element: <WarehouseManagement />
         },
@@ -152,6 +173,10 @@ const router = createBrowserRouter([
       {
         path: 'orders',
         element: <OrderManagement />
+      },
+      {
+        path: 'vouchers',
+        element: <VoucherManagement />
       },
       {
         path: 'analytics',

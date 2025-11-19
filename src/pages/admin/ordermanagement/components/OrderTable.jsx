@@ -14,7 +14,27 @@ import dayjs from 'dayjs';
 
 const { Text } = Typography;
 
-const OrderTable = ({ data, loading, handleView, handleEdit, handleDelete }) => {
+const OrderTable = ({ data, loading, handleView, handleEdit, handleDelete, pagination, onChange }) => {
+  const handleCall = (record) => {
+    if (typeof window === 'undefined' || !record?.customerPhone) return;
+    window.open(`tel:${record.customerPhone}`);
+  };
+
+  const handlePrint = (record) => {
+    console.info('Printing order', record?.orderNumber);
+  };
+
+  const handleConfirm = (record) => {
+    console.info('Confirm order', record?.orderNumber);
+  };
+
+  const handleShip = (record) => {
+    console.info('Ship order', record?.orderNumber);
+  };
+
+  const handleCancel = (record) => {
+    console.info('Cancel order', record?.orderNumber);
+  };
   
   const getOrderStatusColor = (status) => {
     const colors = {
@@ -133,7 +153,6 @@ const OrderTable = ({ data, loading, handleView, handleEdit, handleDelete }) => 
       render: (_, record) => (
         <div>
           <div className="font-medium text-gray-900">{record.customerName}</div>
-          <div className="text-sm text-gray-500">{record.customerEmail}</div>
           <div className="text-xs text-gray-400 flex items-center gap-1">
             <PhoneOutlined className="text-xs" />
             {record.customerPhone}
@@ -375,7 +394,7 @@ const OrderTable = ({ data, loading, handleView, handleEdit, handleDelete }) => 
             <Popconfirm
               title="Xóa đơn hàng"
               description="Bạn có chắc chắn muốn xóa đơn hàng này?"
-              onConfirm={() => handleDelete(record)}
+              onConfirm={() => handleDelete(record.id)}
               okText="Xóa"
               cancelText="Hủy"
               okButtonProps={{ danger: true }}
@@ -397,18 +416,20 @@ const OrderTable = ({ data, loading, handleView, handleEdit, handleDelete }) => 
     <Table
       columns={columns}
       dataSource={data}
-      rowKey="id"
+      rowKey={(record) => record?.id || record?.orderNumber}
       loading={loading}
       scroll={{ x: 2000, y: 600 }}
-      pagination={{
-        total: data?.length || 0,
-        pageSize: 10,
-        showSizeChanger: true,
-        showQuickJumper: true,
-        showTotal: (total, range) => 
-          `${range[0]}-${range[1]} của ${total} đơn hàng`,
-        pageSizeOptions: ['10', '20', '50', '100'],
-      }}
+      pagination={
+        pagination || {
+          total: data?.length || 0,
+          pageSize: 10,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} đơn hàng`,
+          pageSizeOptions: ['10', '20', '50', '100'],
+        }
+      }
+      onChange={onChange}
       size="small"
       className="order-table"
       rowClassName={(record) => {

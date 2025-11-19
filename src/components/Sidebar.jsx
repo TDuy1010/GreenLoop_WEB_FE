@@ -6,6 +6,11 @@ import {
   DashboardOutlined,
   UserOutlined,
   AppstoreOutlined,
+  TagsOutlined,
+  FireOutlined,
+  ReadOutlined,
+  BellOutlined,
+  GiftOutlined,
   CalendarOutlined,
   HeartOutlined,
   ShoppingCartOutlined,
@@ -28,12 +33,12 @@ const Sidebar = ({ collapsed, onToggle }) => {
   // Cấu hình menu
   const menuItems = useMemo(
     () => [
-      { 
-        key: '/admin/dashboard', 
-        label: 'Bảng điều khiển', 
-        icon: <DashboardOutlined /> 
+      {
+        key: '/admin/dashboard',
+        label: 'Bảng điều khiển',
+        icon: <DashboardOutlined />
       },
-      { 
+      {
         key: 'user-management',
         label: 'Quản lý người dùng',
         icon: <TeamOutlined />,
@@ -50,46 +55,78 @@ const Sidebar = ({ collapsed, onToggle }) => {
           }
         ]
       },
-      { 
-        key: '/admin/products', 
-        label: 'Quản lý sản phẩm', 
-        icon: <AppstoreOutlined /> 
+      {
+        key: 'product-management',
+        label: 'Quản lý sản phẩm',
+        icon: <AppstoreOutlined />,
+        children: [
+          {
+            key: '/admin/products',
+            label: 'Danh sách sản phẩm',
+            icon: <AppstoreOutlined />
+          },
+          {
+            key: '/admin/categories',
+            label: 'Quản lý danh mục',
+            icon: <TagsOutlined />
+          }
+        ]
       },
-      { 
-        key: '/admin/warehouses', 
-        label: 'Quản lý kho', 
-        icon: <HomeOutlined /> 
+      {
+        key: '/admin/eco-rules',
+        label: 'Quản lý Eco Point',
+        icon: <FireOutlined />
       },
-      { 
-        key: '/admin/events', 
-        label: 'Quản lý sự kiện', 
-        icon: <CalendarOutlined /> 
+      {
+        key: '/admin/blogs',
+        label: 'Quản lý blog',
+        icon: <ReadOutlined />
       },
-      { 
-        key: '/admin/donations', 
-        label: 'Quản lý quyên góp', 
-        icon: <HeartOutlined /> 
+      {
+        key: '/admin/notifications',
+        label: 'Quản lý thông báo',
+        icon: <BellOutlined />
       },
-      { 
-        key: '/admin/orders', 
-        label: 'Quản lý đơn hàng', 
-        icon: <ShoppingCartOutlined /> 
+      {
+        key: '/admin/warehouses',
+        label: 'Quản lý kho',
+        icon: <HomeOutlined />
       },
-      { 
-        key: '/admin/analytics', 
-        label: 'Thống kê & Báo cáo', 
-        icon: <BarChartOutlined /> 
+      {
+        key: '/admin/events',
+        label: 'Quản lý sự kiện',
+        icon: <CalendarOutlined />
       },
-      { 
-        key: '/admin/settings', 
-        label: 'Cài đặt hệ thống', 
-        icon: <SettingOutlined /> 
+      {
+        key: '/admin/donations',
+        label: 'Quản lý quyên góp',
+        icon: <HeartOutlined />
+      },
+      {
+        key: '/admin/orders',
+        label: 'Quản lý đơn hàng',
+        icon: <ShoppingCartOutlined />
+      },
+      {
+        key: '/admin/vouchers',
+        label: 'Quản lý voucher',
+        icon: <GiftOutlined />
+      },
+      {
+        key: '/admin/analytics',
+        label: 'Thống kê & Báo cáo',
+        icon: <BarChartOutlined />
+      },
+      {
+        key: '/admin/settings',
+        label: 'Cài đặt hệ thống',
+        icon: <SettingOutlined />
       },
       // Đăng xuất được di chuyển sang dropdown trong Admin header
-      // { 
-      //   key: '/admin/logout', 
-      //   label: 'Đăng xuất', 
-      //   icon: <LogoutOutlined /> 
+      // {
+      //   key: '/admin/logout',
+      //   label: 'Đăng xuất',
+      //   icon: <LogoutOutlined />
       // },
     ],
     []

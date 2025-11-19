@@ -27,8 +27,8 @@ import {
   GiftOutlined
 } from '@ant-design/icons'
 
-const OrderDetail = ({ visible, onClose, order }) => {
-  if (!order) return null
+const OrderDetail = ({ visible, onClose, order, loading = false }) => {
+  if (!order && !loading) return null
 
   const orderStatusConfig = {
     pending: { color: 'orange', text: 'Chờ xác nhận', step: 0 },
@@ -52,7 +52,8 @@ const OrderDetail = ({ visible, onClose, order }) => {
     bank_transfer: 'Chuyển khoản ngân hàng',
     momo: 'Ví MoMo',
     vnpay: 'VNPay',
-    zalopay: 'ZaloPay'
+    zalopay: 'ZaloPay',
+    payos: 'PayOS'
   }
 
   const shippingMethodConfig = {
@@ -160,7 +161,7 @@ const OrderDetail = ({ visible, onClose, order }) => {
     return items
   }
 
-  const currentStep = orderStatusConfig[order.orderStatus]?.step || 0
+  const currentStep = orderStatusConfig[order?.orderStatus]?.step || 0
 
   return (
     <Modal
@@ -170,7 +171,12 @@ const OrderDetail = ({ visible, onClose, order }) => {
       footer={null}
       width={1000}
       className="order-detail-modal"
+      confirmLoading={loading}
     >
+      {loading ? (
+        <div className="py-20 text-center text-gray-600">Đang tải dữ liệu đơn hàng...</div>
+      ) : (
+      <>
       {/* Header Section */}
       <div className="py-6 bg-gradient-to-r from-blue-50 to-purple-50 -mt-6 -mx-6 mb-6 rounded-t-lg">
         <div className="px-6">
@@ -328,12 +334,18 @@ const OrderDetail = ({ visible, onClose, order }) => {
             <div className="space-y-3">
               <div>
                 <div className="text-xs text-gray-500 mb-1">Phương thức thanh toán</div>
-                <Tag color="blue">{paymentMethodConfig[order.paymentMethod]}</Tag>
+                <Tag color="blue">{paymentMethodConfig[order.paymentMethod] || order.paymentMethod}</Tag>
               </div>
               <div>
                 <div className="text-xs text-gray-500 mb-1">Phương thức vận chuyển</div>
-                <Tag color="green">{shippingMethodConfig[order.shippingMethod]}</Tag>
+                <Tag color="green">{shippingMethodConfig[order.shippingMethod] || order.shippingMethod}</Tag>
               </div>
+              {order.carrierName && (
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Đơn vị vận chuyển</div>
+                  <div className="text-sm font-medium text-gray-900">{order.carrierName}</div>
+                </div>
+              )}
               {order.trackingNumber && (
                 <div>
                   <div className="text-xs text-gray-500 mb-1">Mã vận đơn</div>
@@ -380,6 +392,8 @@ const OrderDetail = ({ visible, onClose, order }) => {
           )}
         </Col>
       </Row>
+      </>
+      )}
     </Modal>
   )
 }

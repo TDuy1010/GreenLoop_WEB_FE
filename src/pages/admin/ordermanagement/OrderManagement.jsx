@@ -1,284 +1,174 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, Row, Col, Statistic, Input, Select, Button, message, Space, DatePicker } from 'antd';
 import { SearchOutlined, PlusOutlined, ReloadOutlined, FilterOutlined, ExportOutlined } from '@ant-design/icons';
 import OrderTable from './components/OrderTable';
 import OrderDetail from './components/OrderDetail';
 import OrderAdd from './components/OrderAdd';
 import OrderEdit from './components/OrderEdit';
-import dayjs from 'dayjs';
+import { getAdminOrders, getAdminOrderDetail } from '../../../service/api/orderApi';
 
 const { Search } = Input;
 const { Option } = Select;
 const { RangePicker } = DatePicker;
+
+const ORDER_STATUS_MAP = {
+  PENDING: 'pending',
+  CONFIRMED: 'confirmed',
+  PROCESSING: 'processing',
+  SHIPPING: 'shipping',
+  DELIVERED: 'delivered',
+  CANCELLED: 'cancelled'
+};
+
+const PAYMENT_STATUS_MAP = {
+  PAID: 'paid',
+  UNPAID: 'pending',
+  FAILED: 'failed',
+  REFUNDED: 'paid'
+};
+
+const PAYMENT_METHOD_MAP = {
+  PAYOS: 'payos',
+  COD: 'cod',
+};
+
+const buildAddressString = (address = {}) => {
+  const parts = [
+    address.receiverAddress,
+    address.receiverWardName,
+    address.receiverDistrictName,
+    address.receiverCityName
+  ].filter(Boolean);
+  return parts.join(', ');
+};
+
+const mapOrderItemsFromApi = (items = []) =>
+  items.map(item => ({
+    orderItemId: item.orderItemId,
+    productId: item.productId,
+    productName: item.productName || `Sản phẩm #${item.productId}`,
+    quantity: item.quantity || 0,
+    price: item.price || 0,
+    total: (item.price || 0) * (item.quantity || 0),
+    image:
+      item.image ||
+      item.imageUrl ||
+      'https://via.placeholder.com/80x80.png?text=GreenLoop'
+  }));
+
+const mapAdminOrderToComponent = (order) => {
+  const shipping = order?.shippingAddress || {};
+  const subtotal = Math.max(0, (order?.totalPrice ?? 0) - (order?.shippingFee ?? 0));
+  const carrierName = order?.carrier;
+
+  return {
+    id: order?.orderId,
+    orderNumber: order?.orderCode,
+    customerName: shipping.receiverName || `Khách #${order?.customerId ?? ''}`,
+    customerEmail: order?.customerEmail || shipping.receiverEmail || '—',
+    customerPhone: shipping.receiverPhone || '—',
+    customerAddress: buildAddressString(shipping) || shipping.receiverAddress || '—',
+    items: mapOrderItemsFromApi(order?.orderItems),
+    subtotal,
+    shippingFee: order?.shippingFee ?? 0,
+    discount: 0,
+    totalAmount: order?.totalPrice ?? 0,
+    paymentMethod:
+      PAYMENT_METHOD_MAP[order?.paymentMethod] || order?.paymentMethod?.toLowerCase() || 'cod',
+    paymentStatus: PAYMENT_STATUS_MAP[order?.paymentStatus] || 'pending',
+    orderStatus: ORDER_STATUS_MAP[order?.orderStatus] || 'pending',
+    shippingMethod: order?.shippingStatus?.toLowerCase?.() || carrierName || 'standard',
+    carrierName,
+    trackingNumber:
+      order?.goshipTrackingCode || (order?.paymentOrderCode ? String(order.paymentOrderCode) : null),
+    orderDate: order?.createdAt,
+    paymentDate: order?.paymentStatus === 'PAID' ? order?.updatedAt : null,
+    shippingDate: order?.expectedDeliveryTime,
+    deliveredDate: null,
+    note: shipping?.note || '',
+  };
+};
 
 const OrderManagement = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
+  const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [dateRange, setDateRange] = useState(null);
+  const [tableParams, setTableParams] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0
+  });
+  const { current, pageSize } = tableParams;
 
-  // Mock data cho orders
-  const mockOrders = [
-    {
-      id: 'ORD001',
-      orderNumber: 'GL2024001',
-      customerName: 'Nguyễn Văn A',
-      customerEmail: 'nguyenvana@email.com',
-      customerPhone: '0123456789',
-      customerAddress: '123 Đường ABC, Quận 1, TP.HCM',
-      items: [
-        { 
-          productId: 'P001', 
-          productName: 'Túi tote canvas tái chế', 
-          price: 150000, 
-          quantity: 2, 
-          total: 300000,
-          image: '/images/tote-bag.jpg'
-        },
-        { 
-          productId: 'P002', 
-          productName: 'Ly giữ nhiệt inox', 
-          price: 250000, 
-          quantity: 1, 
-          total: 250000,
-          image: '/images/tumbler.jpg'
-        }
-      ],
-      subtotal: 550000,
-      shippingFee: 30000,
-      discount: 50000,
-      totalAmount: 530000,
-      paymentMethod: 'bank_transfer',
-      paymentStatus: 'paid',
-      orderStatus: 'delivered',
-      shippingMethod: 'standard',
-      trackingNumber: 'VN123456789',
-      orderDate: '2024-01-15 10:30:00',
-      paymentDate: '2024-01-15 11:00:00',
-      shippingDate: '2024-01-16 09:00:00',
-      deliveredDate: '2024-01-18 14:30:00',
-      note: 'Giao hàng giờ hành chính',
-      couponCode: 'WELCOME10'
-    },
-    {
-      id: 'ORD002',
-      orderNumber: 'GL2024002',
-      customerName: 'Trần Thị B',
-      customerEmail: 'tranthib@email.com',
-      customerPhone: '0987654321',
-      customerAddress: '456 Đường XYZ, Quận 3, TP.HCM',
-      items: [
-        { 
-          productId: 'P003', 
-          productName: 'Bộ đũa tre tự nhiên', 
-          price: 80000, 
-          quantity: 3, 
-          total: 240000,
-          image: '/images/bamboo-chopsticks.jpg'
-        }
-      ],
-      subtotal: 240000,
-      shippingFee: 25000,
-      discount: 0,
-      totalAmount: 265000,
-      paymentMethod: 'momo',
-      paymentStatus: 'paid',
-      orderStatus: 'shipping',
-      shippingMethod: 'express',
-      trackingNumber: 'VN987654321',
-      orderDate: '2024-01-16 14:20:00',
-      paymentDate: '2024-01-16 14:25:00',
-      shippingDate: '2024-01-17 08:30:00',
-      deliveredDate: null,
-      note: 'Khách yêu cầu gọi trước khi giao',
-      couponCode: null
-    },
-    {
-      id: 'ORD003',
-      orderNumber: 'GL2024003',
-      customerName: 'Lê Văn C',
-      customerEmail: 'levanc@email.com',
-      customerPhone: '0369852147',
-      customerAddress: '789 Đường DEF, Quận 7, TP.HCM',
-      items: [
-        { 
-          productId: 'P004', 
-          productName: 'Hộp cơm inox 3 ngăn', 
-          price: 320000, 
-          quantity: 1, 
-          total: 320000,
-          image: '/images/lunch-box.jpg'
-        },
-        { 
-          productId: 'P005', 
-          productName: 'Ống hút inox kèm cọ rửa', 
-          price: 45000, 
-          quantity: 4, 
-          total: 180000,
-          image: '/images/metal-straw.jpg'
-        }
-      ],
-      subtotal: 500000,
-      shippingFee: 35000,
-      discount: 75000,
-      totalAmount: 460000,
-      paymentMethod: 'vnpay',
-      paymentStatus: 'paid',
-      orderStatus: 'processing',
-      shippingMethod: 'standard',
-      trackingNumber: null,
-      orderDate: '2024-01-17 09:15:00',
-      paymentDate: '2024-01-17 09:20:00',
-      shippingDate: null,
-      deliveredDate: null,
-      note: 'Đơn hàng ưu tiên',
-      couponCode: 'SAVE15'
-    },
-    {
-      id: 'ORD004',
-      orderNumber: 'GL2024004',
-      customerName: 'Phạm Thị D',
-      customerEmail: 'phamthid@email.com',
-      customerPhone: '0258741963',
-      customerAddress: '321 Đường GHI, Quận 5, TP.HCM',
-      items: [
-        { 
-          productId: 'P006', 
-          productName: 'Túi đựng rau củ lưới cotton', 
-          price: 65000, 
-          quantity: 5, 
-          total: 325000,
-          image: '/images/mesh-bag.jpg'
-        }
-      ],
-      subtotal: 325000,
-      shippingFee: 30000,
-      discount: 32500,
-      totalAmount: 322500,
-      paymentMethod: 'cod',
-      paymentStatus: 'pending',
-      orderStatus: 'confirmed',
-      shippingMethod: 'standard',
-      trackingNumber: null,
-      orderDate: '2024-01-18 16:45:00',
-      paymentDate: null,
-      shippingDate: null,
-      deliveredDate: null,
-      note: 'Thanh toán khi nhận hàng',
-      couponCode: 'FIRST10'
-    },
-    {
-      id: 'ORD005',
-      orderNumber: 'GL2024005',
-      customerName: 'Hoàng Văn E',
-      customerEmail: 'hoangvane@email.com',
-      customerPhone: '0147258369',
-      customerAddress: '654 Đường JKL, Quận 2, TP.HCM',
-      items: [
-        { 
-          productId: 'P007', 
-          productName: 'Bình nước thủy tinh 500ml', 
-          price: 180000, 
-          quantity: 2, 
-          total: 360000,
-          image: '/images/glass-bottle.jpg'
-        },
-        { 
-          productId: 'P001', 
-          productName: 'Túi tote canvas tái chế', 
-          price: 150000, 
-          quantity: 1, 
-          total: 150000,
-          image: '/images/tote-bag.jpg'
-        }
-      ],
-      subtotal: 510000,
-      shippingFee: 30000,
-      discount: 0,
-      totalAmount: 540000,
-      paymentMethod: 'bank_transfer',
-      paymentStatus: 'failed',
-      orderStatus: 'cancelled',
-      shippingMethod: 'standard',
-      trackingNumber: null,
-      orderDate: '2024-01-19 11:30:00',
-      paymentDate: null,
-      shippingDate: null,
-      deliveredDate: null,
-      note: 'Khách hàng hủy do thanh toán thất bại',
-      couponCode: null
-    },
-    {
-      id: 'ORD006',
-      orderNumber: 'GL2024006',
-      customerName: 'Võ Thị F',
-      customerEmail: 'vothif@email.com',
-      customerPhone: '0321654987',
-      customerAddress: '987 Đường MNO, Quận 10, TP.HCM',
-      items: [
-        { 
-          productId: 'P008', 
-          productName: 'Set 3 hộp bảo quản thực phẩm', 
-          price: 280000, 
-          quantity: 1, 
-          total: 280000,
-          image: '/images/food-container.jpg'
-        }
-      ],
-      subtotal: 280000,
-      shippingFee: 25000,
-      discount: 28000,
-      totalAmount: 277000,
-      paymentMethod: 'momo',
-      paymentStatus: 'paid',
-      orderStatus: 'pending',
-      shippingMethod: 'express',
-      trackingNumber: null,
-      orderDate: '2024-01-20 13:20:00',
-      paymentDate: '2024-01-20 13:25:00',
-      shippingDate: null,
-      deliveredDate: null,
-      note: 'Đơn hàng mới',
-      couponCode: 'GREEN10'
-    }
-  ];
+  const [orderData, setOrderData] = useState([]);
 
-  const [orderData, setOrderData] = useState(mockOrders);
+  const fetchOrders = useCallback(async () => {
+    try {
+      setLoading(true);
 
-  // Filtered data
-  const filteredData = useMemo(() => {
-    return orderData.filter(order => {
-      const matchesSearch = 
-        order.orderNumber.toLowerCase().includes(searchText.toLowerCase()) ||
-        order.customerName.toLowerCase().includes(searchText.toLowerCase()) ||
-        order.customerEmail.toLowerCase().includes(searchText.toLowerCase()) ||
-        order.customerPhone.includes(searchText) ||
-        order.items.some(item => 
-          item.productName.toLowerCase().includes(searchText.toLowerCase())
-        );
-      
-      const matchesStatus = statusFilter === 'all' || order.orderStatus === statusFilter;
-      const matchesPayment = paymentFilter === 'all' || order.paymentStatus === paymentFilter;
-      
-      let matchesDate = true;
-      if (dateRange && dateRange.length === 2) {
-        const orderDate = dayjs(order.orderDate);
-        matchesDate = orderDate.isAfter(dateRange[0].startOf('day')) && 
-                     orderDate.isBefore(dateRange[1].endOf('day'));
+      const statusParam = statusFilter !== 'all' ? statusFilter.toUpperCase() : undefined;
+      const paymentParam =
+        paymentFilter !== 'all'
+          ? paymentFilter === 'pending'
+            ? 'UNPAID'
+            : paymentFilter.toUpperCase()
+          : undefined;
+
+      const response = await getAdminOrders({
+        page: current - 1,
+        size: pageSize,
+        status: statusParam,
+        paymentStatus: paymentParam,
+        searchKeyword: searchText || undefined,
+        fromDate: dateRange?.[0]?.format?.('YYYY-MM-DD'),
+        toDate: dateRange?.[1]?.format?.('YYYY-MM-DD')
+      });
+
+      if (response?.success === false) {
+        throw new Error(response?.message || 'Không thể tải danh sách đơn hàng');
       }
-      
-      return matchesSearch && matchesStatus && matchesPayment && matchesDate;
-    });
-  }, [searchText, statusFilter, paymentFilter, dateRange, orderData]);
+
+      const payload = response?.data || response;
+      const content = Array.isArray(payload?.content)
+        ? payload.content
+        : Array.isArray(payload)
+          ? payload
+          : [];
+      const mappedOrders = content.map(mapAdminOrderToComponent);
+
+      setOrderData(mappedOrders);
+      setTableParams(prev => ({
+        ...prev,
+        total: payload?.totalElements ?? mappedOrders.length,
+        pageSize: payload?.pageSize ?? prev.pageSize,
+        current: (payload?.pageNumber ?? prev.current - 1) + 1
+      }));
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      message.error(error?.message || 'Có lỗi xảy ra khi tải danh sách đơn hàng');
+    } finally {
+      setLoading(false);
+    }
+  }, [current, pageSize, statusFilter, paymentFilter, searchText, dateRange]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  const filteredData = orderData;
 
   // Statistics
   const stats = useMemo(() => {
-    const total = orderData.length;
+    const total = tableParams.total || orderData.length;
     const pending = orderData.filter(o => o.orderStatus === 'pending').length;
     const processing = orderData.filter(o => o.orderStatus === 'processing').length;
     const shipping = orderData.filter(o => o.orderStatus === 'shipping').length;
@@ -301,7 +191,47 @@ const OrderManagement = () => {
       totalRevenue, 
       avgOrderValue 
     };
-  }, [orderData]);
+  }, [orderData, tableParams.total]);
+
+  const handleTableChange = (pagination) => {
+    setTableParams(prev => ({
+      ...prev,
+      current: pagination.current,
+      pageSize: pagination.pageSize
+    }));
+  };
+
+  const handleStatusFilterChange = (value) => {
+    setStatusFilter(value);
+    setTableParams(prev => ({ ...prev, current: 1 }));
+  };
+
+  const handlePaymentFilterChange = (value) => {
+    setPaymentFilter(value);
+    setTableParams(prev => ({ ...prev, current: 1 }));
+  };
+
+  const handleDateRangeChange = (value) => {
+    setDateRange(value);
+    setTableParams(prev => ({ ...prev, current: 1 }));
+  };
+
+  const handleSearchSubmit = (value) => {
+    const trimmed = value.trim();
+    setSearchInput(trimmed);
+    setSearchText(trimmed);
+    setTableParams(prev => ({ ...prev, current: 1 }));
+  };
+
+  const tablePaginationConfig = {
+    current,
+    pageSize,
+    total: tableParams.total,
+    showSizeChanger: true,
+    showQuickJumper: true,
+    showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} đơn hàng`,
+    pageSizeOptions: ['10', '20', '50', '100'],
+  };
 
   // Handle CRUD operations
   const handleAdd = () => {
@@ -314,9 +244,26 @@ const OrderManagement = () => {
     message.success('Thêm đơn hàng thành công!');
   };
 
-  const handleView = (order) => {
+  const handleView = async (order) => {
+    const orderId = order?.id || order?.orderId;
+    if (!orderId) return;
     setSelectedOrder(order);
     setDetailModalVisible(true);
+    setDetailLoading(true);
+    try {
+      const response = await getAdminOrderDetail(orderId);
+      if (response?.success === false) {
+        throw new Error(response?.message || 'Không thể tải chi tiết đơn hàng');
+      }
+      const payload = response?.data || response;
+      const mappedOrder = mapAdminOrderToComponent(payload);
+      setSelectedOrder(mappedOrder);
+    } catch (error) {
+      console.error('Error fetching order detail:', error);
+      message.error(error?.message || 'Có lỗi xảy ra khi tải chi tiết đơn hàng');
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   const handleEdit = (order) => {
@@ -332,15 +279,18 @@ const OrderManagement = () => {
     message.success('Cập nhật đơn hàng thành công!');
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = (orderOrId) => {
+    const id = typeof orderOrId === 'string' ? orderOrId : orderOrId?.id;
+    if (!id) return;
     const newData = orderData.filter(order => order.id !== id);
     setOrderData(newData);
-    message.success('Xóa đơn hàng thành công!');
+    message.success('Đã xóa đơn hàng khỏi danh sách hiện tại!');
   };
 
   const handleCloseDetail = () => {
     setDetailModalVisible(false);
     setSelectedOrder(null);
+    setDetailLoading(false);
   };
 
   const handleCloseAdd = () => {
@@ -353,7 +303,13 @@ const OrderManagement = () => {
   };
 
   const handleRefresh = () => {
-    message.info('Đã làm mới dữ liệu đơn hàng');
+    setSearchInput('');
+    setSearchText('');
+    setStatusFilter('all');
+    setPaymentFilter('all');
+    setDateRange(null);
+    setTableParams(prev => ({ ...prev, current: 1 }));
+    message.success('Đã làm mới bộ lọc đơn hàng');
   };
 
   const handleExport = () => {
@@ -493,8 +449,15 @@ const OrderManagement = () => {
               allowClear
               enterButton={<SearchOutlined />}
               size="middle"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+              value={searchInput}
+              onChange={(e) => {
+                setSearchInput(e.target.value);
+                if (!e.target.value) {
+                  setSearchText('');
+                  setTableParams(prev => ({ ...prev, current: 1 }));
+                }
+              }}
+              onSearch={handleSearchSubmit}
             />
           </Col>
           <Col xs={12} sm={6} md={4}>
@@ -502,7 +465,7 @@ const OrderManagement = () => {
               placeholder="Trạng thái đơn"
               style={{ width: '100%' }}
               value={statusFilter}
-              onChange={setStatusFilter}
+              onChange={handleStatusFilterChange}
             >
               <Option value="all">Tất cả trạng thái</Option>
               <Option value="pending">Chờ xử lý</Option>
@@ -518,7 +481,7 @@ const OrderManagement = () => {
               placeholder="Thanh toán"
               style={{ width: '100%' }}
               value={paymentFilter}
-              onChange={setPaymentFilter}
+              onChange={handlePaymentFilterChange}
             >
               <Option value="all">Tất cả</Option>
               <Option value="paid">Đã thanh toán</Option>
@@ -531,7 +494,7 @@ const OrderManagement = () => {
               style={{ width: '100%' }}
               placeholder={['Từ ngày', 'Đến ngày']}
               value={dateRange}
-              onChange={setDateRange}
+              onChange={handleDateRangeChange}
               format="DD/MM/YYYY"
             />
           </Col>
@@ -549,10 +512,12 @@ const OrderManagement = () => {
       <Card>
         <OrderTable 
           data={filteredData}
-          loading={false}
+          loading={loading}
           handleView={handleView}
           handleEdit={handleEdit}
           handleDelete={handleDelete}
+          pagination={tablePaginationConfig}
+          onChange={handleTableChange}
         />
       </Card>
 
@@ -561,6 +526,7 @@ const OrderManagement = () => {
         visible={detailModalVisible}
         onClose={handleCloseDetail}
         order={selectedOrder}
+        loading={detailLoading}
       />
 
       {/* Order Add Modal */}
