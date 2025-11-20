@@ -1,5 +1,5 @@
 import React from 'react'
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import MainLayout from './layouts/MainLayout'
 import AdminLayout from './layouts/AdminLayout'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -25,7 +25,7 @@ import NotificationManagement from './pages/admin/notificationmanagement/Notific
 import WarehouseManagement from './pages/admin/warehousemanagement/WarehouseManagement'
 import DonationManagement from './pages/admin/donationmanagement/DonationManagement'
 import OrderManagement from './pages/admin/ordermanagement/OrderManagement'
-import VoucherManagement from './pages/admin/vouchermanagement/VoucherManagement'
+import VoucherCampaignManagement from './pages/admin/vouchermanagement/VoucherCampaignManagement'
 import AdminErrorPage from './pages/admin/AdminErrorPage'
 import ErrorPage from './pages/ErrorPage'
 import AboutUsPage from './pages/user/aboutus/AboutUsPage'
@@ -176,7 +176,11 @@ const router = createBrowserRouter([
       },
       {
         path: 'vouchers',
-        element: <VoucherManagement />
+        element: <Navigate to="/admin/vouchers/campaigns" replace />
+      },
+      {
+        path: 'vouchers/campaigns',
+        element: <VoucherCampaignManagement />
       },
       {
         path: 'analytics',

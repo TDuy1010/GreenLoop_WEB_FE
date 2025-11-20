@@ -1,7 +1,56 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { motion } from 'framer-motion'
 
+const FALLBACK_CATEGORY_ITEMS = [
+  { id: 'ao-so-mi', name: 'Áo sơ mi', icon: '👔' },
+  { id: 'ao-thun', name: 'Áo thun', icon: '👕' },
+  { id: 'quan', name: 'Quần', icon: '👖' },
+  { id: 'dam', name: 'Đầm', icon: '👗' },
+  { id: 'vay', name: 'Váy', icon: '👗' },
+  { id: 'ao-khoac', name: 'Áo khoác', icon: '🧥' },
+  { id: 'phu-kien', name: 'Phụ kiện', icon: '👜' },
+  { id: 'giay', name: 'Giày', icon: '👟' }
+]
+
+const CATEGORY_ICON_MAP = {
+  'ao so mi': '👔',
+  'ao-thun': '👕',
+  'ao thun': '👕',
+  'quan': '👖',
+  'quan dai': '👖',
+  'quan short': '🩳',
+  'dam': '👗',
+  'vay': '👗',
+  'chan vay': '👗',
+  'ao khoac': '🧥',
+  'ao blazer': '🧥',
+  'ao len': '🧶',
+  'phu kien': '👜',
+  'tui xach': '👜',
+  'non mu': '🎩',
+  'giay': '👟',
+  'giay the thao': '👟',
+  'giay cao got': '👠',
+  'giay sandal': '🥾'
+}
+
+const normalizeKey = (value = '') =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const getCategoryIcon = (name = '') => {
+  const key = normalizeKey(name)
+  return CATEGORY_ICON_MAP[key] || '📦'
+}
+
 const FilterSidebar = ({
+  categories = [],
+  categoryLoading = false,
   selectedCategory,
   setSelectedCategory,
   selectedCondition,
@@ -10,17 +59,20 @@ const FilterSidebar = ({
   setPriceRange,
   onClearFilters
 }) => {
-  const categories = [
-    { id: 'all', name: 'Tất cả', icon: '🛍️' },
-    { id: 'ao-so-mi', name: 'Áo sơ mi', icon: '👔' },
-    { id: 'ao-thun', name: 'Áo thun', icon: '👕' },
-    { id: 'quan', name: 'Quần', icon: '👖' },
-    { id: 'dam', name: 'Đầm', icon: '👗' },
-    { id: 'vay', name: 'Váy', icon: '👗' },
-    { id: 'ao-khoac', name: 'Áo khoác', icon: '🧥' },
-    { id: 'phu-kien', name: 'Phụ kiện', icon: '👜' },
-    { id: 'giay', name: 'Giày', icon: '👟' }
-  ]
+  const categoryItems = useMemo(() => {
+    const dynamicItems = Array.isArray(categories) && categories.length > 0
+      ? categories.map((cat, index) => ({
+          id: String(cat.id ?? cat.value ?? index),
+          name: cat.name || cat.label || `Danh mục ${index + 1}`,
+          icon: getCategoryIcon(cat.name || cat.label)
+        }))
+      : FALLBACK_CATEGORY_ITEMS
+
+    return [
+      { id: 'all', name: 'Tất cả', icon: '🛍️' },
+      ...dynamicItems
+    ]
+  }, [categories])
 
   const conditions = [
     { value: 'all', label: 'Tất cả tình trạng' },
@@ -56,22 +108,31 @@ const FilterSidebar = ({
         <div className="mb-6">
           <h3 className="font-semibold mb-3 text-gray-700">Danh mục</h3>
           <div className="space-y-2">
-            {categories.map((cat) => (
-              <motion.button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`w-full text-left px-3 py-2 rounded-lg transition flex items-center gap-2 ${
-                  selectedCategory === cat.id
-                    ? 'bg-green-100 text-green-700 font-semibold'
-                    : 'hover:bg-gray-100 text-gray-600'
-                }`}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <span>{cat.icon}</span>
-                <span>{cat.name}</span>
-              </motion.button>
-            ))}
+            {categoryLoading && (!categories || categories.length === 0) ? (
+              Array.from({ length: 5 }).map((_, index) => (
+                <div
+                  key={`skeleton-${index}`}
+                  className="w-full h-10 rounded-lg bg-gray-100 animate-pulse"
+                />
+              ))
+            ) : (
+              categoryItems.map((cat) => (
+                <motion.button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`w-full text-left px-3 py-2 rounded-lg transition flex items-center gap-2 ${
+                    selectedCategory === cat.id
+                      ? 'bg-green-100 text-green-700 font-semibold'
+                      : 'hover:bg-gray-100 text-gray-600'
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <span>{cat.icon}</span>
+                  <span>{cat.name}</span>
+                </motion.button>
+              ))
+            )}
           </div>
         </div>
 

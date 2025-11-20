@@ -4,6 +4,7 @@ import ItemsCard from './components/ItemsCard'
 import FilterSidebar from './components/FilterSidebar'
 import { sortOptions } from '../../../data/mockData'
 import { getProducts } from '../../../service/api/productApi'
+import { getAllCategories } from '../../../service/api/categoryApi'
 
 const ShopPage = () => {
   // Filter states
@@ -15,6 +16,8 @@ const ShopPage = () => {
 
   // Data states
   const [products, setProducts] = useState([])
+  const [categoryOptions, setCategoryOptions] = useState([])
+  const [categoryLoading, setCategoryLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -23,6 +26,50 @@ const ShopPage = () => {
   const [totalPages, setTotalPages] = useState(0)
   const [totalElements, setTotalElements] = useState(0)
   const [pageSize] = useState(12)
+
+  const normalizeCategoryResponse = (response) => {
+    const candidate = Array.isArray(response?.data?.data)
+      ? response.data.data
+      : Array.isArray(response?.data?.content)
+        ? response.data.content
+        : Array.isArray(response?.data)
+          ? response.data
+          : Array.isArray(response)
+            ? response
+            : []
+
+    return candidate.map((item, index) => {
+      const rawId = item.id ?? item.categoryId ?? item.code ?? index
+      return {
+        id: String(rawId),
+        value: rawId,
+        name: item.name || item.categoryName || `Danh mục ${index + 1}`,
+        description: item.description || ''
+      }
+    })
+  }
+
+  const fetchCategories = async () => {
+    try {
+      setCategoryLoading(true)
+      const response = await getAllCategories()
+
+      if (response?.success === false) {
+        throw new Error(response?.message || 'Không thể tải danh mục')
+      }
+
+      const parsed = normalizeCategoryResponse(response)
+      setCategoryOptions(parsed)
+    } catch (err) {
+      console.error('❌ Error fetching categories:', err)
+    } finally {
+      setCategoryLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchCategories()
+  }, [])
 
   // Fetch products from API
   const fetchProducts = async () => {
@@ -43,9 +90,11 @@ const ShopPage = () => {
       }
 
       if (selectedCategory !== 'all') {
-        // Convert category ID (cần mapping giữa category name và ID)
-        // Tạm thời comment vì cần có categoryId từ API categories
-        // params.categoryId = selectedCategory
+        const matchedCategory = categoryOptions.find(
+          (cat) => String(cat.id) === String(selectedCategory)
+        )
+        const categoryId = matchedCategory?.value ?? matchedCategory?.id ?? selectedCategory
+        params.categoryId = categoryId
       }
 
       // Apply sorting
@@ -181,6 +230,8 @@ const ShopPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar Filters */}
           <FilterSidebar
+            categories={categoryOptions}
+            categoryLoading={categoryLoading}
             selectedCategory={selectedCategory}
             setSelectedCategory={setSelectedCategory}
             selectedCondition={selectedCondition}

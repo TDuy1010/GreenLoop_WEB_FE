@@ -1,12 +1,14 @@
 /* eslint-disable no-unused-vars */
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { 
   UserOutlined, 
   ShoppingOutlined, 
   EnvironmentOutlined, 
   LockOutlined,
-  CalendarOutlined
+  CalendarOutlined,
+  GiftOutlined,
+  TagsOutlined
 } from '@ant-design/icons'
 import { message } from 'antd'
 import { getCurrentUserProfile, updateUserProfile } from '../../../service/api/userApi'
@@ -14,12 +16,16 @@ import { getMyRegisteredEvents } from '../../../service/api/eventApi'
 import { getMyOrders } from '../../../service/api/orderApi'
 import { changePassword } from '../../../service/api/authApi'
 import { API_CONFIG } from '../../../service/instance'
+import { getMyVouchers } from '../../../service/api/voucherApi'
+import { getMyEcoPoints } from '../../../service/api/ecoPointsApi'
 import Loading from '../../../components/Loading'
 import ProfileHeader from './components/ProfileHeader'
 import PersonalInfoTab from './components/PersonalInfoTab'
 import OrdersTab from './components/OrdersTab'
 import AddressesTab from './components/address/AddressesTab'
 import MyEventsTab from './components/MyEventsTab'
+import MyVouchersTab from './components/MyVouchersTab'
+import RedeemVoucherTab from './components/RedeemVoucherTab'
 import PasswordTab from './components/PasswordTab'
 import PasswordChangeSuccessModal from '../../../components/PasswordChangeSuccessModal'
 import ProfileUpdateSuccessModal from '../../../components/ProfileUpdateSuccessModal'
@@ -50,6 +56,7 @@ const ProfilePage = () => {
   const [editedData, setEditedData] = useState(userData)
   const [myEvents, setMyEvents] = useState([])
   const [orders, setOrders] = useState([])
+  const [myVouchers, setMyVouchers] = useState([])
   const [ordersLoading, setOrdersLoading] = useState(false)
   const [ordersError, setOrdersError] = useState(null)
   const [ordersPage, setOrdersPage] = useState({
@@ -60,6 +67,11 @@ const ProfilePage = () => {
     hasNext: false
   })
   const [ordersReloadKey, setOrdersReloadKey] = useState(0)
+  const [voucherReloadKey, setVoucherReloadKey] = useState(0)
+  const [loadingVouchers, setLoadingVouchers] = useState(false)
+  const [voucherError, setVoucherError] = useState(null)
+  const [ecoPointLoading, setEcoPointLoading] = useState(false)
+  const [ecoPointError, setEcoPointError] = useState(null)
 
   // Nạp hồ sơ người dùng từ API
   useEffect(() => {
@@ -81,6 +93,7 @@ const ProfilePage = () => {
           gender: processedGender,
           birthday: data.dateOfBirth || prev.birthday,
           avatar: data.avatarUrl || prev.avatar,
+          ecoPoints: data.ecoPoints ?? data.ecoPointBalance ?? data.pointBalance ?? prev.ecoPoints,
         }))
         setEditedData(prev => ({
           ...prev,
@@ -101,6 +114,43 @@ const ProfilePage = () => {
     }
     fetchProfile()
   }, [])
+
+  const fetchEcoPoints = useCallback(async () => {
+    try {
+      setEcoPointLoading(true)
+      setEcoPointError(null)
+      const response = await getMyEcoPoints()
+      const payload = response?.data ?? response
+      const extractPointValue = (data) => {
+        if (data === null || data === undefined) return 0
+        if (typeof data === 'number') return data
+        if (typeof data?.data === 'number') return data.data
+        return (
+          data?.ecoPoints ??
+          data?.ecoPointBalance ??
+          data?.pointBalance ??
+          data?.data?.ecoPoints ??
+          data?.data?.ecoPointBalance ??
+          data?.data?.pointBalance ??
+          0
+        )
+      }
+      const balance = extractPointValue(payload)
+      setUserData((prev) => ({
+        ...prev,
+        ecoPoints: balance
+      }))
+    } catch (error) {
+      console.error('Không thể tải điểm Eco:', error)
+      setEcoPointError(error?.message || 'Không thể tải điểm Eco.')
+    } finally {
+      setEcoPointLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchEcoPoints()
+  }, [fetchEcoPoints])
 
   // Nạp danh sách sự kiện đã đăng ký khi mở tab Sự kiện của tôi
   useEffect(() => {
@@ -197,6 +247,38 @@ const ProfilePage = () => {
     }
     fetchOrders()
   }, [activeTab, ordersPage.page, ordersPage.size, ordersReloadKey])
+
+  const fetchMyVouchers = useCallback(async () => {
+    try {
+      setLoadingVouchers(true)
+      setVoucherError(null)
+      const response = await getMyVouchers()
+      const payload = response?.data ?? response
+      const list = Array.isArray(payload?.content)
+        ? payload.content
+        : Array.isArray(payload?.data?.content)
+          ? payload.data.content
+          : Array.isArray(payload?.data)
+            ? payload.data
+            : Array.isArray(payload)
+              ? payload
+              : []
+      setMyVouchers(list)
+    } catch (error) {
+      console.error('Không thể tải voucher:', error)
+      setVoucherError(error?.message || 'Không thể tải danh sách voucher.')
+      setMyVouchers([])
+    } finally {
+      setLoadingVouchers(false)
+    }
+  }, [])
+
+  // Nạp voucher khi mở tab liên quan (Voucher của tôi hoặc Đổi điểm)
+  useEffect(() => {
+    if (activeTab === 'myVouchers' || activeTab === 'redeemPoints') {
+      fetchMyVouchers()
+    }
+  }, [activeTab, voucherReloadKey, fetchMyVouchers])
 
   // Mock addresses
   const [addresses] = useState([
@@ -442,8 +524,26 @@ const ProfilePage = () => {
     { id: 'orders', label: 'Đơn hàng', icon: <ShoppingOutlined /> },
     { id: 'addresses', label: 'Địa chỉ', icon: <EnvironmentOutlined /> },
     { id: 'myEvents', label: 'Sự kiện của tôi', icon: <CalendarOutlined /> },
+    { id: 'redeemPoints', label: 'Đổi điểm', icon: <GiftOutlined /> },
+    { id: 'myVouchers', label: 'Voucher của tôi', icon: <TagsOutlined /> },
     { id: 'password', label: 'Đổi mật khẩu', icon: <LockOutlined /> }
   ]
+
+  const handleRedeemSuccess = ({ remainingPoints, spentPoints }) => {
+    setVoucherReloadKey((prev) => prev + 1);
+    setUserData((prev) => {
+      const current = prev?.ecoPoints ?? 0;
+      if (typeof remainingPoints === 'number') {
+        return { ...prev, ecoPoints: remainingPoints };
+      }
+      if (spentPoints) {
+        const nextPoints = Math.max(0, current - spentPoints);
+        return { ...prev, ecoPoints: nextPoints };
+      }
+      return prev;
+    });
+    fetchEcoPoints();
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-white py-12">
@@ -528,6 +628,27 @@ const ProfilePage = () => {
               {/* My Events Tab */}
               {activeTab === 'myEvents' && (
                 <MyEventsTab myEvents={myEvents} loadingMyEvents={loadingMyEvents} />
+              )}
+
+              {/* My Vouchers Tab */}
+              {activeTab === 'myVouchers' && (
+                <MyVouchersTab
+                  vouchers={myVouchers}
+                  loading={loadingVouchers}
+                  error={voucherError}
+                  onReload={() => setVoucherReloadKey((prev) => prev + 1)}
+                />
+              )}
+
+              {/* Redeem Points Tab */}
+              {activeTab === 'redeemPoints' && (
+                <RedeemVoucherTab
+                  ecoPoints={userData.ecoPoints || 0}
+                  ecoPointLoading={ecoPointLoading}
+                  ecoPointError={ecoPointError}
+                  ownedVouchers={myVouchers}
+                  onRedeemSuccess={handleRedeemSuccess}
+                />
               )}
 
               {/* Change Password Tab */}

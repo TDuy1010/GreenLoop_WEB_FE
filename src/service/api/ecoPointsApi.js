@@ -43,10 +43,16 @@ export const changeEcoPointRuleStatus = async (id, isActive) => {
   return response;
 };
 
+export const getMyEcoPoints = async () => {
+  const response = await axiosClient.get('/eco-point-users/my-eco-points');
+  return response;
+};
+
 export default {
   getEcoPointRules,
   createEcoPointRule,
   updateEcoPointRule,
   changeEcoPointRuleStatus,
+  getMyEcoPoints,
 };
 

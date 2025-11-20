@@ -108,7 +108,7 @@ const Sidebar = ({ collapsed, onToggle }) => {
         icon: <ShoppingCartOutlined />
       },
       {
-        key: '/admin/vouchers',
+        key: '/admin/vouchers/campaigns',
         label: 'Quản lý voucher',
         icon: <GiftOutlined />
       },

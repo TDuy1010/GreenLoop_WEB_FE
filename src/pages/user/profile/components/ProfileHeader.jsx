@@ -69,16 +69,6 @@ const ProfileHeader = ({ userData, ordersCount }) => {
             <p className="text-sm text-gray-600">Đơn hàng</p>
           </motion.div>
           
-          <motion.div 
-            className="text-center"
-            whileHover={{ scale: 1.05 }}
-          >
-            <div className="bg-pink-100 w-16 h-16 rounded-full flex items-center justify-center mb-2 mx-auto">
-              <HeartOutlined className="text-3xl text-pink-600" />
-            </div>
-            <p className="text-2xl font-bold text-gray-900">12</p>
-            <p className="text-sm text-gray-600">Yêu thích</p>
-          </motion.div>
         </div>
       </div>
     </motion.div>
