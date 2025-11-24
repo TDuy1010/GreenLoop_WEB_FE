@@ -48,11 +48,18 @@ export const getMyEcoPoints = async () => {
   return response;
 };
 
+export const getEcoPointsByUserId = async (userId) => {
+  if (!userId && userId !== 0) throw new Error('userId is required');
+  const response = await axiosClient.get(`/eco-point-users/${userId}`);
+  return response;
+};
+
 export default {
   getEcoPointRules,
   createEcoPointRule,
   updateEcoPointRule,
   changeEcoPointRuleStatus,
   getMyEcoPoints,
+  getEcoPointsByUserId,
 };
 

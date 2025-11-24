@@ -72,6 +72,11 @@ const ProfilePage = () => {
   const [voucherError, setVoucherError] = useState(null)
   const [ecoPointLoading, setEcoPointLoading] = useState(false)
   const [ecoPointError, setEcoPointError] = useState(null)
+  const [ecoPointInfo, setEcoPointInfo] = useState({
+    totalPoints: 0,
+    lifetimePoints: 0,
+    transactions: [],
+  })
 
   // Nạp hồ sơ người dùng từ API
   useEffect(() => {
@@ -121,28 +126,43 @@ const ProfilePage = () => {
       setEcoPointError(null)
       const response = await getMyEcoPoints()
       const payload = response?.data ?? response
-      const extractPointValue = (data) => {
-        if (data === null || data === undefined) return 0
-        if (typeof data === 'number') return data
-        if (typeof data?.data === 'number') return data.data
-        return (
-          data?.ecoPoints ??
-          data?.ecoPointBalance ??
-          data?.pointBalance ??
-          data?.data?.ecoPoints ??
-          data?.data?.ecoPointBalance ??
-          data?.data?.pointBalance ??
-          0
-        )
+      const data = payload?.data ?? payload
+
+      const extractPointValue = (value, fallback = 0) => {
+        if (value === null || value === undefined) return fallback
+        if (typeof value === 'number') return value
+        if (typeof value?.data === 'number') return value.data
+        return fallback
       }
-      const balance = extractPointValue(payload)
+
+      const totalPoints =
+        data?.totalPoints ??
+        data?.ecoPoints ??
+        data?.ecoPointBalance ??
+        data?.pointBalance ??
+        extractPointValue(payload, 0)
+
+      const lifetimePoints = data?.lifetimePoints ?? data?.lifeTimePoints ?? totalPoints ?? 0
+      const transactions = Array.isArray(data?.transactions) ? data.transactions : []
+
+      setEcoPointInfo({
+        totalPoints,
+        lifetimePoints,
+        transactions,
+      })
+
       setUserData((prev) => ({
         ...prev,
-        ecoPoints: balance
+        ecoPoints: totalPoints
       }))
     } catch (error) {
       console.error('Không thể tải điểm Eco:', error)
       setEcoPointError(error?.message || 'Không thể tải điểm Eco.')
+      setEcoPointInfo({
+        totalPoints: 0,
+        lifetimePoints: 0,
+        transactions: [],
+      })
     } finally {
       setEcoPointLoading(false)
     }
@@ -554,7 +574,11 @@ const ProfilePage = () => {
         )}
 
         {/* Profile Header */}
-        <ProfileHeader userData={userData} ordersCount={ordersPage.total || orders.length} />
+        <ProfileHeader
+          userData={userData}
+          ordersCount={ordersPage.total || orders.length}
+          ecoPointInfo={ecoPointInfo}
+        />
 
         {/* Tab Navigation */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -646,6 +670,8 @@ const ProfilePage = () => {
                   ecoPoints={userData.ecoPoints || 0}
                   ecoPointLoading={ecoPointLoading}
                   ecoPointError={ecoPointError}
+                  lifetimePoints={ecoPointInfo.lifetimePoints || 0}
+                  transactions={ecoPointInfo.transactions}
                   ownedVouchers={myVouchers}
                   onRedeemSuccess={handleRedeemSuccess}
                 />

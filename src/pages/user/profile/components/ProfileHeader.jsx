@@ -8,7 +8,10 @@ import {
   HeartOutlined
 } from '@ant-design/icons'
 
-const ProfileHeader = ({ userData, ordersCount }) => {
+const ProfileHeader = ({ userData, ordersCount, ecoPointInfo }) => {
+  const totalPoints = ecoPointInfo?.totalPoints ?? userData?.ecoPoints ?? 0
+  const lifetimePoints = ecoPointInfo?.lifetimePoints ?? totalPoints
+
   return (
     <motion.div 
       className="bg-white rounded-2xl shadow-lg p-8 mb-8"
@@ -45,13 +48,14 @@ const ProfileHeader = ({ userData, ordersCount }) => {
           
           {/* Eco Points Badge */}
           <motion.div 
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-full shadow-lg"
+            className="inline-flex items-center gap-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-full shadow-lg"
             whileHover={{ scale: 1.05 }}
           >
             <TrophyOutlined className="text-2xl" />
-            <div>
+            <div className="text-left">
               <p className="text-sm opacity-90">Eco Points</p>
-              <p className="text-2xl font-bold">{userData.ecoPoints}</p>
+              <p className="text-2xl font-bold">{totalPoints.toLocaleString('vi-VN')}</p>
+              <p className="text-xs opacity-80">Tích lũy: {lifetimePoints.toLocaleString('vi-VN')} điểm</p>
             </div>
           </motion.div>
         </div>

@@ -25,10 +25,52 @@ const normalizeCampaigns = (response) => {
 
 const normalizeVouchers = normalizeCampaigns;
 
+const deriveTransactionMeta = (tx = {}) => {
+  const description = tx?.description || tx?.action || 'Giao dịch điểm';
+  const actionType = (tx?.type || tx?.actionType || tx?.action || '').toUpperCase();
+  const numericPoints = Number(tx?.points ?? tx?.point ?? tx?.pointChanged ?? tx?.amount ?? 0) || 0;
+  const isSpend =
+    actionType.includes('SPEND') || actionType.includes('REDEEM') || actionType.includes('USE');
+  const absPoints = Math.abs(numericPoints);
+  const timestamp = tx?.createdAt ? new Date(tx.createdAt).getTime() : null;
+  return { description, actionType, numericPoints, absPoints, isSpend, timestamp };
+};
+
+const groupTransactions = (list = []) => {
+  const groupMap = new Map();
+  list.forEach((tx, index) => {
+    const meta = deriveTransactionMeta(tx);
+    const key = `${meta.description}|${meta.actionType}|${meta.isSpend}|${meta.absPoints}`;
+    if (!groupMap.has(key)) {
+      groupMap.set(key, {
+        meta,
+        count: 0,
+        latestTimestamp: meta.timestamp ?? 0,
+        latestTx: tx,
+        firstIndex: index,
+      });
+    }
+    const group = groupMap.get(key);
+    group.count += 1;
+    if ((meta.timestamp ?? 0) > group.latestTimestamp) {
+      group.latestTimestamp = meta.timestamp ?? 0;
+      group.latestTx = tx;
+    }
+  });
+  return Array.from(groupMap.values()).sort((a, b) => {
+    if (b.latestTimestamp === a.latestTimestamp) {
+      return a.firstIndex - b.firstIndex;
+    }
+    return b.latestTimestamp - a.latestTimestamp;
+  });
+};
+
 const RedeemVoucherTab = ({
   ecoPoints = 0,
   ecoPointLoading = false,
   ecoPointError = null,
+  lifetimePoints = 0,
+  transactions = [],
   ownedVouchers = [],
   onRedeemSuccess,
 }) => {
@@ -132,17 +174,26 @@ const RedeemVoucherTab = ({
         .filter((id) => id !== null && id !== undefined),
     );
   }, [ownedVouchers]);
+  const groupedTransactions = useMemo(() => groupTransactions(transactions), [transactions]);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <p className="text-gray-500">Điểm Eco hiện có</p>
-          <p className="text-3xl font-semibold text-green-600">
-            {ecoPointLoading ? 'Đang tải...' : `${availablePoints.toLocaleString('vi-VN')} điểm`}
-          </p>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
+          <div className="rounded-2xl border border-green-100 bg-green-50 p-4">
+            <p className="text-gray-500 text-sm">Điểm Eco hiện có</p>
+            <p className="text-3xl font-semibold text-green-600">
+              {ecoPointLoading ? 'Đang tải...' : `${availablePoints.toLocaleString('vi-VN')} điểm`}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+            <p className="text-gray-500 text-sm">Điểm tích lũy</p>
+            <p className="text-3xl font-semibold text-emerald-600">
+              {ecoPointLoading ? '—' : `${lifetimePoints.toLocaleString('vi-VN')} điểm`}
+            </p>
+          </div>
           {ecoPointError && (
-            <p className="text-sm text-red-500 mt-1">{ecoPointError}</p>
+            <p className="text-sm text-red-500 mt-1 col-span-full">{ecoPointError}</p>
           )}
         </div>
         <div className="flex gap-2">
@@ -280,6 +331,55 @@ const RedeemVoucherTab = ({
             </div>
           )}
         </div>
+      </div>
+
+      <div className="space-y-3">
+        <h3 className="font-semibold text-gray-700">Giao dịch điểm gần đây</h3>
+        {ecoPointLoading ? (
+          <div className="flex justify-center py-10">
+            <div className="animate-spin h-10 w-10 border-4 border-green-200 border-t-green-600 rounded-full" />
+          </div>
+        ) : groupedTransactions.length === 0 ? (
+          <Empty description="Chưa có giao dịch điểm" />
+        ) : (
+          <div className="space-y-3">
+            {groupedTransactions.map((group, index) => {
+              const { meta, latestTx, count } = group;
+              const amountLabel = `${meta.isSpend ? '-' : '+'}${meta.absPoints.toLocaleString('vi-VN')} điểm`;
+              const dateText = latestTx?.createdAt
+                ? new Date(latestTx.createdAt).toLocaleString('vi-VN')
+                : 'Không xác định';
+              return (
+                <div
+                  key={`${group.meta.description}-${group.meta.actionType}-${index}`}
+                  className="border border-gray-100 rounded-2xl p-4 shadow-sm bg-gray-50"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {meta.description}
+                      </p>
+                      <p className="text-xs text-gray-500">{dateText}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {count > 1 && (
+                        <span className="text-xs font-semibold text-gray-500 bg-gray-200/70 px-2 py-0.5 rounded-full">
+                          x{count}
+                        </span>
+                      )}
+                      <Tag color={meta.isSpend ? 'red' : 'green'} className="text-sm font-semibold">
+                        {amountLabel}
+                      </Tag>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {meta.actionType || 'Không xác định'}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

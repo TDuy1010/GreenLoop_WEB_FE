@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { 
   Modal, 
   Avatar, 
@@ -10,7 +10,8 @@ import {
   Space,
   Badge,
   Spin,
-  message
+  message,
+  Empty
 } from 'antd'
 import { 
   UserOutlined,
@@ -25,18 +26,82 @@ import {
   StarOutlined
 } from '@ant-design/icons'
 import { getCustomerById } from '../../../../service/api/customerApi'
+import { getEcoPointsByUserId } from '../../../../service/api/ecoPointsApi'
+
+const deriveEcoTransactionMeta = (tx = {}) => {
+  const description = tx?.description || tx?.action || 'Giao dịch điểm'
+  const actionType = (tx?.type || tx?.actionType || tx?.action || '').toUpperCase()
+  const numericPoints = Number(tx?.points ?? tx?.point ?? tx?.pointChanged ?? tx?.amount ?? 0) || 0
+  const isSpend = actionType.includes('SPEND') || actionType.includes('REDEEM') || actionType.includes('USE')
+  const absPoints = Math.abs(numericPoints)
+  const timestamp = tx?.createdAt ? new Date(tx.createdAt).getTime() : null
+  return { description, actionType, numericPoints, absPoints, isSpend, timestamp }
+}
+
+const groupEcoTransactions = (list = []) => {
+  const map = new Map()
+  list.forEach((tx, index) => {
+    const meta = deriveEcoTransactionMeta(tx)
+    const key = `${meta.description}|${meta.actionType}|${meta.isSpend}|${meta.absPoints}`
+    if (!map.has(key)) {
+      map.set(key, {
+        meta,
+        count: 0,
+        latestTimestamp: meta.timestamp ?? 0,
+        latestTx: tx,
+        firstIndex: index
+      })
+    }
+    const group = map.get(key)
+    group.count += 1
+    if ((meta.timestamp ?? 0) > group.latestTimestamp) {
+      group.latestTimestamp = meta.timestamp ?? 0
+      group.latestTx = tx
+    }
+  })
+
+  return Array.from(map.values()).sort((a, b) => {
+    if (b.latestTimestamp === a.latestTimestamp) {
+      return a.firstIndex - b.firstIndex
+    }
+    return b.latestTimestamp - a.latestTimestamp
+  })
+}
 
 const UserDetail = ({ visible, onClose, user }) => {
   const [customerDetail, setCustomerDetail] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [ecoPointInfo, setEcoPointInfo] = useState({
+    totalPoints: 0,
+    lifetimePoints: 0,
+    transactions: []
+  })
+  const [ecoPointLoading, setEcoPointLoading] = useState(false)
 
-  useEffect(() => {
-    if (visible && user?.id) {
-      fetchCustomerDetail(user.id)
+  const fetchEcoPointInfo = useCallback(async (customerId) => {
+    try {
+      setEcoPointLoading(true)
+      const response = await getEcoPointsByUserId(customerId)
+      const data = response?.data ?? response
+      setEcoPointInfo({
+        totalPoints: data?.totalPoints ?? 0,
+        lifetimePoints: data?.lifetimePoints ?? 0,
+        transactions: Array.isArray(data?.transactions) ? data.transactions : []
+      })
+    } catch (error) {
+      console.error('Error fetching eco point info:', error)
+      message.error('Không thể tải thông tin điểm Eco của khách hàng!')
+      setEcoPointInfo({
+        totalPoints: 0,
+        lifetimePoints: 0,
+        transactions: []
+      })
+    } finally {
+      setEcoPointLoading(false)
     }
-  }, [visible, user?.id])
+  }, [])
 
-  const fetchCustomerDetail = async (customerId) => {
+  const fetchCustomerDetail = useCallback(async (customerId) => {
     try {
       setLoading(true)
       const response = await getCustomerById(customerId)
@@ -72,12 +137,24 @@ const UserDetail = ({ visible, onClose, user }) => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [onClose])
+
+  useEffect(() => {
+    if (visible && user?.id) {
+      fetchCustomerDetail(user.id)
+      fetchEcoPointInfo(user.id)
+    }
+  }, [visible, user?.id, fetchCustomerDetail, fetchEcoPointInfo])
 
   const handleClose = () => {
     setCustomerDetail(null)
     onClose()
   }
+
+  const groupedEcoTransactions = useMemo(
+    () => groupEcoTransactions(ecoPointInfo.transactions),
+    [ecoPointInfo.transactions]
+  )
 
   if (!visible) return null
 
@@ -232,12 +309,84 @@ const UserDetail = ({ visible, onClose, user }) => {
                     <div className="flex-1">
                       <div className="text-xs text-gray-500">Điểm Eco</div>
                       <div className="text-base font-bold text-yellow-600">
-                        {displayUser.ecoPoints || 0} EP
+                        {ecoPointInfo.totalPoints ?? displayUser.ecoPoints ?? 0} EP
                       </div>
                     </div>
                   </div>
                 </Col>
               </Row>
+            </Card>
+
+            {/* Eco Point Detail */}
+            <Card
+              title={
+                <span className="text-base font-semibold text-gray-700">
+                  Điểm Eco & giao dịch
+                </span>
+              }
+              className="mb-4 shadow-sm"
+              size="small"
+            >
+              <Spin spinning={ecoPointLoading}>
+                <Row gutter={[16, 16]}>
+                  <Col span={12}>
+                    <div className="p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg">
+                      <div className="text-xs text-gray-600 mb-1">Điểm hiện có</div>
+                      <div className="text-2xl font-bold text-yellow-600">
+                        {(ecoPointInfo.totalPoints ?? 0).toLocaleString('vi-VN')} điểm
+                      </div>
+                    </div>
+                  </Col>
+                  <Col span={12}>
+                    <div className="p-3 bg-gradient-to-r from-emerald-50 to-green-50 rounded-lg">
+                      <div className="text-xs text-gray-600 mb-1">Điểm tích lũy</div>
+                      <div className="text-2xl font-bold text-emerald-600">
+                        {(ecoPointInfo.lifetimePoints ?? 0).toLocaleString('vi-VN')} điểm
+                      </div>
+                    </div>
+                  </Col>
+                </Row>
+                <Divider />
+                <div className="text-sm font-semibold text-gray-700 mb-3">Lịch sử giao dịch</div>
+                {groupedEcoTransactions.length === 0 ? (
+                  <Empty description="Chưa có giao dịch điểm" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                ) : (
+                  <div className="max-h-64 overflow-auto pr-2 space-y-3">
+                    {groupedEcoTransactions.map((group, index) => {
+                      const { meta, latestTx, count } = group
+                      const amountText = `${meta.isSpend ? '-' : '+'}${meta.absPoints.toLocaleString('vi-VN')} điểm`
+                      const dateText = latestTx?.createdAt
+                        ? new Date(latestTx.createdAt).toLocaleString('vi-VN')
+                        : 'Không xác định'
+                      return (
+                        <div
+                          key={`${meta.description}-${meta.actionType}-${index}`}
+                          className="p-3 border border-gray-100 rounded-xl bg-gray-50"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="font-medium text-gray-900">
+                              {meta.description}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {count > 1 && (
+                                <Tag color="blue" className="text-xs font-semibold px-2">
+                                  x{count}
+                                </Tag>
+                              )}
+                              <Tag color={meta.isSpend ? 'red' : 'green'} className="text-sm font-semibold">
+                                {amountText}
+                              </Tag>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {dateText} • {meta.actionType || 'Không xác định'}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </Spin>
             </Card>
 
             {/* Activity Statistics */}
