@@ -127,7 +127,10 @@ const ShopPage = () => {
       console.log('✅ Products response:', response)
 
       if (response.success && response.data) {
-        setProducts(response.data.content)
+        const filteredContent = (response.data.content || []).filter(
+          (product) => product.status !== 'SOLD'
+        )
+        setProducts(filteredContent)
         setTotalPages(response.data.totalPages)
         setTotalElements(response.data.totalElements)
       }

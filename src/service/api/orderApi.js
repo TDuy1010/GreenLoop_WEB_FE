@@ -54,3 +54,16 @@ export const getAdminOrderDetail = async (orderId) => {
   return axiosClient.get(`/orders/${orderId}`)
 }
 
+export const getOrderHistory = async (orderId) => {
+  if (!orderId) throw new Error('orderId is required')
+  return axiosClient.get(`/orders/${orderId}/history`)
+}
+
+export default {
+  getMyOrders,
+  getMyOrderDetail,
+  getAdminOrders,
+  getAdminOrderDetail,
+  getOrderHistory
+}
+

@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Spin } from 'antd'
-import { getMyOrderDetail } from '../../../../service/api/orderApi'
+import { Spin, Image, Timeline } from 'antd'
+import { getMyOrderDetail, getOrderHistory } from '../../../../service/api/orderApi'
 
 const statusConfig = {
   PENDING: { label: 'Đang xử lý', className: 'bg-amber-100 text-amber-700' },
@@ -19,6 +19,13 @@ const paymentStatusConfig = {
   REFUNDED: { label: 'Đã hoàn tiền', className: 'text-blue-600' }
 }
 
+const eventColorMap = {
+  ORDER_CREATED: 'green',
+  ORDER_STATUS_CHANGED: 'blue',
+  SHIPPING_STATUS_CHANGED: 'cyan',
+  PAYMENT_STATUS_CHANGED: 'purple'
+}
+
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}₫`
 
 const OrdersTab = ({ orders = [], loading, error, onReload, pagination }) => {
@@ -27,6 +34,30 @@ const OrdersTab = ({ orders = [], loading, error, onReload, pagination }) => {
   const [detailData, setDetailData] = useState(null)
   const [detailError, setDetailError] = useState(null)
   const [detailOrderId, setDetailOrderId] = useState(null)
+  const [historyData, setHistoryData] = useState([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyError, setHistoryError] = useState(null)
+
+  const formatDateTime = (value) =>
+    value ? new Date(value).toLocaleString('vi-VN') : '-'
+
+  const loadOrderHistory = async (orderId) => {
+    if (!orderId) return
+    setHistoryLoading(true)
+    setHistoryError(null)
+    try {
+      const response = await getOrderHistory(orderId)
+      const payload = response?.data ?? response ?? {}
+      const historyList = payload.data ?? payload
+      setHistoryData(Array.isArray(historyList) ? historyList : [])
+    } catch (err) {
+      console.error('Không thể tải lịch sử đơn hàng:', err)
+      setHistoryError(err?.response?.data?.message || 'Không thể tải lịch sử đơn hàng.')
+      setHistoryData([])
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
 
   const handleViewDetail = async (orderId) => {
     if (!orderId) return
@@ -34,10 +65,13 @@ const OrdersTab = ({ orders = [], loading, error, onReload, pagination }) => {
     setDetailOrderId(orderId)
     setDetailLoading(true)
     setDetailError(null)
+    setHistoryData([])
+    setHistoryError(null)
     try {
       const response = await getMyOrderDetail(orderId)
       const payload = response?.data ?? response ?? {}
       setDetailData(payload.data ?? payload)
+      await loadOrderHistory(orderId)
     } catch (err) {
       console.error('Không thể tải chi tiết đơn hàng:', err)
       setDetailError(err?.message || 'Không thể tải chi tiết đơn hàng. Vui lòng thử lại.')
@@ -47,11 +81,36 @@ const OrdersTab = ({ orders = [], loading, error, onReload, pagination }) => {
     }
   }
 
+  const timelineItems = Array.isArray(historyData)
+    ? historyData.map((event) => ({
+        key: event.id,
+        color: eventColorMap[event.eventType] || 'gray',
+        children: (
+          <div>
+            <p className="font-medium text-gray-900">{event.description || event.eventType}</p>
+            <p className="text-xs text-gray-500">
+              {formatDateTime(event.createdAt)}{' '}
+              {event.changedByRole ? `• ${event.changedByRole}` : ''}
+            </p>
+            {(event.oldValue || event.newValue) && (
+              <p className="text-xs text-gray-400">
+                {event.oldValue ? `Từ ${event.oldValue}` : ''}{' '}
+                {event.newValue ? `→ ${event.newValue}` : ''}
+              </p>
+            )}
+          </div>
+        )
+      }))
+    : []
+
   const closeDetailModal = () => {
     setDetailVisible(false)
     setDetailData(null)
     setDetailError(null)
     setDetailOrderId(null)
+    setHistoryData([])
+    setHistoryError(null)
+    setHistoryLoading(false)
   }
 
   const renderContent = () => {
@@ -251,20 +310,53 @@ const OrdersTab = ({ orders = [], loading, error, onReload, pagination }) => {
                   )}
                 </div>
 
+                <div className="bg-gray-50 rounded-2xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-lg font-semibold text-gray-900">Lịch sử đơn hàng</h4>
+                    {historyLoading && <Spin size="small" />}
+                  </div>
+                  {historyError ? (
+                    <p className="text-rose-500 text-sm">{historyError}</p>
+                  ) : timelineItems.length ? (
+                    <Timeline
+                      items={timelineItems}
+                      className="mt-2"
+                    />
+                  ) : (
+                    <p className="text-gray-500 text-sm">Chưa có lịch sử cho đơn hàng này.</p>
+                  )}
+                </div>
+
                 <div>
                   <h4 className="text-lg font-semibold text-gray-900 mb-3">Sản phẩm</h4>
                   <div className="space-y-3">
                     {detailData.orderItems?.map((item) => (
                       <div
                         key={item.orderItemId}
-                        className="border border-gray-200 rounded-xl p-4 flex justify-between items-center"
+                        className="border border-gray-200 rounded-xl p-4 flex gap-4 items-center"
                       >
-                        <div>
-                          <p className="font-semibold text-gray-900">Sản phẩm #{item.productId}</p>
+                        <Image
+                          width={80}
+                          height={80}
+                          src={item.productImage}
+                          alt={item.productName || 'Sản phẩm'}
+                          className="object-cover rounded-lg"
+                          fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik"
+                        />
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900 mb-1">
+                            {item.productName || `Sản phẩm #${item.productId}`}
+                          </p>
                           <p className="text-gray-600 text-sm">Số lượng: {item.quantity}</p>
+                          {item.productId && (
+                            <p className="text-gray-500 text-xs mt-1">ID: {item.productId}</p>
+                          )}
                         </div>
                         <div className="text-right">
-                          <p className="text-gray-900 font-semibold">{formatCurrency(item.price)}</p>
+                          <p className="text-gray-900 font-semibold text-lg">{formatCurrency(item.price)}</p>
+                          <p className="text-gray-500 text-sm">
+                            Tổng: {formatCurrency(item.price * item.quantity)}
+                          </p>
                         </div>
                       </div>
                     ))}

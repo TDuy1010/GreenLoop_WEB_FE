@@ -84,38 +84,38 @@ const UserTable = ({
         </div>
       ),
     },
-    {
-      title: 'Loại tài khoản',
-      dataIndex: 'accountType',
-      key: 'accountType',
-      render: (accountType) => {
-        const config = accountTypeConfig[accountType] || { color: 'default', text: accountType }
-        return <Tag color={config.color}>{config.text}</Tag>
-      },
-    },
-    {
-      title: 'Hoạt động',
-      key: 'activity',
-      render: (_, record) => (
-        <div className="space-y-1 text-center">
-          <div className="flex items-center justify-center gap-1 text-sm">
-            <ShoppingCartOutlined className="text-blue-500" />
-            <span className="font-medium">{record.totalOrders}</span>
-            <span className="text-xs text-gray-500">đơn</span>
-          </div>
-          <div className="flex items-center justify-center gap-1 text-sm">
-            <HeartOutlined className="text-red-500" />
-            <span className="font-medium">{record.donationCount}</span>
-            <span className="text-xs text-gray-500">quyên góp</span>
-          </div>
-          <div className="flex items-center justify-center gap-1 text-sm">
-            <CalendarOutlined className="text-green-500" />
-            <span className="font-medium">{record.eventParticipation}</span>
-            <span className="text-xs text-gray-500">sự kiện</span>
-          </div>
-        </div>
-      ),
-    },
+    // {
+    //   title: 'Loại tài khoản',
+    //   dataIndex: 'accountType',
+    //   key: 'accountType',
+    //   render: (accountType) => {
+    //     const config = accountTypeConfig[accountType] || { color: 'default', text: accountType }
+    //     return <Tag color={config.color}>{config.text}</Tag>
+    //   },
+    // },
+    // {
+    //   title: 'Hoạt động',
+    //   key: 'activity',
+    //   render: (_, record) => (
+    //     <div className="space-y-1 text-center">
+    //       <div className="flex items-center justify-center gap-1 text-sm">
+    //         <ShoppingCartOutlined className="text-blue-500" />
+    //         <span className="font-medium">{record.totalOrders}</span>
+    //         <span className="text-xs text-gray-500">đơn</span>
+    //       </div>
+    //       <div className="flex items-center justify-center gap-1 text-sm">
+    //         <HeartOutlined className="text-red-500" />
+    //         <span className="font-medium">{record.donationCount}</span>
+    //         <span className="text-xs text-gray-500">quyên góp</span>
+    //       </div>
+    //       <div className="flex items-center justify-center gap-1 text-sm">
+    //         <CalendarOutlined className="text-green-500" />
+    //         <span className="font-medium">{record.eventParticipation}</span>
+    //         <span className="text-xs text-gray-500">sự kiện</span>
+    //       </div>
+    //     </div>
+    //   ),
+    // },
     {
       title: 'Trạng thái',
       dataIndex: 'status',

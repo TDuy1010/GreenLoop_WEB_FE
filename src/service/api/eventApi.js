@@ -182,6 +182,17 @@ export const getEventStaffs = async (eventId) => {
   return response
 }
 
+// Lấy danh sách đơn donation theo event
+export const getEventDonations = async (eventId) => {
+  const response = await axiosClient.get(`/donations/event/${eventId}`)
+  return response
+}
+
+export const getDonationById = async (donationId) => {
+  const response = await axiosClient.get(`/donations/${donationId}`)
+  return response
+}
+
 // Lấy danh sách người đăng ký của sự kiện (ADMIN)
 // GET /events/admin/{eventId}/registrations
 export const getEventRegistrations = async (eventId, params = {}) => {
@@ -289,7 +300,9 @@ export default {
   cancelCustomerRegistration,
   getEventRegistrations,
   updateEventRegistrationStatus,
-  activateEvent 
+  activateEvent,
+  getEventDonations,
+  getDonationById
 }
 
 

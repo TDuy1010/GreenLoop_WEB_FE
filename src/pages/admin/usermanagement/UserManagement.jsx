@@ -57,26 +57,36 @@ const UserManagement = () => {
       
       if (response.success && response.data) {
         // Map API data to component format
-        const mappedData = response.data.content.map(customer => ({
-          id: customer.id,
-          name: customer.fullName,
-          email: customer.email,
-          phone: customer.phoneNumber || 'Chưa có',
-          gender: customer.gender || 'other',
-          dateOfBirth: customer.dateOfBirth,
-          address: 'Chưa cập nhật', // API chưa trả về địa chỉ
-          joinDate: customer.createdAt,
-          status: customer.isActive ? 'active' : 'inactive',
-          isVerified: customer.isEmailVerified,
-          avatar: customer.avatarUrl,
-          totalOrders: 0, // Cần API khác để lấy thông tin này
-          totalSpent: 0,
-          ecoPoints: 0,
-          lastLogin: customer.updatedAt,
-          accountType: 'standard', // Cần thêm field này từ API
-          donationCount: 0,
-          eventParticipation: 0
-        }))
+        const mappedData = response.data.content.map((customer) => {
+          const normalizedGender =
+            typeof customer.gender === 'string'
+              ? customer.gender.trim().toLowerCase()
+              : 'other'
+          const genderValue = ['male', 'female', 'other'].includes(normalizedGender)
+            ? normalizedGender
+            : 'other'
+
+          return {
+            id: customer.id,
+            name: customer.fullName,
+            email: customer.email,
+            phone: customer.phoneNumber || 'Chưa có',
+            gender: genderValue,
+            dateOfBirth: customer.dateOfBirth,
+            address: 'Chưa cập nhật', // API chưa trả về địa chỉ
+            joinDate: customer.createdAt,
+            status: customer.isActive ? 'active' : 'inactive',
+            isVerified: customer.isEmailVerified,
+            avatar: customer.avatarUrl,
+            totalOrders: 0, // Cần API khác để lấy thông tin này
+            totalSpent: 0,
+            ecoPoints: 0,
+            lastLogin: customer.updatedAt,
+            accountType: 'standard', // Cần thêm field này từ API
+            donationCount: 0,
+            eventParticipation: 0
+          }
+        })
 
         setUserData(mappedData)
         setFilteredData(mappedData)

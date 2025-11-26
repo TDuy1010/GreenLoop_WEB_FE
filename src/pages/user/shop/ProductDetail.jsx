@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { relatedProducts } from "../../../data/mockData";
 import { getProductById } from "../../../service/api/productApi";
 import { addToCart } from "../../../service/api/cartApi";
 import { notifyCartUpdated } from "../../../utils/cartEvents";
 
 const ProductDetail = () => {
+  const navigate = useNavigate();
   const { id } = useParams(); // Lấy product ID từ URL
   const [selectedImage, setSelectedImage] = useState(0);
   
@@ -15,6 +16,7 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [adding, setAdding] = useState(false);
+  const [buying, setBuying] = useState(false);
   const [toast, setToast] = useState(null);
   const showToast = (type, text) => {
     setToast({ type, text });
@@ -34,6 +36,22 @@ const ProductDetail = () => {
       showToast("error", message);
     } finally {
       setAdding(false);
+    }
+  };
+
+  const handleBuyNow = async () => {
+    if (!product?.id || buying || !product.isAvailable) return;
+
+    try {
+      setBuying(true);
+      await addToCart(product.id);
+      notifyCartUpdated();
+      navigate("/payment", { state: { from: "product-detail", productId: product.id } });
+    } catch (err) {
+      const message = err?.message || "Không thể mua ngay lúc này";
+      showToast("error", message);
+    } finally {
+      setBuying(false);
     }
   };
 
@@ -290,13 +308,7 @@ const ProductDetail = () => {
                     {product.category}
                   </span>
                 </span>
-                <span className="text-gray-400">•</span>
-                <span className="text-gray-600">
-                  Thương hiệu:{" "}
-                  <span className="font-semibold text-gray-800">
-                    {product.brand}
-                  </span>
-                </span>
+                
               </div>
 
               {/* Price */}
@@ -367,7 +379,41 @@ const ProductDetail = () => {
               
 
               {/* Action Buttons */}
-              <div className="flex gap-4 mb-8">
+              <div className="flex flex-col sm:flex-row gap-4 mb-8">
+                <motion.button
+                  className={`flex-1 font-bold py-4 rounded-lg flex items-center justify-center gap-2 shadow-lg transition ${
+                    !product.isAvailable || buying
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-amber-500 hover:bg-amber-600 text-white"
+                  }`}
+                  whileHover={
+                    product.isAvailable && !buying ? { scale: 1.02 } : {}
+                  }
+                  whileTap={
+                    product.isAvailable && !buying ? { scale: 0.98 } : {}
+                  }
+                  disabled={!product.isAvailable || buying}
+                  onClick={handleBuyNow}
+                >
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8c1.104 0 2-.672 2-1.5S13.104 5 12 5s-2 .672-2 1.5S10.896 8 12 8zm0 0v11m-7-6h14"
+                    />
+                  </svg>
+                  {!product.isAvailable
+                    ? "Hết hàng"
+                    : buying
+                    ? "Đang xử lý..."
+                    : "Mua ngay"}
+                </motion.button>
                 <motion.button
                   className={`flex-1 font-bold py-4 rounded-lg flex items-center justify-center gap-2 shadow-lg transition ${
                     !product.isAvailable || adding
@@ -401,26 +447,6 @@ const ProductDetail = () => {
                     : adding
                     ? "Đang thêm..."
                     : "Thêm vào giỏ hàng"}
-                </motion.button>
-                <motion.button
-                  className="px-6 py-4 border-2 border-green-600 text-green-600 rounded-lg hover:bg-green-50 transition"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  title="Yêu thích"
-                >
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                    />
-                  </svg>
                 </motion.button>
               </div>
 

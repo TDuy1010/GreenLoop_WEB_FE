@@ -289,7 +289,7 @@ const UserEdit = ({ visible, onClose, onUpdate, user }) => {
             </Form.Item>
           </Col>
 
-          {/* Loại tài khoản */}
+          {/* Loại tài khoản
           <Col span={12}>
             <Form.Item
               name="accountType"
@@ -306,7 +306,7 @@ const UserEdit = ({ visible, onClose, onUpdate, user }) => {
                 <Option value="vip">VIP</Option>
               </Select>
             </Form.Item>
-          </Col>
+          </Col> */}
 
           {/* Địa chỉ */}
           <Col span={24}>

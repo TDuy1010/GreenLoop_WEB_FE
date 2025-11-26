@@ -1,24 +1,23 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { 
   Modal, 
   Form, 
   Input, 
   Select, 
   InputNumber,
-  Upload,
   message,
   Row,
   Col,
   Divider
 } from 'antd'
-import { 
-  PlusOutlined,
+import {
   EditOutlined,
   TagOutlined,
   DollarOutlined,
-  HomeOutlined,
   IdcardOutlined
 } from '@ant-design/icons'
+import { updateProduct } from '../../../../service/api/productApi'
+import { getAllCategories } from '../../../../service/api/categoryApi'
 
 const { Option } = Select
 const { TextArea } = Input
@@ -26,58 +25,191 @@ const { TextArea } = Input
 const ProductEdit = ({ visible, onClose, onUpdate, product }) => {
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
-  const [fileList, setFileList] = useState([])
+  const [categoryOptions, setCategoryOptions] = useState([])
+  const [categoryLoading, setCategoryLoading] = useState(false)
+
+  const conditionOptions = useMemo(
+    () => [
+      { value: 'NEW', label: 'Mới' },
+      { value: 'LIKE_NEW', label: 'Như mới' },
+      { value: 'GOOD', label: 'Tốt' },
+      { value: 'FAIR', label: 'Khá' },
+      { value: 'POOR', label: 'Cần sửa chữa' }
+    ],
+    []
+  )
+
+  const typeOptions = [
+    { value: 'CHARITY', label: 'Quyên góp' },
+    { value: 'RESALE', label: 'Mua bán' }
+  ]
+
+  const statusOptions = [
+    { value: 'PENDING', label: 'Chờ duyệt' },
+    { value: 'AVAILABLE', label: 'Có sẵn' },
+    { value: 'SOLD', label: 'Đã bán' },
+    { value: 'UNAVAILABLE', label: 'Không khả dụng' }
+  ]
+
+  useEffect(() => {
+    if (!visible) return
+    const fetchCategories = async () => {
+      try {
+        setCategoryLoading(true)
+        const response = await getAllCategories()
+        const payload = response?.data ?? response ?? []
+        const list = Array.isArray(payload.data)
+          ? payload.data
+          : Array.isArray(payload.content)
+            ? payload.content
+            : Array.isArray(payload)
+              ? payload
+              : []
+        const normalized = list.map((item, index) => ({
+          value: item.id ?? item.categoryId ?? index,
+          label: item.name ?? item.categoryName ?? `Danh mục ${index + 1}`
+        }))
+        setCategoryOptions(normalized)
+      } catch (error) {
+        console.error('❌ Lỗi tải danh mục:', error)
+        message.error(error?.message || 'Không thể tải danh mục')
+      } finally {
+        setCategoryLoading(false)
+      }
+    }
+
+    fetchCategories()
+  }, [visible])
 
   useEffect(() => {
     if (visible && product) {
+      // Map dữ liệu từ product vào form
       form.setFieldsValue({
-        name: product.name,
-        description: product.description,
-        category: product.category,
-        brand: product.brand,
-        condition: product.condition,
-        size: product.size,
-        color: product.color,
-        material: product.material,
-        weight: product.weight,
-        dimensions: product.dimensions,
-        location: product.location,
-        originalPrice: product.originalPrice,
-        price: product.price,
-        tags: product.tags || []
+        productName: product.productName || product.name || '',
+        description: product.description || '',
+        categoryId: product.categoryId || product.category?.id || null,
+        type: product.typeValue || product.type || 'CHARITY',
+        status: product.statusValue || product.status || 'PENDING',
+        conditionGrade: product.conditionGradeValue || product.condition || 'LIKE_NEW',
+        price: product.price || 0,
+        ecoPointValue: product.ecoPointValue || product.ecoPoints || 0,
+        donationItemCode: product.donationItemCode || ''
       })
-      
-      // Set existing images
-      if (product.images) {
-        setFileList(product.images.map((url, index) => ({
-          uid: `-${index}`,
-          name: `image-${index}`,
-          status: 'done',
-          url: url
-        })))
-      }
     }
   }, [visible, product, form])
 
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields()
+      console.log('Form values:', values)
       setLoading(true)
-      
-      const updatedProduct = {
-        ...product,
-        ...values,
-        images: fileList.map(file => file.url || URL.createObjectURL(file.originFileObj)),
-        ecoPoints: Math.floor(values.price / 10000) * 5
+
+      // Kiểm tra và validate các giá trị bắt buộc theo schema API
+      if (!values.categoryId) {
+        message.error('Vui lòng chọn danh mục!')
+        setLoading(false)
+        return
+      }
+
+      if (!values.type) {
+        message.error('Vui lòng chọn loại sản phẩm!')
+        setLoading(false)
+        return
+      }
+
+      if (!values.status) {
+        message.error('Vui lòng chọn trạng thái!')
+        setLoading(false)
+        return
+      }
+
+      if (!values.conditionGrade) {
+        message.error('Vui lòng chọn tình trạng!')
+        setLoading(false)
+        return
+      }
+
+      if (values.price === undefined || values.price === null || Number(values.price) < 0) {
+        message.error('Vui lòng nhập giá bán hợp lệ (>= 0)!')
+        setLoading(false)
+        return
+      }
+
+      if (values.ecoPointValue === undefined || values.ecoPointValue === null || Number(values.ecoPointValue) < 0) {
+        message.error('Vui lòng nhập Eco Points hợp lệ (>= 0)!')
+        setLoading(false)
+        return
+      }
+
+      // Validate productName
+      if (!values.productName || !values.productName.trim()) {
+        message.error('Vui lòng nhập tên sản phẩm!')
+        setLoading(false)
+        return
+      }
+
+      if (values.productName.trim().length > 150) {
+        message.error('Tên sản phẩm không được vượt quá 150 ký tự!')
+        setLoading(false)
+        return
+      }
+
+      // Validate description nếu có (0-2000 characters)
+      if (values.description && values.description.trim().length > 2000) {
+        message.error('Mô tả không được vượt quá 2000 ký tự!')
+        setLoading(false)
+        return
+      }
+
+      // Validate donationItemCode
+      if (!values.donationItemCode || !values.donationItemCode.trim()) {
+        message.error('Vui lòng nhập mã quyên góp!')
+        setLoading(false)
+        return
+      }
+
+      if (values.donationItemCode.trim().length < 1) {
+        message.error('Mã quyên góp phải có ít nhất 1 ký tự!')
+        setLoading(false)
+        return
+      }
+
+      // Tạo request payload theo schema API
+      const requestPayload = {
+        categoryId: Number(values.categoryId),
+        type: String(values.type).toUpperCase(),
+        status: String(values.status).toUpperCase(),
+        conditionGrade: String(values.conditionGrade).toUpperCase(),
+        price: Number(values.price),
+        ecoPointValue: Number(values.ecoPointValue),
+        productName: values.productName.trim(),
+        description: values.description?.trim() || '',
+        donationItemCode: values.donationItemCode.trim()
+      }
+
+      console.log('Update Payload:', requestPayload)
+
+      // Gọi API update
+      const response = await updateProduct(product.id, requestPayload)
+      const body = response?.data ?? response ?? {}
+      const updatedProduct = body.data ?? body
+
+      if (onUpdate && updatedProduct) {
+        onUpdate(updatedProduct)
       }
       
-      onUpdate(updatedProduct)
-      
-      message.success('Cập nhật sản phẩm thành công!')
+      message.success(body.message || 'Cập nhật sản phẩm thành công!')
+      form.resetFields()
       onClose()
     } catch (error) {
-      console.error('Validation failed:', error)
-      message.error('Vui lòng kiểm tra lại thông tin!')
+      console.error('Validation failed or update error:', error)
+      const errMsg = error?.response?.data?.message || error?.message
+      const errors = error?.response?.data?.errors || []
+      if (errors.length > 0) {
+        message.error(errors.join(', '))
+      } else {
+        message.error(errMsg || 'Vui lòng kiểm tra lại thông tin!')
+      }
     } finally {
       setLoading(false)
     }
@@ -85,20 +217,8 @@ const ProductEdit = ({ visible, onClose, onUpdate, product }) => {
 
   const handleCancel = () => {
     form.resetFields()
-    setFileList([])
     onClose()
   }
-
-  const handleUploadChange = ({ fileList: newFileList }) => {
-    setFileList(newFileList)
-  }
-
-  const uploadButton = (
-    <div>
-      <PlusOutlined />
-      <div style={{ marginTop: 8 }}>Tải ảnh</div>
-    </div>
-  )
 
   if (!product) return null
 
@@ -128,11 +248,13 @@ const ProductEdit = ({ visible, onClose, onUpdate, product }) => {
         <div className="flex items-center gap-2 text-sm text-blue-800">
           <IdcardOutlined />
           <span className="font-medium">Mã sản phẩm:</span>
-          <span className="font-bold">SP-{String(product.id).padStart(4, '0')}</span>
+          <span className="font-bold">{product.code || `SP-${String(product.id).padStart(4, '0')}`}</span>
         </div>
-        <div className="text-xs text-blue-600">
-          Quyên góp: {new Date(product.donationDate).toLocaleDateString('vi-VN')}
-        </div>
+        {product.donationItemCode && (
+          <div className="text-xs text-blue-600">
+            Mã quyên góp: {product.donationItemCode}
+          </div>
+        )}
       </div>
       
       <Form
@@ -140,31 +262,15 @@ const ProductEdit = ({ visible, onClose, onUpdate, product }) => {
         layout="vertical"
         requiredMark="optional"
       >
-        {/* Images Upload */}
-        <Form.Item
-          label={<span className="font-medium">Hình ảnh sản phẩm</span>}
-          tooltip="Tải lên tối đa 5 ảnh, ảnh đầu tiên sẽ là ảnh đại diện"
-        >
-          <Upload
-            listType="picture-card"
-            fileList={fileList}
-            onChange={handleUploadChange}
-            beforeUpload={() => false}
-            maxCount={5}
-          >
-            {fileList.length >= 5 ? null : uploadButton}
-          </Upload>
-        </Form.Item>
-
         <Row gutter={16}>
           {/* Tên sản phẩm */}
           <Col span={24}>
             <Form.Item
-              name="name"
+              name="productName"
               label={<span className="font-medium">Tên sản phẩm</span>}
               rules={[
                 { required: true, message: 'Vui lòng nhập tên sản phẩm!' },
-                { min: 5, message: 'Tên sản phẩm phải có ít nhất 5 ký tự!' }
+                { max: 150, message: 'Tên sản phẩm không được vượt quá 150 ký tự!' }
               ]}
             >
               <Input 
@@ -181,14 +287,13 @@ const ProductEdit = ({ visible, onClose, onUpdate, product }) => {
               name="description"
               label={<span className="font-medium">Mô tả sản phẩm</span>}
               rules={[
-                { required: true, message: 'Vui lòng nhập mô tả!' },
-                { min: 10, message: 'Mô tả phải có ít nhất 10 ký tự!' }
+                { max: 2000, message: 'Mô tả không được vượt quá 2000 ký tự!' }
               ]}
             >
               <TextArea
                 rows={3}
                 placeholder="Nhập mô tả chi tiết về sản phẩm..."
-                maxLength={500}
+                maxLength={2000}
                 showCount
               />
             </Form.Item>
@@ -197,167 +302,73 @@ const ProductEdit = ({ visible, onClose, onUpdate, product }) => {
           {/* Danh mục */}
           <Col span={12}>
             <Form.Item
-              name="category"
+              name="categoryId"
               label={<span className="font-medium">Danh mục</span>}
               rules={[{ required: true, message: 'Vui lòng chọn danh mục!' }]}
             >
-              <Select placeholder="Chọn danh mục" size="large">
-                <Option value="Thời trang">Thời trang</Option>
-                <Option value="Giày dép">Giày dép</Option>
-                <Option value="Phụ kiện">Phụ kiện</Option>
-                <Option value="Sách & Văn phòng phẩm">Sách & Văn phòng phẩm</Option>
-                <Option value="Đồ gia dụng">Đồ gia dụng</Option>
-                <Option value="Điện tử">Điện tử</Option>
-              </Select>
-            </Form.Item>
-          </Col>
-
-          {/* Thương hiệu */}
-          <Col span={12}>
-            <Form.Item
-              name="brand"
-              label={<span className="font-medium">Thương hiệu</span>}
-              rules={[{ required: true, message: 'Vui lòng nhập thương hiệu!' }]}
-            >
-              <Input 
-                placeholder="Nhập thương hiệu" 
+              <Select
+                placeholder="Chọn danh mục"
                 size="large"
-              />
+                loading={categoryLoading}
+                notFoundContent={categoryLoading ? 'Đang tải...' : 'Không có danh mục'}
+              >
+                {categoryOptions.map((category) => (
+                  <Option key={category.value} value={category.value}>
+                    {category.label}
+                  </Option>
+                ))}
+              </Select>
             </Form.Item>
           </Col>
 
           {/* Tình trạng */}
           <Col span={8}>
             <Form.Item
-              name="condition"
+              name="conditionGrade"
               label={<span className="font-medium">Tình trạng</span>}
               rules={[{ required: true, message: 'Vui lòng chọn tình trạng!' }]}
             >
               <Select placeholder="Chọn tình trạng" size="large">
-                <Option value="Rất tốt">Rất tốt</Option>
-                <Option value="Tốt">Tốt</Option>
-                <Option value="Khá">Khá</Option>
-                <Option value="Cần sửa chữa">Cần sửa chữa</Option>
+                {conditionOptions.map((option) => (
+                  <Option key={option.value} value={option.value}>
+                    {option.label}
+                  </Option>
+                ))}
               </Select>
             </Form.Item>
           </Col>
 
-          {/* Size */}
+          {/* Trạng thái */}
           <Col span={8}>
             <Form.Item
-              name="size"
-              label={<span className="font-medium">Size</span>}
-              rules={[{ required: true, message: 'Vui lòng nhập size!' }]}
+              name="status"
+              label={<span className="font-medium">Trạng thái</span>}
+              rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
             >
-              <Input 
-                placeholder="M, L, XL, ..." 
-                size="large"
-              />
-            </Form.Item>
-          </Col>
-
-          {/* Màu sắc */}
-          <Col span={8}>
-            <Form.Item
-              name="color"
-              label={<span className="font-medium">Màu sắc</span>}
-              rules={[{ required: true, message: 'Vui lòng nhập màu sắc!' }]}
-            >
-              <Input 
-                placeholder="Đỏ, Xanh, ..." 
-                size="large"
-              />
-            </Form.Item>
-          </Col>
-
-          {/* Chất liệu */}
-          <Col span={12}>
-            <Form.Item
-              name="material"
-              label={<span className="font-medium">Chất liệu</span>}
-              rules={[{ required: true, message: 'Vui lòng nhập chất liệu!' }]}
-            >
-              <Input 
-                placeholder="Cotton, Da, Vải, ..." 
-                size="large"
-              />
-            </Form.Item>
-          </Col>
-
-          {/* Trọng lượng */}
-          <Col span={12}>
-            <Form.Item
-              name="weight"
-              label={<span className="font-medium">Trọng lượng (kg)</span>}
-              rules={[{ required: true, message: 'Vui lòng nhập trọng lượng!' }]}
-            >
-              <InputNumber
-                placeholder="0.5"
-                size="large"
-                className="w-full"
-                min={0}
-                step={0.1}
-              />
-            </Form.Item>
-          </Col>
-
-          {/* Kích thước */}
-          <Col span={12}>
-            <Form.Item
-              name="dimensions"
-              label={<span className="font-medium">Kích thước</span>}
-              rules={[{ required: true, message: 'Vui lòng nhập kích thước!' }]}
-            >
-              <Input 
-                placeholder="60x50x2 cm" 
-                size="large"
-              />
-            </Form.Item>
-          </Col>
-
-          {/* Kho */}
-          <Col span={12}>
-            <Form.Item
-              name="location"
-              label={
-                <span className="font-medium">
-                  <HomeOutlined className="mr-2 text-gray-400" />
-                  Kho lưu trữ
-                </span>
-              }
-              rules={[{ required: true, message: 'Vui lòng chọn kho!' }]}
-            >
-              <Select placeholder="Chọn kho" size="large">
-                <Option value="Kho TP.HCM">Kho TP.HCM</Option>
-                <Option value="Kho Hà Nội">Kho Hà Nội</Option>
-                <Option value="Kho Đà Nẵng">Kho Đà Nẵng</Option>
-                <Option value="Kho Cần Thơ">Kho Cần Thơ</Option>
+              <Select placeholder="Chọn trạng thái" size="large">
+                {statusOptions.map((option) => (
+                  <Option key={option.value} value={option.value}>
+                    {option.label}
+                  </Option>
+                ))}
               </Select>
             </Form.Item>
           </Col>
 
-          {/* Giá gốc */}
-          <Col span={12}>
+          {/* Loại sản phẩm */}
+          <Col span={8}>
             <Form.Item
-              name="originalPrice"
-              label={
-                <span className="font-medium">
-                  <DollarOutlined className="mr-2 text-gray-400" />
-                  Giá gốc (VNĐ)
-                </span>
-              }
-              rules={[
-                { required: true, message: 'Vui lòng nhập giá gốc!' },
-                { type: 'number', min: 1000, message: 'Giá gốc phải lớn hơn 1,000 VNĐ!' }
-              ]}
+              name="type"
+              label={<span className="font-medium">Loại sản phẩm</span>}
+              rules={[{ required: true, message: 'Vui lòng chọn loại!' }]}
             >
-              <InputNumber
-                placeholder="500000"
-                size="large"
-                className="w-full"
-                formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                parser={value => value.replace(/\$\s?|(,*)/g, '')}
-              />
+              <Select placeholder="Chọn loại" size="large">
+                {typeOptions.map((option) => (
+                  <Option key={option.value} value={option.value}>
+                    {option.label}
+                  </Option>
+                ))}
+              </Select>
             </Form.Item>
           </Col>
 
@@ -373,7 +384,7 @@ const ProductEdit = ({ visible, onClose, onUpdate, product }) => {
               }
               rules={[
                 { required: true, message: 'Vui lòng nhập giá bán!' },
-                { type: 'number', min: 1000, message: 'Giá bán phải lớn hơn 1,000 VNĐ!' }
+                { type: 'number', min: 0, message: 'Giá bán phải >= 0!' }
               ]}
             >
               <InputNumber
@@ -382,61 +393,71 @@ const ProductEdit = ({ visible, onClose, onUpdate, product }) => {
                 className="w-full"
                 formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                 parser={value => value.replace(/\$\s?|(,*)/g, '')}
+                step={0.01}
               />
             </Form.Item>
           </Col>
 
-          {/* Tags */}
-          <Col span={24}>
+          {/* Eco Points */}
+          <Col span={12}>
             <Form.Item
-              name="tags"
-              label={<span className="font-medium">Tags (Nhấn Enter để thêm)</span>}
+              name="ecoPointValue"
+              label={<span className="font-medium">Eco Points</span>}
+              rules={[{ required: true, message: 'Vui lòng nhập Eco Points!' }]}
             >
-              <Select
-                mode="tags"
+              <InputNumber
+                placeholder="10"
                 size="large"
-                placeholder="Nhập tags và nhấn Enter"
-                style={{ width: '100%' }}
+                className="w-full"
+                min={0}
+                step={1}
               />
+            </Form.Item>
+          </Col>
+
+          {/* Donation Item Code */}
+          <Col span={12}>
+            <Form.Item
+              name="donationItemCode"
+              label={<span className="font-medium">Mã quyên góp</span>}
+              rules={[
+                { required: true, message: 'Vui lòng nhập mã quyên góp!' },
+                { min: 1, message: 'Mã quyên góp phải có ít nhất 1 ký tự!' }
+              ]}
+            >
+              <Input placeholder="Nhập mã quyên góp" size="large" />
             </Form.Item>
           </Col>
         </Row>
       </Form>
 
       {/* Statistics Info */}
-      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-        <Row gutter={16} className="text-xs">
-          <Col span={8}>
-            <div className="text-gray-600">
-              <span className="font-medium">Lượt xem:</span>{' '}
-              <span className="text-blue-600 font-bold">{product.views || 0}</span>
-            </div>
-          </Col>
-          <Col span={8}>
-            <div className="text-gray-600">
-              <span className="font-medium">Lượt thích:</span>{' '}
-              <span className="text-red-600 font-bold">{product.likes || 0}</span>
-            </div>
-          </Col>
-          <Col span={8}>
-            <div className="text-gray-600">
-              <span className="font-medium">Eco Points:</span>{' '}
-              <span className="text-yellow-600 font-bold">{product.ecoPoints || 0} EP</span>
-            </div>
-          </Col>
-        </Row>
-      </div>
-
-      {/* Last Updated Info */}
-      <div className="mt-2 p-3 bg-gray-50 rounded-lg">
-        <div className="text-xs text-gray-600">
-          <span className="font-medium">Cập nhật lần cuối:</span>{' '}
-          {new Date().toLocaleString('vi-VN')}
+      {product.views !== undefined && (
+        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+          <Row gutter={16} className="text-xs">
+            <Col span={8}>
+              <div className="text-gray-600">
+                <span className="font-medium">Lượt xem:</span>{' '}
+                <span className="text-blue-600 font-bold">{product.views || 0}</span>
+              </div>
+            </Col>
+            <Col span={8}>
+              <div className="text-gray-600">
+                <span className="font-medium">Eco Points:</span>{' '}
+                <span className="text-yellow-600 font-bold">{product.ecoPointValue || product.ecoPoints || 0} EP</span>
+              </div>
+            </Col>
+            <Col span={8}>
+              <div className="text-gray-600">
+                <span className="font-medium">Trạng thái:</span>{' '}
+                <span className="text-green-600 font-bold">{statusOptions.find(s => s.value === product.status)?.label || product.status}</span>
+              </div>
+            </Col>
+          </Row>
         </div>
-      </div>
+      )}
     </Modal>
   )
 }
 
 export default ProductEdit
-

@@ -5,7 +5,8 @@ import {
   Space,
   Tag,
   Image,
-  Popconfirm
+  Popconfirm,
+  Switch
 } from 'antd'
 import {
   EditOutlined,
@@ -20,7 +21,10 @@ const ProductTable = ({
   handleEdit,
   handleApprove,
   handleDelete,
-  conditionConfig
+  handleToggleStatus,
+  handleManageImages,
+  conditionConfig,
+  togglingProductId
 }) => {
   const columns = [
     {
@@ -100,6 +104,21 @@ const ProductTable = ({
       ),
     },
     {
+      title: 'Hoạt động',
+      key: 'active',
+      align: 'center',
+      width: 140,
+      render: (_, record) => (
+        <Switch
+          checked={record.status === 'available'}
+          onChange={() => handleToggleStatus?.(record)}
+          checkedChildren="Bật"
+          unCheckedChildren="Tắt"
+          loading={togglingProductId === record.id}
+        />
+      )
+    },
+    {
       title: 'Thao tác',
       key: 'action',
       render: (_, record) => (
@@ -122,6 +141,14 @@ const ProductTable = ({
               size="small"
             >
               Sửa
+            </Button>
+            <Button
+              type="text"
+              onClick={() => handleManageImages?.(record)}
+              className="text-purple-600 hover:text-purple-700"
+              size="small"
+            >
+              Ảnh
             </Button>
           </Space>
           <Space size="small">

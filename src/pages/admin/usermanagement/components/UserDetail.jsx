@@ -108,12 +108,20 @@ const UserDetail = ({ visible, onClose, user }) => {
       
       if (response.success && response.data) {
         // Map API data to component format
+        const normalizedGender =
+          typeof response.data.gender === 'string'
+            ? response.data.gender.trim().toLowerCase()
+            : 'other'
+        const genderValue = ['male', 'female', 'other'].includes(normalizedGender)
+          ? normalizedGender
+          : 'other'
+
         const mappedData = {
           id: response.data.id,
           name: response.data.fullName,
           email: response.data.email,
           phone: response.data.phoneNumber || 'Chưa có',
-          gender: response.data.gender || 'other',
+          gender: genderValue,
           dateOfBirth: response.data.dateOfBirth,
           address: 'Chưa cập nhật',
           joinDate: response.data.createdAt,
@@ -389,76 +397,6 @@ const UserDetail = ({ visible, onClose, user }) => {
               </Spin>
             </Card>
 
-            {/* Activity Statistics */}
-            <Card 
-              title={
-                <span className="text-base font-semibold text-gray-700">
-                  Hoạt động
-                </span>
-              }
-              className="mb-4 shadow-sm"
-              size="small"
-            >
-              <Row gutter={[16, 16]}>
-                <Col span={8}>
-                  <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <ShoppingCartOutlined className="text-3xl text-blue-500 mb-2" />
-                    <div className="text-2xl font-bold text-blue-600">
-                      {displayUser.totalOrders || 0}
-                    </div>
-                    <div className="text-xs text-gray-600 mt-1">Đơn hàng</div>
-                  </div>
-                </Col>
-                <Col span={8}>
-                  <div className="text-center p-3 bg-red-50 rounded-lg">
-                    <HeartOutlined className="text-3xl text-red-500 mb-2" />
-                    <div className="text-2xl font-bold text-red-600">
-                      {displayUser.donationCount || 0}
-                    </div>
-                    <div className="text-xs text-gray-600 mt-1">Quyên góp</div>
-                  </div>
-                </Col>
-                <Col span={8}>
-                  <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <GiftOutlined className="text-3xl text-green-500 mb-2" />
-                    <div className="text-2xl font-bold text-green-600">
-                      {displayUser.eventParticipation || 0}
-                    </div>
-                    <div className="text-xs text-gray-600 mt-1">Sự kiện</div>
-                  </div>
-                </Col>
-              </Row>
-            </Card>
-
-            {/* Financial Information */}
-            <Card 
-              title={
-                <span className="text-base font-semibold text-gray-700">
-                  Thông tin tài chính
-                </span>
-              }
-              className="shadow-sm"
-              size="small"
-            >
-              <Row gutter={[16, 16]}>
-                <Col span={12}>
-                  <div className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
-                    <div className="text-xs text-gray-600 mb-1">Tổng chi tiêu</div>
-                    <div className="text-xl font-bold text-green-600">
-                      {(displayUser.totalSpent || 0).toLocaleString('vi-VN')} VNĐ
-                    </div>
-                  </div>
-                </Col>
-                <Col span={12}>
-                  <div className="p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg">
-                    <div className="text-xs text-gray-600 mb-1">Thời gian tham gia</div>
-                    <div className="text-xl font-bold text-purple-600">
-                      {Math.floor((new Date() - new Date(displayUser.joinDate)) / (1000 * 60 * 60 * 24 * 30))} tháng
-                    </div>
-                  </div>
-                </Col>
-              </Row>
-            </Card>
           </>
         )}
       </Spin>

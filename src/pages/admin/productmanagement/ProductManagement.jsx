@@ -22,11 +22,46 @@ import ProductTable from './components/ProductTable'
 import ProductDetail from './components/ProductDetail'
 import ProductAdd from './components/ProductAdd'
 import ProductEdit from './components/ProductEdit'
-import { getProducts, getProductById } from '../../../service/api/productApi'
+import ProductImageManager from './components/ProductImageManager'
+import { getProducts, getProductById, toggleProductStatus } from '../../../service/api/productApi'
 
 const { Search } = Input
 const { Option } = Select
 const MotionDiv = motion.div
+
+const DEFAULT_PRODUCT_IMAGE = 'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400'
+
+const resolveImageUrls = (apiProduct = {}) => {
+  const urls = []
+  const pushUrl = (url) => {
+    if (!url || typeof url !== 'string') return
+    const trimmed = url.trim()
+    if (trimmed) urls.push(trimmed)
+  }
+
+  const candidateArrays = [
+    apiProduct.imageUrls,
+    apiProduct.thumbnailUrls,
+    apiProduct.thumbnails,
+    apiProduct.images
+  ]
+
+  candidateArrays.forEach(list => {
+    if (Array.isArray(list)) {
+      list.forEach(item => {
+        if (typeof item === 'string') pushUrl(item)
+        else if (item?.productAssetUrl) pushUrl(item.productAssetUrl)
+        else if (item?.url) pushUrl(item.url)
+        else if (item?.thumbnailUrl) pushUrl(item.thumbnailUrl)
+      })
+    }
+  })
+
+  pushUrl(apiProduct.imageUrl)
+  pushUrl(apiProduct.thumbnailUrl)
+
+  return urls.length > 0 ? urls : [DEFAULT_PRODUCT_IMAGE]
+}
 
 const ProductManagement = () => {
   const [productData, setProductData] = useState([])
@@ -39,7 +74,10 @@ const ProductManagement = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false)
   const [addModalVisible, setAddModalVisible] = useState(false)
   const [editModalVisible, setEditModalVisible] = useState(false)
+  const [imageModalVisible, setImageModalVisible] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
+  const [imageProduct, setImageProduct] = useState(null)
+  const [togglingProductId, setTogglingProductId] = useState(null)
 
   // Animation variants
   const fadeInUp = {
@@ -71,17 +109,19 @@ const ProductManagement = () => {
       description: apiProduct.description || '',
       category: apiProduct.categoryName || 'Chưa phân loại',
       condition: conditionMap[apiProduct.conditionGrade] || 'Tốt',
+      conditionGradeValue: apiProduct.conditionGrade,
       status: statusMap[apiProduct.status] || 'available',
+      statusValue: apiProduct.status,
       isApproved: apiProduct.status === 'AVAILABLE' || apiProduct.status === 'SOLD',
       price: apiProduct.price || 0,
-      images:
-        apiProduct.imageUrls && apiProduct.imageUrls.length > 0
-          ? apiProduct.imageUrls
-          : ['https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400'],
+      images: resolveImageUrls(apiProduct),
+      imageAssets: Array.isArray(apiProduct.imageUrls) ? apiProduct.imageUrls : [],
       ecoPoints: apiProduct.ecoPointValue || 0,
       categoryId: apiProduct.categoryId,
       type: apiProduct.type,
+      typeValue: apiProduct.type,
       donationItemId: apiProduct.donationItemId,
+      donationItemCode: apiProduct.donationItemCode,
       createdAt: apiProduct.createdAt,
       updatedAt: apiProduct.updatedAt
     }
@@ -177,48 +217,104 @@ const ProductManagement = () => {
     setAddModalVisible(true)
   }
 
-  const handleAddProduct = (newProduct) => {
-    const updatedData = [...productData, newProduct]
+  const handleAddProduct = (createdProduct) => {
+    if (!createdProduct) {
+      message.warning('Không nhận được dữ liệu sản phẩm mới từ API')
+      return
+    }
+    const mappedProduct = mapApiProductToComponent(createdProduct)
+    const updatedData = [...productData, mappedProduct]
     setProductData(updatedData)
     setFilteredData(updatedData)
     message.success("Thêm sản phẩm thành công!")
   }
 
-  const handleView = async (product) => {
+  const fetchProductDetail = async (product) => {
     try {
-      setLoading(true)
       const response = await getProductById(product.id)
 
       if (response.success && response.data) {
-        const mappedProduct = mapApiProductToComponent(response.data)
-        setSelectedProduct(mappedProduct)
-        setDetailModalVisible(true)
-      } else {
-        message.error(response.message || 'Không thể tải chi tiết sản phẩm')
-        setSelectedProduct(product)
-        setDetailModalVisible(true)
+        return mapApiProductToComponent(response.data)
       }
+      message.error(response.message || 'Không thể tải chi tiết sản phẩm')
+      return product
     } catch (error) {
       console.error('Error fetching product detail:', error)
       message.error(error.message || 'Có lỗi xảy ra khi tải chi tiết sản phẩm')
-      setSelectedProduct(product)
+      return product
+    }
+  }
+
+  const handleView = async (product) => {
+    try {
+      setLoading(true)
+      const mappedProduct = await fetchProductDetail(product)
+      setSelectedProduct(mappedProduct)
       setDetailModalVisible(true)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleEdit = (product) => {
-    setSelectedProduct(product)
-    setEditModalVisible(true)
+  const handleManageImages = (product) => {
+    setImageProduct(product)
+    setImageModalVisible(true)
+  }
+
+  const handleImagesUpdated = (productId, images) => {
+    if (!productId || !Array.isArray(images)) return
+    const updatedData = productData.map(prod =>
+      prod.id === productId ? { ...prod, images } : prod
+    )
+    setProductData(updatedData)
+    setFilteredData(prev =>
+      prev.map(prod => (prod.id === productId ? { ...prod, images } : prod))
+    )
+    setImageProduct(prev =>
+      prev && prev.id === productId ? { ...prev, images } : prev
+    )
+  }
+
+  const handleAssetsUpdated = (productId, assets) => {
+    if (!productId || !Array.isArray(assets)) return
+    const updatedData = productData.map(prod =>
+      prod.id === productId ? { ...prod, imageAssets: assets } : prod
+    )
+    setProductData(updatedData)
+    setFilteredData(prev =>
+      prev.map(prod => (prod.id === productId ? { ...prod, imageAssets: assets } : prod))
+    )
+    setImageProduct(prev =>
+      prev && prev.id === productId ? { ...prev, imageAssets: assets } : prev
+    )
+  }
+
+  const handleEdit = async (product) => {
+    try {
+      setLoading(true)
+      const mappedProduct = await fetchProductDetail(product)
+      setSelectedProduct(mappedProduct)
+      setEditModalVisible(true)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleUpdateProduct = (updatedProduct) => {
+    if (!updatedProduct) {
+      message.error('Không nhận được dữ liệu sản phẩm sau khi cập nhật')
+      return
+    }
+    // Nếu API trả content mới, ưu tiên map nội dung đó; ngược lại dùng data cũ nhất đang mở
+    const normalized = updatedProduct?.data ?? updatedProduct
+    const mapped = mapApiProductToComponent(normalized)
     const updatedData = productData.map(product =>
-      product.id === updatedProduct.id ? updatedProduct : product
+      product.id === mapped.id ? mapped : product
     )
     setProductData(updatedData)
-    filterData(searchText, filterCategory, filterStatus, filterCondition)
+    setFilteredData(prev =>
+      prev.map(product => (product.id === mapped.id ? mapped : product))
+    )
     message.success("Cập nhật sản phẩm thành công!")
   }
 
@@ -242,6 +338,32 @@ const ProductManagement = () => {
     setProductData(newData)
     filterData(searchText, filterCategory, filterStatus, filterCondition)
     message.success('Xóa sản phẩm thành công!')
+  }
+
+  const handleToggleStatus = async (product) => {
+    if (!product?.id) return
+    try {
+      setTogglingProductId(product.id)
+      const response = await toggleProductStatus(product.id)
+      const body = response?.data ?? response ?? {}
+      const updatedStatus = product.status === 'available' ? 'unavailable' : 'available'
+      const updatedStatusValue = product.statusValue === 'AVAILABLE' ? 'UNAVAILABLE' : 'AVAILABLE'
+      const updatedData = productData.map(p =>
+        p.id === product.id ? { ...p, status: updatedStatus, statusValue: updatedStatusValue } : p
+      )
+      setProductData(updatedData)
+      const updatedFiltered = filteredData.map(p =>
+        p.id === product.id ? { ...p, status: updatedStatus, statusValue: updatedStatusValue } : p
+      )
+      setFilteredData(updatedFiltered)
+      message.success(body.message || 'Đã cập nhật trạng thái sản phẩm!')
+    } catch (error) {
+      console.error('Toggle status failed:', error)
+      const errMsg = error?.response?.data?.message || error?.message
+      message.error(errMsg || 'Không thể đổi trạng thái sản phẩm!')
+    } finally {
+      setTogglingProductId(null)
+    }
   }
 
   const handleCloseDetail = () => {
@@ -391,6 +513,9 @@ const ProductManagement = () => {
             handleEdit={handleEdit}
             handleApprove={handleApprove}
             handleDelete={handleDelete}
+            handleManageImages={handleManageImages}
+            handleToggleStatus={handleToggleStatus}
+            togglingProductId={togglingProductId}
             conditionConfig={conditionConfig}
           />
         </Spin>
@@ -416,6 +541,17 @@ const ProductManagement = () => {
         onClose={handleCloseEdit}
         onUpdate={handleUpdateProduct}
         product={selectedProduct}
+      />
+
+      <ProductImageManager
+        visible={imageModalVisible}
+        onClose={() => {
+          setImageModalVisible(false)
+          setImageProduct(null)
+        }}
+        product={imageProduct}
+        onImagesUpdated={handleImagesUpdated}
+        onAssetsUpdated={handleAssetsUpdated}
       />
 
     </MotionDiv>

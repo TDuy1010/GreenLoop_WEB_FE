@@ -6,12 +6,14 @@ import {
   Row,
   Col,
   Card,
-  Image,
   Skeleton,
   Table,
   Space,
   Empty,
-  Button
+  Button,
+  Image,
+  DatePicker,
+  message
 } from 'antd'
 import {
   CheckCircleOutlined,
@@ -23,8 +25,12 @@ import {
   TeamOutlined
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
-import { getEventById, getEventStaffs, getEventRegistrations } from '../../../../service/api/eventApi'
+import { getEventById, getEventStaffs, getEventRegistrations, getEventDonations, getDonationById } from '../../../../service/api/eventApi'
+import { getProductsAssignableToEvent, assignProductsToEvent, removeProductsFromEvent } from '../../../../service/api/productApi'
 import EventStaffEditor from './EventStaffEditor'
+import DonationListModal from './DonationListModal'
+import DonationDetailModal from './DonationDetailModal'
+import EventProductListModal from './EventProductListModal'
 import Vietmap from '../../../../components/Vietmap'
 import heroImg from '../../../../assets/images/herosection.jpg'
 
@@ -38,6 +44,49 @@ const EventDetail = ({ visible, onClose, event }) => {
   const [regsModalOpen, setRegsModalOpen] = useState(false)
   const [staffsModalOpen, setStaffsModalOpen] = useState(false)
   const [assignModalOpen, setAssignModalOpen] = useState(false)
+  const [donations, setDonations] = useState([])
+  const [loadingDonations, setLoadingDonations] = useState(false)
+  const [assignedProducts, setAssignedProducts] = useState([])
+  const [loadingProducts, setLoadingProducts] = useState(false)
+  const [productModalOpen, setProductModalOpen] = useState(false)
+  const [assignProductModalOpen, setAssignProductModalOpen] = useState(false)
+  const [productsAssignable, setProductsAssignable] = useState([])
+  const [selectedProductIds, setSelectedProductIds] = useState([])
+  const [assigning, setAssigning] = useState(false)
+  const [displayRange, setDisplayRange] = useState([])
+  const [removingProductId, setRemovingProductId] = useState(null)
+  const [selectedAssignedMappings, setSelectedAssignedMappings] = useState([])
+  const [bulkRemoving, setBulkRemoving] = useState(false)
+  const [donationsModalOpen, setDonationsModalOpen] = useState(false)
+  const [donationDetail, setDonationDetail] = useState(null)
+  const [loadingDonationDetail, setLoadingDonationDetail] = useState(false)
+  const [donationDetailModalOpen, setDonationDetailModalOpen] = useState(false)
+  const handleOpenDonationDetail = async (donationId) => {
+    if (!donationId) return
+    try {
+      setLoadingDonationDetail(true)
+      const res = await getDonationById(donationId)
+      const data = res?.data?.data || res?.data
+      if (data) {
+        setDonationDetail({
+          id: data.id,
+          code: data.code,
+          totalItems: data.totalItems ?? 0,
+          totalWeight: data.totalWeight ?? 0,
+          totalEcoPoints: data.totalEcoPoints ?? 0,
+          inspectedBy: data.inspectedBy,
+          inspectedName: data.inspectedName,
+          userId: data.userId,
+          donationItems: Array.isArray(data.donationItems) ? data.donationItems : []
+        })
+      }
+    } catch (err) {
+      console.error('Error loading donation detail:', err)
+      setDonationDetail(null)
+    } finally {
+      setLoadingDonationDetail(false)
+    }
+  }
 
   // Load danh sách nhân viên đã được assign
   const loadAssignedStaffs = useCallback(async () => {
@@ -90,6 +139,216 @@ const EventDetail = ({ visible, onClose, event }) => {
       setLoadingRegs(false)
     }
   }, [event?.id, visible])
+
+  const loadDonations = useCallback(async () => {
+    if (!event?.id || !visible) return
+    try {
+      setLoadingDonations(true)
+      const res = await getEventDonations(event.id)
+      const list = res?.data?.data || res?.data || (Array.isArray(res) ? res : [])
+      const mapped = (Array.isArray(list) ? list : []).map((donation, idx) => ({
+        key: donation.id || idx,
+        id: donation.id,
+        code: donation.code,
+        totalItems: donation.totalItems ?? 0,
+        totalWeight: donation.totalWeight ?? 0,
+        totalEcoPoints: donation.totalEcoPoints ?? 0
+      }))
+      setDonations(mapped)
+    } catch (err) {
+      console.error('Error loading donations:', err)
+      setDonations([])
+    } finally {
+      setLoadingDonations(false)
+    }
+  }, [event?.id, visible])
+
+  const loadAssignedProducts = useCallback(async () => {
+    if (!event?.id || !visible) return
+    try {
+      setLoadingProducts(true)
+      const res = await getProductsAssignableToEvent(event.id)
+      const list = res?.data?.data || res?.data || (Array.isArray(res) ? res : [])
+      const mapped = (Array.isArray(list) ? list : []).map((product, idx) => {
+        const mappingId =
+          product.eventProductMappingId ||
+          product.eventMappingId ||
+          product.productEventMappingId ||
+          product.mappingId ||
+          product.id
+
+        return {
+          ...product,
+          key: mappingId || product.id || idx,
+          id: product.id,
+          eventMappingId: mappingId,
+          code: product.code,
+          name: product.name,
+          category: product.categoryName,
+          type: product.type,
+          status: (product.status || '').toUpperCase(),
+          ecoPoints: product.ecoPointValue ?? product.ecoPoints ?? 0,
+          displayFrom: product.displayFrom,
+          displayTo: product.displayTo
+        }
+      })
+      setAssignedProducts(mapped)
+      setSelectedAssignedMappings((prev) =>
+        prev.filter((id) => mapped.some((item) => item.eventMappingId === id))
+      )
+    } catch (err) {
+      console.error('Error loading assigned products:', err)
+      setAssignedProducts([])
+    } finally {
+      setLoadingProducts(false)
+    }
+  }, [event?.id, visible])
+
+  const openProductModal = () => {
+    setProductModalOpen(true)
+    setSelectedAssignedMappings([])
+  }
+
+  const computeDefaultDisplayRange = useCallback(() => {
+    const baseSource = detail?.date || event?.startTime || detail?.startDate
+    let base = dayjs(baseSource)
+    if (!base.isValid()) {
+      base = dayjs()
+    }
+
+    const parseTime = (timeText) => {
+      if (!timeText || typeof timeText !== 'string') return null
+      const match = timeText.match(/(\d{1,2}):(\d{2})/)
+      if (!match) return null
+      const hours = Number(match[1])
+      const minutes = Number(match[2])
+      if (Number.isNaN(hours) || Number.isNaN(minutes)) return null
+      return { hours, minutes }
+    }
+
+    const startTimeInfo = parseTime(detail?.startTime)
+    const endTimeInfo = parseTime(detail?.endTime)
+
+    let start = base.clone()
+    if (startTimeInfo) {
+      start = start.hour(startTimeInfo.hours).minute(startTimeInfo.minutes)
+    } else if (event?.startTime && dayjs(event.startTime).isValid()) {
+      start = dayjs(event.startTime)
+    } else {
+      start = start.startOf('day').hour(7).minute(0)
+    }
+
+    let end = base.clone()
+    if (endTimeInfo) {
+      end = end.hour(endTimeInfo.hours).minute(endTimeInfo.minutes)
+    } else if (event?.endTime && dayjs(event.endTime).isValid()) {
+      end = dayjs(event.endTime)
+    } else {
+      end = start.clone().add(8, 'hour')
+    }
+
+    if (!end.isAfter(start)) {
+      end = start.clone().add(8, 'hour')
+    }
+
+    return [start, end]
+  }, [event?.startTime, event?.endTime, detail?.date, detail?.startTime, detail?.endTime, detail?.startDate])
+
+  const openAssignModal = async () => {
+    try {
+      setLoadingProducts(true)
+      const res = await getProductsAssignableToEvent(event.id)
+      const list = res?.data?.data || res?.data || (Array.isArray(res) ? res : [])
+      const mapped = (Array.isArray(list) ? list : []).map((product, idx) => ({
+        key: product.id || idx,
+        id: product.id,
+        code: product.code,
+        name: product.name,
+        categoryName: product.categoryName,
+        type: (product.type || '').toUpperCase(),
+        status: (product.status || '').toUpperCase(),
+        ecoPointValue: product.ecoPointValue ?? 0
+      }))
+      setProductsAssignable(mapped)
+      setAssignProductModalOpen(true)
+      setSelectedProductIds([])
+      setDisplayRange(computeDefaultDisplayRange())
+    } catch (err) {
+      console.error('Error loading products for assign:', err)
+      message.error('Không tải được danh sách sản phẩm')
+    } finally {
+      setLoadingProducts(false)
+    }
+  }
+
+  const handleAssignProducts = async () => {
+    if (!event?.id) return
+    if (selectedProductIds.length === 0) {
+      message.warning('Vui lòng chọn ít nhất một sản phẩm')
+      return
+    }
+    if (!displayRange || displayRange.length !== 2) {
+      message.warning('Vui lòng chọn thời gian hiển thị')
+      return
+    }
+    try {
+      setAssigning(true)
+      const payload = {
+        eventId: event.id,
+        productIds: selectedProductIds,
+        displayFrom: displayRange[0]?.toISOString(),
+        displayTo: displayRange[1]?.toISOString()
+      }
+      const res = await assignProductsToEvent(payload)
+      message.success(res?.message || 'Gán sản phẩm thành công!')
+      setAssignProductModalOpen(false)
+      await loadAssignedProducts()
+    } catch (err) {
+      console.error('Assign products error:', err)
+      message.error(err?.response?.data?.message || 'Không thể gán sản phẩm, vui lòng thử lại.')
+    } finally {
+      setAssigning(false)
+    }
+  }
+
+  const handleRemoveProductFromEvent = async (product) => {
+    const mappingId = product?.eventMappingId || product?.id
+    if (!mappingId) {
+      message.error('Không xác định được sản phẩm cần gỡ.')
+      return
+    }
+    try {
+      setRemovingProductId(mappingId)
+      await removeProductsFromEvent([mappingId])
+      message.success('Đã bỏ sản phẩm khỏi sự kiện.')
+      await loadAssignedProducts()
+      setSelectedAssignedMappings((prev) => prev.filter((id) => id !== mappingId))
+    } catch (err) {
+      console.error('Remove product from event error:', err)
+      message.error(err?.response?.data?.message || 'Không thể bỏ sản phẩm, vui lòng thử lại.')
+    } finally {
+      setRemovingProductId(null)
+    }
+  }
+
+  const handleBulkRemoveProducts = async () => {
+    if (selectedAssignedMappings.length === 0) {
+      message.warning('Vui lòng chọn sản phẩm cần gỡ.')
+      return
+    }
+    try {
+      setBulkRemoving(true)
+      await removeProductsFromEvent(selectedAssignedMappings)
+      message.success(`Đã bỏ ${selectedAssignedMappings.length} sản phẩm khỏi sự kiện.`)
+      setSelectedAssignedMappings([])
+      await loadAssignedProducts()
+    } catch (err) {
+      console.error('Bulk remove products error:', err)
+      message.error(err?.response?.data?.message || 'Không thể bỏ các sản phẩm, vui lòng thử lại.')
+    } finally {
+      setBulkRemoving(false)
+    }
+  }
 
   useEffect(() => {
     const loadDetail = async () => {
@@ -182,7 +441,9 @@ const EventDetail = ({ visible, onClose, event }) => {
     loadDetail()
     loadAssignedStaffs()
     loadRegistrations()
-  }, [event?.id, visible, loadAssignedStaffs, loadRegistrations])
+    loadDonations()
+    loadAssignedProducts()
+  }, [event?.id, visible, loadAssignedStaffs, loadRegistrations, loadDonations, loadAssignedProducts])
 
   useEffect(() => {
     if (!visible) {
@@ -190,6 +451,8 @@ const EventDetail = ({ visible, onClose, event }) => {
       setLoading(false)
       setAssignedStaffs([])
       setLoadingStaffs(false)
+      setDonations([])
+      setLoadingDonations(false)
     }
   }, [visible])
 
@@ -330,6 +593,15 @@ const EventDetail = ({ visible, onClose, event }) => {
               </Button>
             </div>
           </Col>
+          <Col span={12}>
+            <div className="text-xs text-gray-500">Tổng đơn donation</div>
+            <div className="flex items-center gap-2">
+              <div className="text-sm font-medium text-gray-900">{donations.length}</div>
+              <Button type="link" size="small" onClick={() => { setDonationsModalOpen(true); loadDonations(); }}>
+                Xem danh sách
+              </Button>
+            </div>
+          </Col>
           <Col span={24}>
             <div className="flex items-start gap-3">
               <EnvironmentOutlined className="text-red-500 text-lg mt-1" />
@@ -347,6 +619,36 @@ const EventDetail = ({ visible, onClose, event }) => {
             </div>
           </Col>
         </Row>
+        </Skeleton>
+      </Card>
+
+      <Card
+        title={
+          <div className="flex items-center justify-between">
+            <span className="text-base font-semibold text-gray-700">
+              Sản phẩm trong sự kiện
+            </span>
+            <div className="flex gap-2">
+              <Button type="primary" onClick={openAssignModal} className="bg-green-600">
+                Gán sản phẩm
+              </Button>
+              <Button onClick={openProductModal} disabled={assignedProducts.length === 0}>
+                Xem danh sách
+              </Button>
+            </div>
+          </div>
+        }
+        className="mb-4 shadow-sm"
+        size="small"
+      >
+        <Skeleton loading={loadingProducts} active>
+          {assignedProducts.length === 0 ? (
+            <Empty description="Chưa có sản phẩm nào" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          ) : (
+            <div className="text-sm text-gray-600">
+              Đã gán {assignedProducts.length} sản phẩm. Nhấn “Xem danh sách” để xem chi tiết.
+            </div>
+          )}
         </Skeleton>
       </Card>
 
@@ -413,6 +715,17 @@ const EventDetail = ({ visible, onClose, event }) => {
         )}
       </Modal>
 
+      <DonationListModal
+        visible={donationsModalOpen}
+        loading={loadingDonations}
+        donations={donations}
+        onClose={() => setDonationsModalOpen(false)}
+        onViewDetail={async (donationId) => {
+          await handleOpenDonationDetail(donationId)
+          setDonationDetailModalOpen(true)
+        }}
+      />
+
       {/* Modal chỉnh sửa phân công nhân viên */}
       <EventStaffEditor
         visible={assignModalOpen}
@@ -468,6 +781,111 @@ const EventDetail = ({ visible, onClose, event }) => {
             ]}
           />
         )}
+      </Modal>
+
+      <DonationDetailModal
+        visible={donationDetailModalOpen}
+        loading={loadingDonationDetail}
+        donation={donationDetail}
+        onClose={() => {
+          setDonationDetailModalOpen(false)
+          setDonationDetail(null)
+        }}
+      />
+
+      <EventProductListModal
+        open={productModalOpen}
+        loading={loadingProducts}
+        products={assignedProducts}
+        removingProductId={removingProductId}
+        onRemoveProduct={handleRemoveProductFromEvent}
+        selectedRowKeys={selectedAssignedMappings}
+        onSelectionChange={setSelectedAssignedMappings}
+        onBulkRemove={handleBulkRemoveProducts}
+        bulkRemoving={bulkRemoving}
+        onClose={() => {
+          setProductModalOpen(false)
+          setSelectedAssignedMappings([])
+        }}
+      />
+
+      {/* Modal gán sản phẩm vào sự kiện */}
+      <Modal
+        title="Gán sản phẩm vào sự kiện"
+        open={assignProductModalOpen}
+        onCancel={() => setAssignProductModalOpen(false)}
+        onOk={handleAssignProducts}
+        confirmLoading={assigning}
+        width={800}
+        okText="Gán sản phẩm"
+        cancelText="Hủy"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Chọn thời gian hiển thị
+            </label>
+            <DatePicker.RangePicker
+              style={{ width: '100%' }}
+              showTime
+              format="DD/MM/YYYY HH:mm"
+              value={displayRange}
+              onChange={(dates) => setDisplayRange(dates || [])}
+              placeholder={['Từ ngày', 'Đến ngày']}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Chọn sản phẩm ({selectedProductIds.length} đã chọn)
+            </label>
+            <Table
+              size="small"
+              dataSource={productsAssignable}
+              rowKey="id"
+              loading={loadingProducts}
+              pagination={{ pageSize: 10 }}
+              rowSelection={{
+                type: 'checkbox',
+                selectedRowKeys: selectedProductIds,
+                onChange: (selectedKeys) => setSelectedProductIds(selectedKeys),
+              }}
+              columns={[
+                {
+                  title: 'Sản phẩm',
+                  dataIndex: 'name',
+                  key: 'name',
+                  render: (text, record) => (
+                    <div>
+                      <div className="font-medium text-gray-900">{text}</div>
+                      <div className="text-xs text-gray-500">Mã: {record.code}</div>
+                    </div>
+                  )
+                },
+                { title: 'Danh mục', dataIndex: 'categoryName', key: 'categoryName' },
+                {
+                  title: 'Loại',
+                  dataIndex: 'type',
+                  key: 'type',
+                  render: (value) => (
+                    <Tag color={value === 'CHARITY' ? 'green' : 'blue'}>
+                      {value === 'CHARITY' ? 'Quyên góp' : 'Mua bán'}
+                    </Tag>
+                  )
+                },
+                {
+                  title: 'Trạng thái',
+                  dataIndex: 'status',
+                  key: 'status',
+                  render: (status) => {
+                    const color = status === 'AVAILABLE' ? 'green' : 'orange'
+                    return <Tag color={color}>{status || 'N/A'}</Tag>
+                  }
+                },
+                { title: 'Eco Points', dataIndex: 'ecoPointValue', key: 'ecoPointValue', align: 'right' }
+              ]}
+            />
+          </div>
+        </div>
       </Modal>
 
       {/* System Meta */}

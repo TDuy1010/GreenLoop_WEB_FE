@@ -211,7 +211,8 @@ const PaymentPage = () => {
     const payload = {
       shippingAddress: buildShippingAddressPayload(selectedAddress),
       paymentMethod: selectedPaymentMethod,
-      selectedRateId: selectedShippingOption.rateId
+      selectedRateId: selectedShippingOption.rateId,
+      platform: 'web'
     }
 
     setProcessing(true)
