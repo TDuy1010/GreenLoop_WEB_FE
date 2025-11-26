@@ -1,20 +1,35 @@
 import React from 'react';
-import { Table, Tag, Button, Space, Tooltip, Typography, Image, Popconfirm } from 'antd';
+import { Table, Tag, Button, Space, Tooltip, Typography, Image } from 'antd';
 import { 
   EyeOutlined, 
   EditOutlined, 
-  DeleteOutlined, 
   CheckCircleOutlined, 
   CloseCircleOutlined,
   TruckOutlined,
-  PrinterOutlined,
-  PhoneOutlined
+  PhoneOutlined,
+  SyncOutlined,
+  SolutionOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
 const { Text } = Typography;
 
-const OrderTable = ({ data, loading, handleView, handleEdit, handleDelete, pagination, onChange }) => {
+const OrderTable = ({
+  data,
+  loading,
+  handleView,
+  handleEdit,
+  pagination,
+  onChange,
+  onConfirmOrder,
+  confirmingOrderId,
+  onProcessOrder,
+  processingOrderId,
+  onShipOrder,
+  shippingOrderId,
+  onCancelOrder,
+  cancellingOrderId
+}) => {
   const handleCall = (record) => {
     if (typeof window === 'undefined' || !record?.customerPhone) return;
     window.open(`tel:${record.customerPhone}`);
@@ -22,14 +37,6 @@ const OrderTable = ({ data, loading, handleView, handleEdit, handleDelete, pagin
 
   const handlePrint = (record) => {
     console.info('Printing order', record?.orderNumber);
-  };
-
-  const handleConfirm = (record) => {
-    console.info('Confirm order', record?.orderNumber);
-  };
-
-  const handleShip = (record) => {
-    console.info('Ship order', record?.orderNumber);
   };
 
   const handleCancel = (record) => {
@@ -317,26 +324,6 @@ const OrderTable = ({ data, loading, handleView, handleEdit, handleDelete, pagin
             />
           </Tooltip>
           
-          <Tooltip title="Gọi khách hàng">
-            <Button 
-              type="text" 
-              icon={<PhoneOutlined />} 
-              size="small"
-              className="text-blue-600 hover:text-blue-700"
-              onClick={() => handleCall(record)}
-            />
-          </Tooltip>
-
-          <Tooltip title="In đơn hàng">
-            <Button 
-              type="text" 
-              icon={<PrinterOutlined />} 
-              size="small"
-              className="text-purple-600 hover:text-purple-700"
-              onClick={() => handlePrint(record)}
-            />
-          </Tooltip>
-          
           {record.orderStatus === 'pending' && (
             <Tooltip title="Xác nhận đơn">
               <Button 
@@ -344,40 +331,65 @@ const OrderTable = ({ data, loading, handleView, handleEdit, handleDelete, pagin
                 icon={<CheckCircleOutlined />} 
                 size="small"
                 className="text-green-600 hover:text-green-700"
-                onClick={() => handleConfirm(record)}
+                onClick={() => onConfirmOrder?.(record)}
+                loading={confirmingOrderId === record.id}
+                disabled={confirmingOrderId && confirmingOrderId !== record.id}
+              />
+            </Tooltip>
+          )}
+
+          {record.orderStatus === 'confirmed' && (
+            <Tooltip title="Chuyển sang xử lý">
+              <Button
+                type="text"
+                icon={<SyncOutlined />}
+                size="small"
+                className="text-purple-600 hover:text-purple-700"
+                onClick={() => onProcessOrder?.(record)}
+                loading={processingOrderId === record.id}
+                disabled={processingOrderId && processingOrderId !== record.id}
               />
             </Tooltip>
           )}
           
-          {(record.orderStatus === 'confirmed' || record.orderStatus === 'processing') && (
+          {record.orderStatus === 'processing' && (
             <Tooltip title="Giao hàng">
               <Button 
                 type="text" 
                 icon={<TruckOutlined />} 
                 size="small"
                 className="text-cyan-600 hover:text-cyan-700"
-                onClick={() => handleShip(record)}
+                onClick={() => onShipOrder?.(record)}
+                loading={shippingOrderId === record.id}
+                disabled={shippingOrderId && shippingOrderId !== record.id}
+              />
+            </Tooltip>
+          )}
+
+          {record.orderStatus === 'ready_to_ship' && (
+            <Tooltip title="Đã sẵn sàng giao, xem vận đơn">
+              <Button 
+                type="text" 
+                icon={<SolutionOutlined />} 
+                size="small"
+                className="text-blue-600 hover:text-blue-700"
+                onClick={() => handleView(record)}
               />
             </Tooltip>
           )}
           
-          {record.orderStatus !== 'delivered' && record.orderStatus !== 'cancelled' && (
+          {['pending', 'confirmed'].includes(record.orderStatus) && (
             <Tooltip title="Hủy đơn">
-              <Popconfirm
-                title="Hủy đơn hàng"
-                description="Bạn có chắc chắn muốn hủy đơn hàng này?"
-                onConfirm={() => handleCancel(record)}
-                okText="Hủy đơn"
-                cancelText="Không"
-                okButtonProps={{ danger: true }}
-              >
-                <Button 
-                  type="text" 
-                  icon={<CloseCircleOutlined />} 
-                  size="small"
-                  danger
-                />
-              </Popconfirm>
+              <Button 
+                type="text" 
+                icon={<CloseCircleOutlined />} 
+                size="small"
+                danger
+                className="hover:text-rose-600"
+                onClick={() => onCancelOrder?.(record)}
+                loading={cancellingOrderId === record.id}
+                disabled={cancellingOrderId && cancellingOrderId !== record.id}
+              />
             </Tooltip>
           )}
           
@@ -388,24 +400,6 @@ const OrderTable = ({ data, loading, handleView, handleEdit, handleDelete, pagin
               size="small"
               onClick={() => handleEdit(record)}
             />
-          </Tooltip>
-          
-          <Tooltip title="Xóa">
-            <Popconfirm
-              title="Xóa đơn hàng"
-              description="Bạn có chắc chắn muốn xóa đơn hàng này?"
-              onConfirm={() => handleDelete(record.id)}
-              okText="Xóa"
-              cancelText="Hủy"
-              okButtonProps={{ danger: true }}
-            >
-              <Button 
-                type="text" 
-                icon={<DeleteOutlined />} 
-                size="small"
-                danger
-              />
-            </Popconfirm>
           </Tooltip>
         </Space>
       ),

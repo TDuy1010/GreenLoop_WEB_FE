@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Spin, Image, Timeline } from 'antd'
-import { getMyOrderDetail, getOrderHistory } from '../../../../service/api/orderApi'
+import { motion as Motion } from 'framer-motion'
+import { Spin, Image, Timeline, message } from 'antd'
+import { getMyOrderDetail, getOrderHistory, cancelMyOrder } from '../../../../service/api/orderApi'
 
 const statusConfig = {
   PENDING: { label: 'Đang xử lý', className: 'bg-amber-100 text-amber-700' },
@@ -37,6 +37,10 @@ const OrdersTab = ({ orders = [], loading, error, onReload, pagination }) => {
   const [historyData, setHistoryData] = useState([])
   const [historyLoading, setHistoryLoading] = useState(false)
   const [historyError, setHistoryError] = useState(null)
+  const [cancelReason, setCancelReason] = useState('')
+  const [cancelLoading, setCancelLoading] = useState(false)
+  const [cancelError, setCancelError] = useState(null)
+  const [cancelModalVisible, setCancelModalVisible] = useState(false)
 
   const formatDateTime = (value) =>
     value ? new Date(value).toLocaleString('vi-VN') : '-'
@@ -67,6 +71,7 @@ const OrdersTab = ({ orders = [], loading, error, onReload, pagination }) => {
     setDetailError(null)
     setHistoryData([])
     setHistoryError(null)
+    setCancelError(null)
     try {
       const response = await getMyOrderDetail(orderId)
       const payload = response?.data ?? response ?? {}
@@ -111,6 +116,41 @@ const OrdersTab = ({ orders = [], loading, error, onReload, pagination }) => {
     setHistoryData([])
     setHistoryError(null)
     setHistoryLoading(false)
+    setCancelReason('')
+    setCancelError(null)
+    setCancelModalVisible(false)
+  }
+
+  const openCancelModal = () => {
+    setCancelError(null)
+    setCancelModalVisible(true)
+  }
+
+  const closeCancelModal = () => {
+    if (cancelLoading) return
+    setCancelModalVisible(false)
+    setCancelReason('')
+    setCancelError(null)
+  }
+
+  const handleCancelOrder = async () => {
+    if (!detailOrderId || cancelLoading) return
+    setCancelLoading(true)
+    setCancelError(null)
+    try {
+      await cancelMyOrder(detailOrderId, cancelReason.trim())
+      message.success('Đã gửi yêu cầu hủy đơn hàng.')
+      setCancelReason('')
+      setCancelModalVisible(false)
+      await handleViewDetail(detailOrderId)
+      onReload?.()
+    } catch (err) {
+      const errMsg = err?.response?.data?.message || err?.message || 'Không thể hủy đơn hàng.'
+      setCancelError(errMsg)
+      message.error(errMsg)
+    } finally {
+      setCancelLoading(false)
+    }
   }
 
   const renderContent = () => {
@@ -160,7 +200,7 @@ const OrdersTab = ({ orders = [], loading, error, onReload, pagination }) => {
             ? order.orderItems.reduce((sum, item) => sum + (item.quantity || 0), 0)
             : 0
           return (
-            <motion.div
+            <Motion.div
               key={order.orderId || order.orderCode || index}
               className="border border-gray-200 rounded-xl p-6 hover:shadow-lg transition"
               initial={{ opacity: 0, x: -20 }}
@@ -198,7 +238,7 @@ const OrdersTab = ({ orders = [], loading, error, onReload, pagination }) => {
                 <div className="text-left md:text-right">
                   <p className="text-2xl font-bold text-green-600 mb-1">{formatCurrency(order.totalPrice)}</p>
                   <p className="text-sm text-gray-500 mb-3">Đã gồm phí ship: {formatCurrency(order.shippingFee)}</p>
-                  <motion.button
+                  <Motion.button
                     type="button"
                     className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition"
                     whileHover={{ scale: 1.03 }}
@@ -206,10 +246,10 @@ const OrdersTab = ({ orders = [], loading, error, onReload, pagination }) => {
                     onClick={() => handleViewDetail(order.orderId)}
                   >
                     Xem chi tiết
-                  </motion.button>
+                  </Motion.button>
                 </div>
               </div>
-            </motion.div>
+            </Motion.div>
           )
         })}
       </div>
@@ -217,7 +257,7 @@ const OrdersTab = ({ orders = [], loading, error, onReload, pagination }) => {
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+    <Motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Lịch sử đơn hàng</h2>
         {pagination?.total ? (
@@ -228,8 +268,14 @@ const OrdersTab = ({ orders = [], loading, error, onReload, pagination }) => {
       </div>
       {renderContent()}
       {detailVisible && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6 relative">
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-4"
+          onMouseDown={closeDetailModal}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6 relative"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
             <button
               type="button"
               className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
@@ -261,9 +307,16 @@ const OrdersTab = ({ orders = [], loading, error, onReload, pagination }) => {
                   <h3 className="text-3xl font-bold text-gray-900">
                     #{detailData.orderCode || detailData.orderId}
                   </h3>
-                  <p className="text-gray-500">
-                    Tạo lúc: {detailData.createdAt ? new Date(detailData.createdAt).toLocaleString('vi-VN') : '—'}
-                  </p>
+                  {detailData.orderStatus === 'CANCELLED' && (
+                    <div className="mt-3">
+                      <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-700 text-xs font-semibold px-3 py-1 rounded-full">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636L5.636 18.364M5.636 5.636l12.728 12.728" />
+                        </svg>
+                        ĐÃ HỦY
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
@@ -296,6 +349,24 @@ const OrdersTab = ({ orders = [], loading, error, onReload, pagination }) => {
                     </p>
                   </div>
                 </div>
+
+                {detailData.orderStatus === 'PENDING' && (
+                  <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 space-y-2">
+                    <h4 className="text-lg font-semibold text-rose-800">Hủy đơn hàng</h4>
+                    <p className="text-sm text-rose-600">
+                      Bạn chỉ có thể hủy khi đơn hàng đang chờ xử lý. Sau khi hủy, trạng thái sẽ cập nhật ngay.
+                    </p>
+                    <Motion.button
+                      type="button"
+                      className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg text-sm transition"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={openCancelModal}
+                    >
+                      Xác nhận hủy
+                    </Motion.button>
+                  </div>
+                )}
 
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <h4 className="text-lg font-semibold text-gray-900 mb-3">Địa chỉ giao hàng</h4>
@@ -369,9 +440,64 @@ const OrdersTab = ({ orders = [], loading, error, onReload, pagination }) => {
           </div>
         </div>
       )}
-    </motion.div>
+      {cancelModalVisible && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center px-4"
+          onMouseDown={closeCancelModal}
+        >
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" aria-hidden="true"></div>
+          <div
+            className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 text-center transition-all duration-200 scale-100"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+              onClick={closeCancelModal}
+            >
+              ✕
+            </button>
+            <div className="w-16 h-16 mx-auto rounded-full bg-rose-100 flex items-center justify-center mb-4">
+              <svg className="w-8 h-8 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v4m0 4h.01M21 12.79A9 9 0 1111.21 3 9 9 0 0121 12.79z" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-semibold text-gray-900 mb-1">Xác nhận hủy đơn</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Bạn có chắc muốn hủy đơn #{detailData?.orderCode || detailOrderId}? Vui lòng cho chúng tôi biết lý do (tùy chọn).
+            </p>
+            <textarea
+              className="w-full border border-gray-200 rounded-2xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-rose-400"
+              rows={4}
+              maxLength={255}
+              placeholder="Lý do hủy..."
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+            />
+            {cancelError && <p className="text-rose-600 text-sm mt-2">{cancelError}</p>}
+            <div className="flex flex-col sm:flex-row gap-3 mt-6">
+              <button
+                type="button"
+                className="flex-1 border border-gray-300 text-gray-700 rounded-2xl py-3 font-medium hover:border-gray-400"
+                onClick={closeCancelModal}
+                disabled={cancelLoading}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl py-3 font-semibold shadow-lg shadow-rose-500/30 disabled:opacity-60"
+                onClick={handleCancelOrder}
+                disabled={cancelLoading}
+              >
+                {cancelLoading ? 'Đang hủy...' : 'Xác nhận hủy'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </Motion.div>
   )
 }
 
 export default OrdersTab
-

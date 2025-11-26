@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Card, Row, Col, Statistic, Input, Select, Button, message, Space, DatePicker } from 'antd';
+import { Card, Row, Col, Statistic, Input, Select, Button, message, Space, DatePicker, Modal, Form, InputNumber, Divider } from 'antd';
 import { SearchOutlined, PlusOutlined, ReloadOutlined, FilterOutlined, ExportOutlined } from '@ant-design/icons';
 import OrderTable from './components/OrderTable';
 import OrderDetail from './components/OrderDetail';
 import OrderAdd from './components/OrderAdd';
 import OrderEdit from './components/OrderEdit';
-import { getAdminOrders, getAdminOrderDetail } from '../../../service/api/orderApi';
+import { getAdminOrders, getAdminOrderDetail, confirmOrderByStaff, processOrderByStaff, createShipmentForOrder, cancelOrderByStaff } from '../../../service/api/orderApi';
 
 const { Search } = Input;
 const { Option } = Select;
@@ -16,6 +16,7 @@ const ORDER_STATUS_MAP = {
   CONFIRMED: 'confirmed',
   PROCESSING: 'processing',
   SHIPPING: 'shipping',
+  READY_TO_SHIP: 'ready_to_ship',
   DELIVERED: 'delivered',
   CANCELLED: 'cancelled'
 };
@@ -89,12 +90,55 @@ const mapAdminOrderToComponent = (order) => {
   };
 };
 
+const buildShipmentDefaults = (payload) => {
+  const shipping = payload?.shippingAddress || {}
+  return {
+    weight: 500,
+    length: 30,
+    width: 20,
+    height: 15,
+    metadata: `Đơn hàng ${payload?.orderCode || payload?.orderId || ''}`,
+    reason: '',
+    codAmount: payload?.paymentMethod === 'COD' ? payload?.totalPrice || 0 : 0,
+    totalAmount: payload?.totalPrice || 0,
+    payer: 0,
+    warehouseAddress: {
+      name: '',
+      phone: '',
+      street: '',
+      wardCode: '',
+      districtId: '',
+      cityId: ''
+    },
+    customerAddress: {
+      name: shipping?.receiverName || '',
+      phone: shipping?.receiverPhone || '',
+      street: shipping?.receiverAddress || '',
+      wardCode: shipping?.receiverWardCode || '',
+      districtId: shipping?.receiverDistrictId || '',
+      cityId: shipping?.receiverCityId || ''
+    }
+  }
+}
+
 const OrderManagement = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [confirmingOrderId, setConfirmingOrderId] = useState(null);
+  const [processingOrderId, setProcessingOrderId] = useState(null);
+  const [shippingOrderId, setShippingOrderId] = useState(null);
+  const [cancellingOrderId, setCancellingOrderId] = useState(null);
+  const [shipModalVisible, setShipModalVisible] = useState(false);
+  const [shipModalLoading, setShipModalLoading] = useState(false);
+  const [shipTargetOrder, setShipTargetOrder] = useState(null);
+  const [shipForm] = Form.useForm();
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [cancelTargetOrder, setCancelTargetOrder] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelError, setCancelError] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -287,10 +331,143 @@ const OrderManagement = () => {
     message.success('Đã xóa đơn hàng khỏi danh sách hiện tại!');
   };
 
+  const handleConfirmOrder = useCallback(async (record) => {
+    if (!record?.id || confirmingOrderId) return;
+    try {
+      setConfirmingOrderId(record.id);
+      await confirmOrderByStaff(record.id);
+      message.success(`Đã xác nhận đơn #${record.orderNumber}`);
+      await fetchOrders();
+      if (selectedOrder?.id === record.id) {
+        const response = await getAdminOrderDetail(record.id);
+        const payload = response?.data || response;
+        setSelectedOrder(mapAdminOrderToComponent(payload));
+      }
+    } catch (error) {
+      const errMsg = error?.response?.data?.message || error?.message || 'Không thể xác nhận đơn';
+      message.error(errMsg);
+    } finally {
+      setConfirmingOrderId(null);
+    }
+  }, [confirmingOrderId, fetchOrders, selectedOrder]);
+
+  const handleProcessOrder = useCallback(async (record) => {
+    if (!record?.id || processingOrderId) return;
+    try {
+      setProcessingOrderId(record.id);
+      await processOrderByStaff(record.id);
+      message.success(`Đơn #${record.orderNumber} đã chuyển sang xử lý`);
+      await fetchOrders();
+      if (selectedOrder?.id === record.id) {
+        const response = await getAdminOrderDetail(record.id);
+        const payload = response?.data || response;
+        setSelectedOrder(mapAdminOrderToComponent(payload));
+      }
+    } catch (error) {
+      const errMsg = error?.response?.data?.message || error?.message || 'Không thể chuyển đơn sang xử lý';
+      message.error(errMsg);
+    } finally {
+      setProcessingOrderId(null);
+    }
+  }, [processingOrderId, fetchOrders, selectedOrder]);
+
   const handleCloseDetail = () => {
     setDetailModalVisible(false);
     setSelectedOrder(null);
     setDetailLoading(false);
+  };
+
+  const handleOpenShipModal = useCallback(async (record) => {
+    if (!record?.id) return;
+    setShipModalVisible(true);
+    setShippingOrderId(record.id);
+    setShipModalLoading(true);
+    try {
+      const response = await getAdminOrderDetail(record.id);
+      if (response?.success === false) {
+        throw new Error(response?.message || 'Không lấy được chi tiết đơn hàng');
+      }
+      const payload = response?.data || response;
+      setShipTargetOrder({
+        id: record.id,
+        orderNumber: record.orderNumber || payload.orderCode || payload.orderId
+      });
+      shipForm.setFieldsValue(buildShipmentDefaults(payload));
+    } catch (error) {
+      const errMsg = error?.response?.data?.message || error?.message || 'Không thể mở form tạo vận đơn';
+      message.error(errMsg);
+      setShipModalVisible(false);
+      setShippingOrderId(null);
+    } finally {
+      setShipModalLoading(false);
+    }
+  }, [shipForm]);
+
+  const handleCloseShipModal = () => {
+    setShipModalVisible(false);
+    setShipTargetOrder(null);
+    setShippingOrderId(null);
+    shipForm.resetFields();
+  };
+
+  const handleCreateShipment = async () => {
+    if (!shipTargetOrder?.id) return;
+    try {
+      const values = await shipForm.validateFields();
+      setShipModalLoading(true);
+      await createShipmentForOrder(shipTargetOrder.id, values);
+      message.success('Đã tạo vận đơn cho đơn hàng');
+      handleCloseShipModal();
+      await fetchOrders();
+      if (selectedOrder?.id === shipTargetOrder.id) {
+        const response = await getAdminOrderDetail(shipTargetOrder.id);
+        const payload = response?.data || response;
+        setSelectedOrder(mapAdminOrderToComponent(payload));
+      }
+    } catch (error) {
+      const errMsg = error?.response?.data?.message || error?.message || 'Không thể tạo vận đơn';
+      message.error(errMsg);
+    } finally {
+      setShipModalLoading(false);
+    }
+  };
+
+  const openCancelModal = useCallback((record) => {
+    if (!record?.id || cancellingOrderId) return;
+    setCancelModalVisible(true);
+    setCancelTargetOrder(record);
+    setCancelReason('');
+    setCancelError('');
+  }, [cancellingOrderId]);
+
+  const handleCancelOrder = useCallback(async () => {
+    if (!cancelTargetOrder?.id || cancellingOrderId) return;
+    try {
+      setCancellingOrderId(cancelTargetOrder.id);
+      setCancelError('');
+      await cancelOrderByStaff(cancelTargetOrder.id, cancelReason);
+      message.success(`Đã hủy đơn #${cancelTargetOrder.orderNumber}`);
+      setCancelModalVisible(false);
+      await fetchOrders();
+      if (selectedOrder?.id === cancelTargetOrder.id) {
+        const response = await getAdminOrderDetail(cancelTargetOrder.id);
+        const payload = response?.data || response;
+        setSelectedOrder(mapAdminOrderToComponent(payload));
+      }
+    } catch (error) {
+      const errMsg = error?.response?.data?.message || error?.message || 'Không thể hủy đơn';
+      setCancelError(errMsg);
+      message.error(errMsg);
+    } finally {
+      setCancellingOrderId(null);
+    }
+  }, [cancelTargetOrder, cancelReason, cancellingOrderId, fetchOrders, selectedOrder]);
+
+  const closeCancelModal = () => {
+    setCancelModalVisible(false);
+    setCancelTargetOrder(null);
+    setCancelReason('');
+    setCancelError('');
   };
 
   const handleCloseAdd = () => {
@@ -510,12 +687,20 @@ const OrderManagement = () => {
 
       {/* Orders Table */}
       <Card>
-        <OrderTable 
+      <OrderTable
           data={filteredData}
           loading={loading}
           handleView={handleView}
           handleEdit={handleEdit}
           handleDelete={handleDelete}
+        onConfirmOrder={handleConfirmOrder}
+        confirmingOrderId={confirmingOrderId}
+        onProcessOrder={handleProcessOrder}
+        processingOrderId={processingOrderId}
+        onShipOrder={handleOpenShipModal}
+        shippingOrderId={shippingOrderId}
+        onCancelOrder={openCancelModal}
+        cancellingOrderId={cancellingOrderId}
           pagination={tablePaginationConfig}
           onChange={handleTableChange}
         />
@@ -528,6 +713,179 @@ const OrderManagement = () => {
         order={selectedOrder}
         loading={detailLoading}
       />
+
+      <Modal
+        title={`Tạo vận đơn cho ${shipTargetOrder?.orderNumber || ''}`}
+        open={shipModalVisible}
+        onCancel={handleCloseShipModal}
+        onOk={handleCreateShipment}
+        confirmLoading={shipModalLoading}
+        okText="Tạo vận đơn"
+        cancelText="Đóng"
+        width={720}
+      >
+        <Form layout="vertical" form={shipForm}>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="Khối lượng (gram)" name="weight" rules={[{ required: true, message: 'Nhập khối lượng' }]}>
+                <InputNumber min={1} className="w-full" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="COD (₫)" name="codAmount" rules={[{ required: true, message: 'Nhập số tiền COD (0 nếu không)' }]}>
+                <InputNumber min={0} className="w-full" />
+              </Form.Item>
+            </Col>
+          </Row>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              label="Tổng giá trị đơn (₫)"
+              name="totalAmount"
+              rules={[{ required: true, message: 'Nhập tổng giá trị đơn' }]}
+            >
+              <InputNumber min={1} className="w-full" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              label="Người trả phí ship"
+              name="payer"
+              rules={[{ required: true, message: 'Chọn người trả phí ship' }]}
+            >
+              <Select
+                options={[
+                  { label: 'Khách hàng trả (RECEIVER)', value: 0 },
+                  { label: 'Shop trả (SENDER)', value: 1 }
+                ]}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item label="Dài (cm)" name="length" rules={[{ required: true }]}><InputNumber min={1} className="w-full" /></Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="Rộng (cm)" name="width" rules={[{ required: true }]}><InputNumber min={1} className="w-full" /></Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="Cao (cm)" name="height" rules={[{ required: true }]}><InputNumber min={1} className="w-full" /></Form.Item>
+            </Col>
+          </Row>
+          <Form.Item label="Ghi chú riêng" name="metadata">
+            <Input.TextArea rows={2} />
+          </Form.Item>
+          <Divider orientation="left">Kho gửi hàng</Divider>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="Tên kho" name={['warehouseAddress', 'name']} rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="SĐT kho" name={['warehouseAddress', 'phone']} rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item label="Địa chỉ" name={['warehouseAddress', 'street']} rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item label="Ward code" name={['warehouseAddress', 'wardCode']} rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="District ID" name={['warehouseAddress', 'districtId']} rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="City ID" name={['warehouseAddress', 'cityId']} rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Divider orientation="left">Địa chỉ khách hàng</Divider>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="Tên người nhận" name={['customerAddress', 'name']} rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="SĐT người nhận" name={['customerAddress', 'phone']} rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item label="Địa chỉ" name={['customerAddress', 'street']} rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item label="Ward code" name={['customerAddress', 'wardCode']} rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="District ID" name={['customerAddress', 'districtId']} rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="City ID" name={['customerAddress', 'cityId']} rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
+
+      <Modal
+        open={cancelModalVisible}
+        title="Hủy đơn hàng"
+        onCancel={closeCancelModal}
+        footer={null}
+        maskClosable={! (cancellingOrderId === cancelTargetOrder?.id)}
+        destroyOnClose
+        centered
+      >
+        <div className="text-sm text-gray-600 mb-3">
+          Bạn có chắc muốn hủy đơn#{' '}
+          <span className="font-semibold text-gray-900">{cancelTargetOrder?.orderNumber}</span>? Lý do hủy
+          (không bắt buộc).
+        </div>
+        <Form layout="vertical">
+          <Form.Item label="Lý do hủy">
+            <Input.TextArea
+              rows={4}
+              maxLength={255}
+              placeholder="Nhập lý do..."
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+            />
+          </Form.Item>
+        </Form>
+        {cancelError && <p className="text-rose-600 text-sm -mt-2 mb-4">{cancelError}</p>}
+        <div className="flex justify-end gap-3 mt-4">
+          <Button onClick={closeCancelModal} disabled={cancellingOrderId === cancelTargetOrder?.id}>
+            Không
+          </Button>
+          <Button
+            type="primary"
+            danger
+            onClick={handleCancelOrder}
+            loading={cancellingOrderId === cancelTargetOrder?.id}
+          >
+            Hủy đơn
+          </Button>
+        </div>
+      </Modal>
 
       {/* Order Add Modal */}
       <OrderAdd

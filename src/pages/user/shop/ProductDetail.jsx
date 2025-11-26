@@ -73,6 +73,20 @@ const ProductDetail = () => {
           // Transform API data to match UI format
           const apiProduct = response.data;
           
+          const imageList =
+            Array.isArray(apiProduct.imageUrls) && apiProduct.imageUrls.length > 0
+              ? apiProduct.imageUrls.map((img) => img.productAssetUrl || img.url || img)
+              : [
+                  'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600',
+                  'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600'
+                ]
+
+          let conditionLabel = 'Đã qua sử dụng'
+          if (apiProduct.conditionGrade === 'LIKE_NEW') conditionLabel = 'Như mới'
+          else if (apiProduct.conditionGrade === 'GOOD') conditionLabel = 'Tốt'
+          else if (apiProduct.conditionGrade === 'FAIR') conditionLabel = 'Khá'
+          else if (apiProduct.conditionGrade === 'NEW') conditionLabel = 'Mới 100%'
+
           const transformedProduct = {
             id: apiProduct.id,
             code: apiProduct.code,
@@ -84,18 +98,11 @@ const ProductDetail = () => {
             size: 'N/A', // API không có size
             color: 'N/A', // API không có color
             material: 'N/A', // API không có material
-            condition: apiProduct.conditionGrade === 'LIKE_NEW' ? 'Như mới' : 
-                      apiProduct.conditionGrade === 'GOOD' ? 'Tốt' :
-                      apiProduct.conditionGrade === 'FAIR' ? 'Khá' : 'Đã qua sử dụng',
+            condition: conditionLabel,
             ecoPoints: apiProduct.ecoPointValue,
             isAvailable: apiProduct.status === 'AVAILABLE',
             type: apiProduct.type === 'DONATION' ? 'Quyên góp' : 'Mua bán',
-            images: apiProduct.imageUrls && apiProduct.imageUrls.length > 0 
-              ? apiProduct.imageUrls 
-              : [
-                  'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600',
-                  'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600'
-                ],
+            images: imageList,
             features: [
               apiProduct.description,
               `Tình trạng: ${apiProduct.conditionGrade}`,

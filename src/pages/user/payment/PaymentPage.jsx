@@ -248,8 +248,8 @@ const PaymentPage = () => {
         })
       } else {
         // Các phương thức khác (nếu sau này có)
-        navigate('/orders', {
-          state: { success: true, orderId: result.orderId, orderCode: result.orderCode }
+        navigate('/profile?tab=orders', {
+          state: { activeTab: 'orders', success: true, orderId: result.orderId, orderCode: result.orderCode }
         })
       }
     } catch (error) {

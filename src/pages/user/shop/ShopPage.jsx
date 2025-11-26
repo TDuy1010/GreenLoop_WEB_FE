@@ -166,22 +166,33 @@ const ShopPage = () => {
   }
 
   // Transform API data to match ItemsCard component format
-  const items = products.map(product => ({
-    id: product.id,
-    name: product.name,
-    category: product.categoryName,
-    price: product.price,
-    image: product.imageUrls && product.imageUrls.length > 0 
-      ? product.imageUrls[0] 
-      : 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=400', // Default image
-    condition: product.conditionGrade === 'LIKE_NEW' ? 'Như mới' : 
-               product.conditionGrade === 'GOOD' ? 'Tốt' :
-               product.conditionGrade === 'FAIR' ? 'Khá' : 'Đã qua sử dụng',
-    isEcoFriendly: true,
-    ecoPoints: product.ecoPointValue,
-    rating: 4.5, // Default rating (nếu API không có)
-    sold: 0 // Default sold count (nếu API không có)
-  }))
+  const items = products.map((product) => {
+    const imageUrl =
+      Array.isArray(product.imageUrls) && product.imageUrls.length > 0
+        ? product.imageUrls[0]?.productAssetUrl ||
+          product.imageUrls[0]?.url ||
+          product.imageUrls[0]
+        : 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=400'
+
+    let conditionLabel = 'Đã qua sử dụng'
+    if (product.conditionGrade === 'LIKE_NEW') conditionLabel = 'Như mới'
+    else if (product.conditionGrade === 'GOOD') conditionLabel = 'Tốt'
+    else if (product.conditionGrade === 'FAIR') conditionLabel = 'Khá'
+    else if (product.conditionGrade === 'NEW') conditionLabel = 'Mới 100%'
+
+    return {
+      id: product.id,
+      name: product.name,
+      category: product.categoryName,
+      price: product.price,
+      image: imageUrl,
+      condition: conditionLabel,
+      isEcoFriendly: true,
+      ecoPoints: product.ecoPointValue,
+      rating: 4.5, // Default rating
+      sold: 0 // Default sold count
+    }
+  })
 
   const fadeInUp = {
     hidden: { opacity: 0, y: 20 },

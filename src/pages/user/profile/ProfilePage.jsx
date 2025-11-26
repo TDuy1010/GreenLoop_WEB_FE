@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useCallback, useEffect, useState } from 'react'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { 
   UserOutlined, 
@@ -30,8 +31,15 @@ import PasswordTab from './components/PasswordTab'
 import PasswordChangeSuccessModal from '../../../components/PasswordChangeSuccessModal'
 import ProfileUpdateSuccessModal from '../../../components/ProfileUpdateSuccessModal'
 
+const DEFAULT_PROFILE_TAB = 'personal'
+const PROFILE_TAB_IDS = ['personal', 'orders', 'addresses', 'myEvents', 'redeemPoints', 'myVouchers', 'password']
+const resolveProfileTab = (tabId) => (PROFILE_TAB_IDS.includes(tabId) ? tabId : DEFAULT_PROFILE_TAB)
+
 const ProfilePage = () => {
-  const [activeTab, setActiveTab] = useState('personal')
+  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedTab = location.state?.activeTab || searchParams.get('tab')
+  const [activeTab, setActiveTab] = useState(() => resolveProfileTab(requestedTab))
   const [isEditing, setIsEditing] = useState(false)
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [loadingMyEvents, setLoadingMyEvents] = useState(false)
@@ -549,6 +557,27 @@ const ProfilePage = () => {
     { id: 'password', label: 'Đổi mật khẩu', icon: <LockOutlined /> }
   ]
 
+  useEffect(() => {
+    setActiveTab((currentTab) => {
+      const nextTab = resolveProfileTab(requestedTab)
+      return currentTab === nextTab ? currentTab : nextTab
+    })
+  }, [requestedTab])
+
+  const handleTabChange = (tabId) => {
+    const nextTab = resolveProfileTab(tabId)
+    if (nextTab === activeTab) return
+    setActiveTab(nextTab)
+
+    const params = new URLSearchParams(searchParams)
+    if (nextTab === DEFAULT_PROFILE_TAB) {
+      params.delete('tab')
+    } else {
+      params.set('tab', nextTab)
+    }
+    setSearchParams(params, { replace: true })
+  }
+
   const handleRedeemSuccess = ({ remainingPoints, spentPoints }) => {
     setVoucherReloadKey((prev) => prev + 1);
     setUserData((prev) => {
@@ -593,7 +622,7 @@ const ProfilePage = () => {
               {tabs.map((tab) => (
                 <motion.button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => handleTabChange(tab.id)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                     activeTab === tab.id
                       ? 'bg-green-600 text-white shadow-lg'
