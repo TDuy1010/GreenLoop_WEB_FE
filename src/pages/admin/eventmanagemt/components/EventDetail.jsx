@@ -26,7 +26,7 @@ import {
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { getEventById, getEventStaffs, getEventRegistrations, getEventDonations, getDonationById } from '../../../../service/api/eventApi'
-import { getProductsAssignableToEvent, assignProductsToEvent, removeProductsFromEvent } from '../../../../service/api/productApi'
+import { getProducts, getProductsAssignableToEvent, assignProductsToEvent, removeProductsFromEvent } from '../../../../service/api/productApi'
 import EventStaffEditor from './EventStaffEditor'
 import DonationListModal from './DonationListModal'
 import DonationDetailModal from './DonationDetailModal'
@@ -54,13 +54,49 @@ const EventDetail = ({ visible, onClose, event }) => {
   const [selectedProductIds, setSelectedProductIds] = useState([])
   const [assigning, setAssigning] = useState(false)
   const [displayRange, setDisplayRange] = useState([])
-  const [removingProductId, setRemovingProductId] = useState(null)
   const [selectedAssignedMappings, setSelectedAssignedMappings] = useState([])
   const [bulkRemoving, setBulkRemoving] = useState(false)
   const [donationsModalOpen, setDonationsModalOpen] = useState(false)
   const [donationDetail, setDonationDetail] = useState(null)
   const [loadingDonationDetail, setLoadingDonationDetail] = useState(false)
   const [donationDetailModalOpen, setDonationDetailModalOpen] = useState(false)
+  const [feedbackModal, setFeedbackModal] = useState({
+    open: false,
+    type: 'success',
+    title: '',
+    message: '',
+    highlight: '',
+    description: ''
+  })
+  const showFeedbackModal = useCallback(
+    ({ type = 'info', title = '', message: content = '', highlight = '', description = '' }) => {
+      setFeedbackModal({
+        open: true,
+        type,
+        title,
+        message: content,
+        highlight,
+        description
+      })
+    },
+    []
+  )
+
+  const closeFeedbackModal = () => {
+    setFeedbackModal((prev) => ({ ...prev, open: false }))
+  }
+
+
+  const resolveMappingId = useCallback((product) => {
+    if (!product) return null
+    return (
+      product.eventMappingId ??
+      product.eventProductMappingId ??
+      product.productEventMappingId ??
+      product.mappingId ??
+      null
+    )
+  }, [])
   const handleOpenDonationDetail = async (donationId) => {
     if (!donationId) return
     try {
@@ -170,16 +206,11 @@ const EventDetail = ({ visible, onClose, event }) => {
       const res = await getProductsAssignableToEvent(event.id)
       const list = res?.data?.data || res?.data || (Array.isArray(res) ? res : [])
       const mapped = (Array.isArray(list) ? list : []).map((product, idx) => {
-        const mappingId =
-          product.eventProductMappingId ||
-          product.eventMappingId ||
-          product.productEventMappingId ||
-          product.mappingId ||
-          product.id
+        const mappingId = resolveMappingId(product)
 
         return {
           ...product,
-          key: mappingId || product.id || idx,
+          key: mappingId ?? product.id ?? idx,
           id: product.id,
           eventMappingId: mappingId,
           code: product.code,
@@ -193,6 +224,7 @@ const EventDetail = ({ visible, onClose, event }) => {
         }
       })
       setAssignedProducts(mapped)
+      // Giữ lại các productId vẫn còn trong danh sách sau khi reload
       setSelectedAssignedMappings((prev) =>
         prev.filter((id) => mapped.some((item) => item.eventMappingId === id))
       )
@@ -202,7 +234,7 @@ const EventDetail = ({ visible, onClose, event }) => {
     } finally {
       setLoadingProducts(false)
     }
-  }, [event?.id, visible])
+  }, [event?.id, visible, resolveMappingId])
 
   const openProductModal = () => {
     setProductModalOpen(true)
@@ -257,9 +289,10 @@ const EventDetail = ({ visible, onClose, event }) => {
   const openAssignModal = async () => {
     try {
       setLoadingProducts(true)
-      const res = await getProductsAssignableToEvent(event.id)
-      const list = res?.data?.data || res?.data || (Array.isArray(res) ? res : [])
-      const mapped = (Array.isArray(list) ? list : []).map((product, idx) => ({
+      const res = await getProducts({ page: 0, size: 100, status: 'AVAILABLE' })
+      const page = res?.data?.data || res?.data || {}
+      const list = Array.isArray(page?.content) ? page.content : (Array.isArray(page) ? page : [])
+      const mapped = list.map((product, idx) => ({
         key: product.id || idx,
         id: product.id,
         code: product.code,
@@ -300,34 +333,29 @@ const EventDetail = ({ visible, onClose, event }) => {
         displayTo: displayRange[1]?.toISOString()
       }
       const res = await assignProductsToEvent(payload)
-      message.success(res?.message || 'Gán sản phẩm thành công!')
+      showFeedbackModal({
+        type: 'success',
+        title: 'Gán sản phẩm thành công',
+        message: 'Các sản phẩm đã được đưa vào sự kiện.',
+        highlight: `${selectedProductIds.length} sản phẩm`,
+        description:
+          res?.message ||
+          `Thời gian hiển thị: ${dayjs(displayRange[0]).format('DD/MM HH:mm')} - ${dayjs(displayRange[1]).format(
+            'DD/MM HH:mm'
+          )}`
+      })
       setAssignProductModalOpen(false)
       await loadAssignedProducts()
     } catch (err) {
       console.error('Assign products error:', err)
-      message.error(err?.response?.data?.message || 'Không thể gán sản phẩm, vui lòng thử lại.')
+      showFeedbackModal({
+        type: 'error',
+        title: 'Gán sản phẩm thất bại',
+        message: 'Không thể gán sản phẩm, vui lòng thử lại.',
+        description: err?.response?.data?.message || err?.message
+      })
     } finally {
       setAssigning(false)
-    }
-  }
-
-  const handleRemoveProductFromEvent = async (product) => {
-    const mappingId = product?.eventMappingId || product?.id
-    if (!mappingId) {
-      message.error('Không xác định được sản phẩm cần gỡ.')
-      return
-    }
-    try {
-      setRemovingProductId(mappingId)
-      await removeProductsFromEvent([mappingId])
-      message.success('Đã bỏ sản phẩm khỏi sự kiện.')
-      await loadAssignedProducts()
-      setSelectedAssignedMappings((prev) => prev.filter((id) => id !== mappingId))
-    } catch (err) {
-      console.error('Remove product from event error:', err)
-      message.error(err?.response?.data?.message || 'Không thể bỏ sản phẩm, vui lòng thử lại.')
-    } finally {
-      setRemovingProductId(null)
     }
   }
 
@@ -336,15 +364,30 @@ const EventDetail = ({ visible, onClose, event }) => {
       message.warning('Vui lòng chọn sản phẩm cần gỡ.')
       return
     }
+    if (!event?.id) {
+      message.error('Không xác định được sự kiện.')
+      return
+    }
     try {
       setBulkRemoving(true)
-      await removeProductsFromEvent(selectedAssignedMappings)
-      message.success(`Đã bỏ ${selectedAssignedMappings.length} sản phẩm khỏi sự kiện.`)
+      await removeProductsFromEvent(event.id, selectedAssignedMappings)
+      showFeedbackModal({
+        type: 'success',
+        title: 'Đã gỡ sản phẩm',
+        message: `Đã bỏ ${selectedAssignedMappings.length} sản phẩm khỏi sự kiện.`,
+        highlight: `${selectedAssignedMappings.length} sản phẩm`,
+        description: 'Danh sách được cập nhật ngay lập tức.'
+      })
       setSelectedAssignedMappings([])
       await loadAssignedProducts()
     } catch (err) {
       console.error('Bulk remove products error:', err)
-      message.error(err?.response?.data?.message || 'Không thể bỏ các sản phẩm, vui lòng thử lại.')
+      showFeedbackModal({
+        type: 'error',
+        title: 'Không thể gỡ sản phẩm',
+        message: 'Vui lòng thử lại sau.',
+        description: err?.response?.data?.message || err?.message
+      })
     } finally {
       setBulkRemoving(false)
     }
@@ -797,8 +840,6 @@ const EventDetail = ({ visible, onClose, event }) => {
         open={productModalOpen}
         loading={loadingProducts}
         products={assignedProducts}
-        removingProductId={removingProductId}
-        onRemoveProduct={handleRemoveProductFromEvent}
         selectedRowKeys={selectedAssignedMappings}
         onSelectionChange={setSelectedAssignedMappings}
         onBulkRemove={handleBulkRemoveProducts}
@@ -935,6 +976,39 @@ const EventDetail = ({ visible, onClose, event }) => {
         </Card>
       )}
       {/* Dữ liệu chi tiết hiện không yêu cầu thêm các khối phụ */}
+
+      <Modal
+        open={feedbackModal.open}
+        onCancel={closeFeedbackModal}
+        footer={[
+          <Button key="close" type="primary" onClick={closeFeedbackModal}>
+            Đóng
+          </Button>
+        ]}
+        centered
+        title={feedbackModal.title || (feedbackModal.type === 'success' ? 'Thành công' : 'Thông báo')}
+      >
+        <div className="flex items-start gap-4">
+          <div
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg ${
+              feedbackModal.type === 'success'
+                ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                : 'bg-rose-50 text-rose-600 border border-rose-200'
+            }`}
+          >
+            {feedbackModal.type === 'success' ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+          </div>
+          <div className="space-y-1">
+            {feedbackModal.highlight && (
+              <p className="text-sm font-semibold text-gray-900">{feedbackModal.highlight}</p>
+            )}
+            <p className="text-gray-700 text-sm leading-relaxed">{feedbackModal.message}</p>
+            {feedbackModal.description && (
+              <p className="text-xs text-gray-500">{feedbackModal.description}</p>
+            )}
+          </div>
+        </div>
+      </Modal>
     </Modal>
   )
 }

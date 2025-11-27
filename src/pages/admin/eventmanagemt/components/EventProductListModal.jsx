@@ -1,13 +1,11 @@
 import React, { useMemo } from 'react'
-import { Modal, Table, Tag, Popconfirm, Button } from 'antd'
+import { Modal, Table, Tag, Button } from 'antd'
 
 const EventProductListModal = ({
   open,
   loading,
   products = [],
   onClose,
-  onRemoveProduct,
-  removingProductId,
   selectedRowKeys = [],
   onSelectionChange,
   onBulkRemove,
@@ -56,30 +54,7 @@ const EventProductListModal = ({
       align: 'right',
       render: (value) => value ?? 0
     },
-    {
-      title: 'Thao tác',
-      key: 'actions',
-      align: 'right',
-      render: (_, record) => (
-        <Popconfirm
-          title="Bỏ sản phẩm khỏi sự kiện?"
-          okText="Đồng ý"
-          cancelText="Huỷ"
-          placement="left"
-          onConfirm={() => onRemoveProduct?.(record)}
-        >
-          <Button
-            size="small"
-            danger
-            loading={removingProductId === (record.eventMappingId || record.id)}
-            disabled={!onRemoveProduct}
-          >
-            Bỏ khỏi sự kiện
-          </Button>
-        </Popconfirm>
-      )
-    }
-  ], [onRemoveProduct, removingProductId])
+  ], [])
 
   const rowSelection = onSelectionChange
     ? {

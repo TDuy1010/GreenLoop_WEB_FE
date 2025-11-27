@@ -290,15 +290,19 @@ export const assignProductsToEvent = async (payload) => {
 
 // ===== GỠ SẢN PHẨM KHỎI SỰ KIỆN =====
 /**
- * Hủy mapping giữa sản phẩm và sự kiện
- * @param {Array<number|string>} mappingIds - danh sách product-event mapping IDs
+ * Gỡ sản phẩm khỏi sự kiện theo eventId + danh sách mappingId
+ * @param {number|string} eventId
+ * @param {Array<number|string>} mappingIds - danh sách eventProductMappingId
  */
-export const removeProductsFromEvent = async (mappingIds = []) => {
+export const removeProductsFromEvent = async (eventId, mappingIds = []) => {
+  if (!eventId) {
+    throw new Error('eventId là bắt buộc để gỡ sản phẩm khỏi sự kiện');
+  }
   if (!Array.isArray(mappingIds) || mappingIds.length === 0) {
     throw new Error('mappingIds là bắt buộc để gỡ sản phẩm khỏi sự kiện');
   }
   try {
-    const response = await axiosClient.delete('/products/remove-from-event', {
+    const response = await axiosClient.delete(`/products/remove-from-event/${eventId}`, {
       data: mappingIds
     });
     return response;
