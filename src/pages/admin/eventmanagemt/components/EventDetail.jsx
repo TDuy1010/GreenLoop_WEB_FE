@@ -34,7 +34,7 @@ import EventProductListModal from './EventProductListModal'
 import Vietmap from '../../../../components/Vietmap'
 import heroImg from '../../../../assets/images/herosection.jpg'
 
-const EventDetail = ({ visible, onClose, event }) => {
+const EventDetail = ({ visible, onClose, event, onStaffCountChange }) => {
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(false)
   const [assignedStaffs, setAssignedStaffs] = useState([])
@@ -474,6 +474,19 @@ const EventDetail = ({ visible, onClose, event }) => {
             updatedBy: d.updatedByName || d.updatedBy,
             updatedAt: d.updatedAt,
           })
+          const staffTotal =
+            typeof d.totalStaffs === 'number'
+              ? d.totalStaffs
+              : typeof d.totalStaff === 'number'
+                ? d.totalStaff
+                : Array.isArray(d.staffs)
+                  ? d.staffs.length
+                  : Array.isArray(assignedStaffs)
+                    ? assignedStaffs.length
+                    : undefined
+          if (typeof staffTotal === 'number' && !Number.isNaN(staffTotal)) {
+            onStaffCountChange?.(d.id, staffTotal)
+          }
         }
       } catch (error) {
         console.error('Error loading event detail:', error)
@@ -701,7 +714,7 @@ const EventDetail = ({ visible, onClose, event }) => {
           <div className="flex items-center justify-between pr-10">
             <span>Nhân viên đã được phân công</span>
             <Button size="small" type="primary" onClick={() => setAssignModalOpen(true)}>
-              Chỉnh sửa
+              Cập nhật nhân viên
             </Button>
           </div>
         )}

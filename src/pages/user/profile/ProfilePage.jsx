@@ -56,7 +56,7 @@ const ProfilePage = () => {
     email: '—',
     phone: '',
     gender: 'other',
-    birthday: '',
+    birthday: '1980-01-01',
     ecoPoints: 0,
     avatar: 'https://i.pravatar.cc/300?img=12'
   })
@@ -104,7 +104,7 @@ const ProfilePage = () => {
           email: data.email || prev.email,
           phone: data.phoneNumber || prev.phone,
           gender: processedGender,
-          birthday: data.dateOfBirth || prev.birthday,
+          birthday: data.dateOfBirth || '1980-01-01',
           avatar: data.avatarUrl || prev.avatar,
           ecoPoints: data.ecoPoints ?? data.ecoPointBalance ?? data.pointBalance ?? prev.ecoPoints,
         }))
@@ -114,7 +114,7 @@ const ProfilePage = () => {
           email: data.email || prev.email,
           phone: data.phoneNumber || prev.phone,
           gender: processedGender,
-          birthday: data.dateOfBirth || prev.birthday,
+          birthday: data.dateOfBirth || '1980-01-01',
           avatar: data.avatarUrl || prev.avatar,
         }))
         

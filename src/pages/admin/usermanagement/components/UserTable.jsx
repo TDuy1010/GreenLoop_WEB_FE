@@ -27,7 +27,8 @@ const UserTable = ({
   accountTypeConfig,
   genderConfig,
   pagination,
-  handleTableChange
+  handleTableChange,
+  isStaffOnly = false
 }) => {
   const columns = [
     {
@@ -125,6 +126,7 @@ const UserTable = ({
           <Switch
             checked={status === 'active'}
             onChange={() => handleToggleStatus(record)}
+            disabled={isStaffOnly}
             checkedChildren="Active"
             unCheckedChildren="Inactive"
             className={status === 'active' ? 'bg-green-600' : ''}

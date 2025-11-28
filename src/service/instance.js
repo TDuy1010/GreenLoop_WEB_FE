@@ -12,12 +12,24 @@ const API_CONFIG = {
 };
 
 // ===== DEBUG/SAFETY SWITCH =====
-// Bật cờ này để tạm thời KHÔNG tự clear localStorage/redirect khi refresh thất bại.
-// Mục đích: theo dõi xem có gọi /auth/refresh hay không và tránh bị "văng" ngoài ý muốn.
-const DISABLE_AUTO_LOGOUT = true;
+// Đặt false để cho phép tự động đăng xuất & chuyển hướng khi token hết hạn
+const DISABLE_AUTO_LOGOUT = false;
 
 // Export config để sử dụng ở nơi khác nếu cần
 export { API_CONFIG };
+
+const forceLogout = () => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("refreshToken");
+  localStorage.removeItem("userInfo");
+  const currentPath = window.location.pathname;
+  if (currentPath.startsWith('/admin')) {
+    window.location.href = '/admin/login';
+  } else {
+    window.location.href = '/login';
+  }
+};
 
 // ===== AXIOS INSTANCE =====
 const axiosClient = axios.create({
@@ -111,15 +123,7 @@ axiosClient.interceptors.request.use(
             // Chỉ đăng xuất khi refresh bị từ chối (401/403)
             const status = err?.response?.status;
             if ((status === 401 || status === 403) && !DISABLE_AUTO_LOGOUT) {
-              localStorage.removeItem("accessToken");
-              localStorage.removeItem("refreshToken");
-              localStorage.removeItem("userInfo");
-              const currentPath = window.location.pathname;
-              if (currentPath.startsWith('/admin')) {
-                window.location.href = '/admin/login';
-              } else {
-                window.location.href = '/login';
-              }
+              forceLogout();
             }
             reject(err);
           });
@@ -214,22 +218,15 @@ axiosClient.interceptors.response.use(
           // Chỉ đăng xuất khi refresh bị từ chối (401/403)
           const status = refreshError?.response?.status;
           if ((status === 401 || status === 403) && !DISABLE_AUTO_LOGOUT) {
-            localStorage.removeItem("accessToken");
-            localStorage.removeItem("refreshToken");
-            localStorage.removeItem("userInfo");
-            const currentPath = window.location.pathname;
-            if (currentPath.startsWith('/admin')) {
-              window.location.href = '/admin/login';
-            } else {
-              window.location.href = '/login';
-            }
+            forceLogout();
           }
           return Promise.reject(refreshError);
         }
       } else {
-        // Không có refresh token: KHÔNG clear ngay; chỉ trả lỗi về cho caller
-        // để UI xử lý (ví dụ hiển thị thông báo) thay vì redirect tự động.
         isRefreshing = false;
+        if (!DISABLE_AUTO_LOGOUT) {
+          forceLogout();
+        }
         return Promise.reject(error.response?.data || error);
       }
     }

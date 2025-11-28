@@ -21,16 +21,32 @@ import dayjs from 'dayjs'
 
 import EventTable from './components/EventTable'
 import EventAssignStaff from './components/EventAssignStaff'
+import EventStaffEditor from './components/EventStaffEditor'
 import EventDetail from './components/EventDetail'
 import EventAdd from './components/EventAdd'
 import EventEdit from './components/EventEdit'
-import { getEvents } from '../../../service/api/eventApi'
+import { getEvents, getEventStaffs } from '../../../service/api/eventApi'
 import { API_CONFIG } from '../../../service/instance'
+import { EVENT_STATUS_OPTIONS, EVENT_STATUS_CONFIG, EVENT_STATUS_EQUIVALENTS } from './constants/status'
+import { isStaffOnly } from '../../../utils/authHelper'
 
 const { Search } = Input
 const { Option } = Select
 const { TextArea } = Input
 
+
+const getStaffCount = (ev = {}) => {
+  const candidates = [
+    ev.totalStaffs,
+    ev.staffCount,
+    ev.staffsCount,
+    ev.assignedStaffCount,
+    Array.isArray(ev.staffs) ? ev.staffs.length : undefined,
+    Array.isArray(ev.eventStaffs) ? ev.eventStaffs.length : undefined
+  ]
+  const found = candidates.find((val) => typeof val === 'number' && !Number.isNaN(val))
+  return found ?? 0
+}
 
 const EventManagement = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false)
@@ -39,6 +55,9 @@ const EventManagement = () => {
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [assignModalVisible, setAssignModalVisible] = useState(false)
   const [selectedEventForAssign, setSelectedEventForAssign] = useState(null)
+  const [editorModalVisible, setEditorModalVisible] = useState(false)
+  const [selectedEventForEditor, setSelectedEventForEditor] = useState(null)
+  const [assignedStaffs, setAssignedStaffs] = useState([])
 
   const [eventData, setEventData] = useState([])
   const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -55,6 +74,7 @@ const EventManagement = () => {
         const list = res?.data?.content || []
         console.log('EventManagement - First event from API:', list[0])
         console.log('EventManagement - First event description:', list[0]?.description)
+        console.log('EventManagement - First event totalStaffs:', list[0]?.totalStaffs, typeof list[0]?.totalStaffs)
         const mapped = list.map(ev => {
           // Chuẩn hoá URL ảnh từ backend (ưu tiên các field phổ biến)
           const rawImage = ev.imageUrl || ev.thumbnail || ev.thumbnailUrl || ev.image || ev.photo || ''
@@ -110,8 +130,11 @@ const EventManagement = () => {
             location: ev.location,
             address: '',
             coordinates: ev.latitude && ev.longitude ? { lat: Number(ev.latitude), lng: Number(ev.longitude) } : undefined,
-            maxParticipants: ev.maxParticipants || 0,
-            registeredCount: ev.registeredCount || 0,
+            maxParticipants: Number(ev.maxParticipants) || 0,
+            registeredCount: Number(ev.registeredCount) || 0,
+            totalParticipants: Number(ev.totalParticipants) || 0,
+            totalStaffs: Number(ev.totalStaffs) || 0,
+            staffCount: getStaffCount(ev),
             status: ev.status, // CREATED | PUBLISHED | ...
             isActive: ev.isActive === true,
             category: ev.category || 'workshop',
@@ -141,19 +164,9 @@ const EventManagement = () => {
 
   // Statistics
   const totalEvents = eventData.length
-  const upcomingEvents = eventData.filter(event => event.status === 'CREATED').length
-  const activeEvents = eventData.filter(event => event.status === 'PUBLISHED').length
-  // Có thể thêm thống kê 'Đã kết thúc' nếu cần hiển thị
-  // const completedEvents = eventData.filter(event => event.status === 'COMPLETED').length
+  const upcomingEvents = eventData.filter(event => event.status === 'UPCOMING').length
+  const activeEvents = eventData.filter(event => event.status === 'ONGOING').length
   const totalParticipants = eventData.reduce((sum, event) => sum + (event.registeredCount || 0), 0)
-
-  // Status mapping
-  const statusConfig = {
-    CREATED: { color: 'blue', text: 'Đã tạo' },
-    PUBLISHED: { color: 'green', text: 'Công khai' },
-    COMPLETED: { color: 'default', text: 'Đã kết thúc' },
-    CANCELLED: { color: 'red', text: 'Đã hủy' }
-  }
 
   // Không dùng phân loại (category) nữa
 
@@ -182,7 +195,8 @@ const EventManagement = () => {
     }
 
     if (status !== 'all') {
-      filtered = filtered.filter(event => event.status === status)
+      const equivalents = EVENT_STATUS_EQUIVALENTS[status] || [status]
+      filtered = filtered.filter(event => equivalents.includes(event.status))
     }
 
     setFilteredData(filtered)
@@ -256,6 +270,7 @@ const EventManagement = () => {
           coordinates: ev.latitude && ev.longitude ? { lat: Number(ev.latitude), lng: Number(ev.longitude) } : undefined,
           maxParticipants: ev.maxParticipants || 0,
           registeredCount: ev.registeredCount || 0,
+          staffCount: getStaffCount(ev),
           status: ev.status,
           isActive: ev.isActive === true,
           category: ev.category || 'workshop',
@@ -304,9 +319,61 @@ const EventManagement = () => {
     setEditModalVisible(true)
   }
 
-  const handleOpenAssign = (event) => {
+  const handleOpenAssign = async (event) => {
+    // Kiểm tra nếu event đã có staff thì mở EventStaffEditor, nếu chưa thì mở EventAssignStaff
+    const staffCount = event.totalStaffs || event.staffCount || 0
+    if (staffCount > 0) {
+      // Event đã có staff, mở EventStaffEditor
+      try {
+        setSelectedEventForEditor(event)
+        // Load danh sách staff đã được phân công
+        const res = await getEventStaffs(event.id)
+        const staffList = res?.data?.data || res?.data || (Array.isArray(res) ? res : [])
+        const mappedStaffs = (Array.isArray(staffList) ? staffList : []).map((staff) => ({
+          id: Number(staff.staffId || staff.id || staff.employeeId),
+          fullName: staff.fullName || staff.name || staff.email || '',
+          email: staff.email || '',
+          storeManager: staff.storeManager === true || staff.StoreManager === true || staff.isStoreManager === true
+        }))
+        // Loại trùng theo id
+        const uniqStaffs = Array.from(new Map(mappedStaffs.map(it => [it.id, it])).values())
+        setAssignedStaffs(uniqStaffs)
+        setEditorModalVisible(true)
+      } catch (error) {
+        console.error('Error loading assigned staffs:', error)
+        message.error('Không thể tải danh sách nhân viên đã phân công')
+      }
+    } else {
+      // Event chưa có staff, mở EventAssignStaff
     setSelectedEventForAssign(event)
     setAssignModalVisible(true)
+    }
+  }
+
+  const updateStaffCountInLists = (eventId, count) => (list) =>
+    list.map((event) => {
+      if (event.id === eventId) {
+        return { 
+          ...event, 
+          staffCount: count,
+          totalStaffs: count // Cập nhật cả totalStaffs vì đây là field được hiển thị trong bảng
+        }
+      }
+      return event
+    })
+
+  const handleStaffSummaryChange = (eventId, count) => {
+    if (!eventId || typeof count !== 'number' || Number.isNaN(count)) return
+    setEventData((prev) => updateStaffCountInLists(eventId, count)(prev))
+    setFilteredData((prev) => updateStaffCountInLists(eventId, count)(prev))
+  }
+
+  const handleStaffAssignmentsUpdated = (eventId, count) => {
+    if (!eventId || count === undefined || count === null) {
+      handleAddEvent()
+      return
+    }
+    handleStaffSummaryChange(eventId, count)
   }
 
   const handleUpdateEvent = async () => {
@@ -368,6 +435,7 @@ const EventManagement = () => {
           image: normalizedImage,
           tags: [],
           price: ev.price || 0,
+          staffCount: getStaffCount(ev),
         }
       })
       setEventData(mapped)
@@ -471,6 +539,7 @@ const EventManagement = () => {
               type="primary"
               icon={<PlusOutlined />}
               onClick={handleAdd}
+              disabled={isStaffOnly()}
               className="bg-green-600 hover:bg-green-700 border-green-600"
             >
               Tạo sự kiện
@@ -497,10 +566,11 @@ const EventManagement = () => {
             className="w-full sm:w-48"
           >
             <Option value="all">Tất cả trạng thái</Option>
-            <Option value="CREATED">Đã tạo</Option>
-            <Option value="PUBLISHED">Công khai</Option>
-            <Option value="COMPLETED">Đã kết thúc</Option>
-            <Option value="CANCELLED">Đã hủy</Option>
+            {EVENT_STATUS_OPTIONS.map((status) => (
+              <Option key={status.value} value={status.value}>
+                {status.label}
+              </Option>
+            ))}
           </Select>
         </div>
 
@@ -512,8 +582,9 @@ const EventManagement = () => {
           handleEdit={handleEdit}
           handleDelete={handleDelete}
           handleAssign={handleOpenAssign}
-          statusConfig={statusConfig}
+          statusConfig={EVENT_STATUS_CONFIG}
           onActivated={handleAddEvent}
+          isStaffOnly={isStaffOnly()}
         />
         {loading && <div className="text-center py-3 text-gray-500">Đang tải dữ liệu...</div>}
         {error && <div className="text-center py-2 text-red-600">{error}</div>}
@@ -524,6 +595,7 @@ const EventManagement = () => {
         visible={detailModalVisible}
         onClose={handleCloseDetail}
         event={selectedEvent}
+        onStaffCountChange={handleStaffSummaryChange}
       />
 
       {/* Event Add Modal */}
@@ -541,12 +613,47 @@ const EventManagement = () => {
         event={selectedEvent}
       />
 
-      {/* Assign Staff Modal */}
+      {/* Assign Staff Modal - Mở khi event chưa có staff */}
       <EventAssignStaff
         visible={assignModalVisible}
         onClose={() => { setAssignModalVisible(false); setSelectedEventForAssign(null) }}
         eventId={selectedEventForAssign?.id}
-        onAssigned={handleAddEvent}
+        onAssigned={handleStaffAssignmentsUpdated}
+      />
+
+      {/* Edit Staff Modal - Mở khi event đã có staff */}
+      <EventStaffEditor
+        visible={editorModalVisible}
+        onClose={() => { 
+          setEditorModalVisible(false)
+          setSelectedEventForEditor(null)
+          setAssignedStaffs([])
+        }}
+        eventId={selectedEventForEditor?.id}
+        assigned={assignedStaffs}
+        onSaved={async (updatedList) => {
+          const eventId = selectedEventForEditor?.id
+          if (!eventId) return
+          
+          // Tính số lượng nhân viên từ danh sách đã cập nhật
+          let newCount = 0
+          if (Array.isArray(updatedList) && updatedList.length > 0) {
+            newCount = updatedList.length
+          } else {
+            // Nếu không có danh sách, lấy từ event hiện tại hoặc fetch lại từ API
+            newCount = selectedEventForEditor?.totalStaffs || selectedEventForEditor?.staffCount || 0
+          }
+          
+          console.log('EventManagement - onSaved called:', { eventId, newCount, updatedListLength: updatedList?.length })
+          
+          // Cập nhật số lượng nhân viên trong danh sách
+          handleStaffAssignmentsUpdated(eventId, newCount)
+          
+          // Đóng modal và reset state
+          setEditorModalVisible(false)
+          setSelectedEventForEditor(null)
+          setAssignedStaffs([])
+        }}
       />
     </div>
   )

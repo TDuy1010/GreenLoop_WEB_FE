@@ -18,6 +18,7 @@ import {
 import dayjs from 'dayjs'
 import { createEvent } from '../../../../service/api/eventApi'
 import VietmapInteractive from '../../../../components/VietmapInteractive'
+import { EVENT_STATUS_OPTIONS } from '../constants/status'
 
 const { TextArea } = Input
 const { Option } = Select
@@ -289,10 +290,11 @@ const EventAdd = ({ visible, onClose, onAdd }) => {
               rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
             >
               <Select placeholder="Chọn trạng thái" size="large">
-                <Option value="CREATED">Đã tạo</Option>
-                <Option value="PUBLISHED">Công khai</Option>
-                <Option value="COMPLETED">Đã kết thúc</Option>
-                <Option value="CANCELLED">Đã hủy</Option>
+                {EVENT_STATUS_OPTIONS.map((status) => (
+                  <Option key={status.value} value={status.value}>
+                    {status.label}
+                  </Option>
+                ))}
               </Select>
             </Form.Item>
 

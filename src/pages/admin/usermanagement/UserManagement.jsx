@@ -20,6 +20,7 @@ import { motion } from 'framer-motion'
 import UserTable from './components/UserTable'
 import UserDetail from './components/UserDetail'
 import { getCustomerList, updateCustomerStatus } from '../../../service/api/customerApi'
+import { isStaffOnly } from '../../../utils/authHelper'
 
 const { Search } = Input
 const { Option } = Select
@@ -29,8 +30,6 @@ const UserManagement = () => {
   const [filteredData, setFilteredData] = useState([])
   const [searchText, setSearchText] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
-  const [filterAccountType, setFilterAccountType] = useState('all')
-  const [filterVerified, setFilterVerified] = useState('all')
   const [detailModalVisible, setDetailModalVisible] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -142,29 +141,6 @@ const UserManagement = () => {
   const handleStatusFilter = (value) => {
     setFilterStatus(value)
     setPagination({ ...pagination, current: 1 }) // Reset về trang 1 khi filter
-  }
-
-  const handleAccountTypeFilter = (value) => {
-    setFilterAccountType(value)
-    // Filter local data theo account type (vì API chưa hỗ trợ)
-    if (value === 'all') {
-      setFilteredData(userData)
-    } else {
-      const filtered = userData.filter(user => user.accountType === value)
-      setFilteredData(filtered)
-    }
-  }
-
-  const handleVerifiedFilter = (value) => {
-    setFilterVerified(value)
-    // Filter local data theo verified status (vì API chưa hỗ trợ)
-    if (value === 'all') {
-      setFilteredData(userData)
-    } else {
-      const isVerified = value === 'verified'
-      const filtered = userData.filter(user => user.isVerified === isVerified)
-      setFilteredData(filtered)
-    }
   }
 
   const handleTableChange = (paginationInfo) => {
@@ -287,29 +263,6 @@ const UserManagement = () => {
             <Option value="active">Active</Option>
             <Option value="inactive">Inactive</Option>
           </Select>
-          <Select
-            placeholder="Lọc theo loại tài khoản"
-            size="large"
-            value={filterAccountType}
-            onChange={handleAccountTypeFilter}
-            className="w-full lg:w-48"
-          >
-            <Option value="all">Tất cả loại</Option>
-            <Option value="standard">Tiêu chuẩn</Option>
-            <Option value="premium">Premium</Option>
-            <Option value="vip">VIP</Option>
-          </Select>
-          <Select
-            placeholder="Lọc theo xác thực"
-            size="large"
-            value={filterVerified}
-            onChange={handleVerifiedFilter}
-            className="w-full lg:w-48"
-          >
-            <Option value="all">Tất cả</Option>
-            <Option value="verified">Đã xác thực</Option>
-            <Option value="unverified">Chưa xác thực</Option>
-          </Select>
         </div>
 
         {/* Table */}
@@ -322,6 +275,7 @@ const UserManagement = () => {
             genderConfig={genderConfig}
             pagination={pagination}
             handleTableChange={handleTableChange}
+            isStaffOnly={isStaffOnly()}
           />
         </Spin>
       </Card>

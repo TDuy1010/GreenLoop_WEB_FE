@@ -5,9 +5,6 @@ import {
   Select,
   message,
   Card,
-  Row,
-  Col,
-  Statistic,
   Space,
   Spin
 } from "antd";
@@ -22,9 +19,12 @@ import StaffDetail from "./components/StaffDetail";
 import StaffAdd from "./components/StaffAdd";
 import StaffEdit from "./components/StaffEdit";
 import { getEmployees, updateEmployeeStatus } from "../../../service/api/employeeApi";
+import { isStaffOnly } from "../../../utils/authHelper";
 
 const { Search } = Input;
 const { Option } = Select;
+
+const MotionDiv = motion.div;
 
 const StaffManagement = () => {
   const [staffData, setStaffData] = useState([]);
@@ -43,13 +43,16 @@ const StaffManagement = () => {
     total: 0
   });
 
+  const currentPage = pagination.current;
+  const pageSizeValue = pagination.pageSize;
+
   // Fetch employees from API
   const fetchEmployees = useCallback(async () => {
     try {
       setLoading(true);
       const params = {
-        page: pagination.current - 1,
-        size: pagination.pageSize,
+        page: currentPage - 1,
+        size: pageSizeValue,
         search: searchText,
         status: filterStatus === 'all' ? null : filterStatus === 'active',
         sortBy: 'createdAt',
@@ -63,8 +66,6 @@ const StaffManagement = () => {
         const roleMapping = {
           'ADMIN': 'Quản trị viên',
           'MANAGER': 'Quản lý',
-          'STORE_MANAGER': 'Quản lý cửa hàng',
-          'SUPPORT_STAFF': 'Nhân viên hỗ trợ',
           'STAFF': 'Nhân viên'
         };
 
@@ -104,7 +105,7 @@ const StaffManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.current, pagination.pageSize, searchText, filterStatus]);
+  }, [currentPage, pageSizeValue, searchText, filterStatus]);
 
   useEffect(() => {
     fetchEmployees();
@@ -123,9 +124,24 @@ const StaffManagement = () => {
   ).length;
   const inactiveStaff = staffData.filter(
     (staff) => staff.status === "inactive"
-  ).length;
-  const departments = [...new Set(staffData.map((staff) => staff.department))]
-    .length;
+  ).length;   
+  const statCards = [
+    {
+      title: "Tổng nhân viên",
+      value: totalStaff,
+      iconColor: "bg-blue-50 text-blue-500",
+    },
+    {
+      title: "Đang làm việc",
+      value: activeStaff,
+      iconColor: "bg-green-50 text-green-500",
+    },
+    {
+      title: "Nghỉ việc",
+      value: inactiveStaff,
+      iconColor: "bg-rose-50 text-rose-500",
+    },
+  ];
 
   // Handle search and filter
   const handleSearch = (value) => {
@@ -219,57 +235,35 @@ const StaffManagement = () => {
   };
 
   return (
-    <motion.div
+    <MotionDiv
       initial="hidden"
       animate="visible"
       variants={fadeInUp}
       transition={{ duration: 0.6 }}
       className="space-y-6"
     >
-      {/* Statistics Cards */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Tổng nhân viên"
-              value={totalStaff}
-              prefix={<UserOutlined className="text-blue-600" />}
-              valueStyle={{ color: "#1890ff" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Đang làm việc"
-              value={activeStaff}
-              prefix={<UserOutlined className="text-green-600" />}
-              valueStyle={{ color: "#52c41a" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Nghỉ việc"
-              value={inactiveStaff}
-              prefix={<UserOutlined className="text-red-600" />}
-              valueStyle={{ color: "#ff4d4f" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Chức vụ"
-              value={departments}
-              prefix={<UserOutlined className="text-purple-600" />}
-              valueStyle={{ color: "#722ed1" }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        {statCards.map((card, ) => (
+          <div
+            key={card.title}
+            className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all duration-200"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-gray-500">{card.title}</p>
+                <p className="text-3xl font-semibold text-gray-900 mt-1">{card.value}</p>
+              </div>
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${card.iconColor}`}>
+                <UserOutlined className="text-lg" />
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">{card.subtitle}</span>
+              
+            </div>
+          </div>
+        ))}
+      </div>
       {/* Main Table Card */}
       <Card
         title={
@@ -281,6 +275,7 @@ const StaffManagement = () => {
               type="primary"
               icon={<PlusOutlined />}
               onClick={handleAdd}
+              disabled={isStaffOnly()}
               className="bg-green-600 hover:bg-green-700 border-green-600"
             >
               Thêm nhân viên
@@ -336,6 +331,7 @@ const StaffManagement = () => {
             handleDelete={handleDelete}
             pagination={pagination}
             handleTableChange={handleTableChange}
+            isStaffOnly={isStaffOnly()}
           />
         </Spin>
       </Card>
@@ -362,7 +358,7 @@ const StaffManagement = () => {
         staff={selectedStaff}
       />
 
-    </motion.div>
+    </MotionDiv>
   );
 };
 

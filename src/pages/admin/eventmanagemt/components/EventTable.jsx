@@ -5,18 +5,18 @@ import {
   Space, 
   Tag, 
   Image,
-  Popconfirm,
   Switch,
   message
 } from 'antd'
 import { 
   EditOutlined, 
-  DeleteOutlined, 
   CalendarOutlined,
   EnvironmentOutlined,
   EyeOutlined,
   UserAddOutlined,
-  ClockCircleOutlined
+  ClockCircleOutlined,
+  UserOutlined,
+  TeamOutlined
 } from '@ant-design/icons'
 import { activateEvent } from '../../../../service/api/eventApi'
 import dayjs from 'dayjs'
@@ -29,7 +29,8 @@ const EventTable = ({
   handleAssign,
   statusConfig,
   categoryConfig,
-  onActivated
+  onActivated,
+  isStaffOnly = false
 }) => {
   // Loading per-row khi toggle để mượt mà và tránh spam request
   const [rowLoading, setRowLoading] = useState({})
@@ -126,6 +127,36 @@ const EventTable = ({
         return <Tag color={config.color}>{config.text}</Tag>
       },
     },
+    {
+      title: 'Số người tham gia',
+      key: 'totalParticipants',
+      width: 150,
+      align: 'center',
+      render: (_, record) => {
+        const count = typeof record.totalParticipants === 'number' ? record.totalParticipants : (Number(record.totalParticipants) || 0)
+        return (
+          <div className="flex items-center justify-center gap-2">
+            <UserOutlined className="text-blue-500" />
+            <span className="font-medium">{count}</span>
+          </div>
+        )
+      },
+    },
+    {
+      title: 'Số nhân viên',
+      key: 'totalStaffs',
+      width: 130,
+      align: 'center',
+      render: (_, record) => {
+        const count = typeof record.totalStaffs === 'number' ? record.totalStaffs : (Number(record.totalStaffs) || 0)
+        return (
+          <div className="flex items-center justify-center gap-2">
+            <TeamOutlined className="text-purple-500" />
+            <span className="font-medium">{count}</span>
+          </div>
+        )
+      },
+    },
     // Bỏ cột Phí tham gia theo yêu cầu
     {
       title: 'Thao tác',
@@ -145,6 +176,7 @@ const EventTable = ({
             type="text"
             icon={<EditOutlined />}
             onClick={() => handleEdit(record)}
+            disabled={isStaffOnly}
             className="text-blue-600 hover:text-blue-700"
             size="small"
           >
@@ -154,28 +186,12 @@ const EventTable = ({
             type="text"
             icon={<UserAddOutlined />}
             onClick={() => handleAssign(record)}
+            disabled={isStaffOnly}
             className="text-purple-600 hover:text-purple-700"
             size="small"
           >
-            Thêm nhân viên
+            {record.staffCount > 0 ? 'Cập nhật nhân viên' : 'Thêm nhân viên'}
           </Button>
-          <Popconfirm
-            title="Xóa sự kiện"
-            description="Bạn có chắc chắn muốn xóa sự kiện này?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-            okButtonProps={{ danger: true }}
-          >
-            <Button
-              type="text"
-              icon={<DeleteOutlined />}
-              danger
-              size="small"
-            >
-              Xóa
-            </Button>
-          </Popconfirm>
         </Space>
       ),
     },

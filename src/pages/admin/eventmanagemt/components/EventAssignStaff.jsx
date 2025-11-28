@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Modal, Table, Tag, Switch, Button, message, Card, Space, Typography, Divider } from 'antd'
 import { CloseOutlined, UserOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import { getEmployees } from '../../../../service/api/employeeApi'
@@ -14,6 +14,8 @@ const EventAssignStaff = ({ visible, onClose, eventId, onAssigned }) => {
   const [assignedStaffs, setAssignedStaffs] = useState([]) // Danh sách nhân viên đã được assign
   const [selectedStaffIds, setSelectedStaffIds] = useState([])
   const [storeManagerIds, setStoreManagerIds] = useState(new Set())
+  const [conflictModal, setConflictModal] = useState({ open: false, message: '', staffNames: [] })
+  const [successModal, setSuccessModal] = useState(false)
 
   // Load danh sách nhân viên đã được assign vào event
   useEffect(() => {
@@ -95,7 +97,9 @@ const EventAssignStaff = ({ visible, onClose, eventId, onAssigned }) => {
       }
       const res = await assignEventStaffs(payload)
       if (res?.success) {
+        let latestCount = null
         message.success('Gán nhân sự thành công!')
+        
         // Reload danh sách nhân viên đã được assign
         if (eventId) {
           try {
@@ -112,6 +116,7 @@ const EventAssignStaff = ({ visible, onClose, eventId, onAssigned }) => {
             // Loại bỏ các nhân viên đã được assign khỏi danh sách đã chọn
             const assignedIds = mapped.map(s => s.id)
             setSelectedStaffIds(prev => prev.filter(id => !assignedIds.includes(id)))
+            latestCount = mapped.length
           } catch (e) {
             console.error('Error reloading assigned staffs:', e)
           }
@@ -119,24 +124,119 @@ const EventAssignStaff = ({ visible, onClose, eventId, onAssigned }) => {
         // Reset selection sau khi gán thành công
         setSelectedStaffIds([])
         setStoreManagerIds(new Set())
-        onClose()
-        if (onAssigned) onAssigned()
+        
+        // Hiển thị modal success trước, không đóng modal chính ngay
+        setSuccessModal(true)
+        
+        // Lưu latestCount để dùng khi đóng modal success
+        // Không gọi onClose() và onAssigned() ở đây, đợi người dùng đóng modal success
       } else {
         const msg = res?.message || 'Gán nhân sự thất bại!'
         message.error(msg)
       }
     } catch (err) {
-      const msg = err?.response?.data?.message || err?.message || 'Gán nhân sự thất bại!'
-      message.error(msg)
+      const responseData = err?.response?.data || {}
+      const serverMsg = responseData.message || err?.message || 'Gán nhân sự thất bại!'
+      
+      console.log('Error caught in EventAssignStaff:', { 
+        serverMsg, 
+        fullError: responseData,
+        statusCode: responseData.statusCode,
+        response: err?.response
+      })
+      
+      // Kiểm tra nhiều từ khóa để phát hiện lỗi conflict
+      // Message mẫu: "Nhân viên có sự kiện khác trùng thời gian với sự kiện này"
+      const conflictKeywords = [
+        'time conflict', 
+        'trùng thời gian', 
+        'trùng lịch', 
+        'conflict', 
+        'trùng',
+        'sự kiện khác',
+        'có sự kiện khác',
+        'nhân viên có sự kiện'
+      ]
+      const msgLower = String(serverMsg || '').toLowerCase().trim()
+      const conflictIndicator = conflictKeywords.some(keyword => {
+        const keywordLower = String(keyword).toLowerCase()
+        const found = msgLower.includes(keywordLower)
+        if (found) {
+          console.log(`Matched conflict keyword: "${keyword}" in message: "${serverMsg}"`)
+        }
+        return found
+      })
+      
+      console.log('Conflict check:', { 
+        serverMsg, 
+        msgLower, 
+        conflictIndicator, 
+        conflictKeywords,
+        matchedKeyword: conflictKeywords.find(keyword => msgLower.includes(keyword.toLowerCase()))
+      })
+      
+      if (conflictIndicator) {
+        const conflictPayload = err?.response?.data?.data
+        let conflictStaffIds = []
+        if (Array.isArray(conflictPayload)) {
+          conflictStaffIds = conflictPayload
+            .map((item) => {
+              if (typeof item === 'object' && item !== null) {
+                return Number(item.staffId || item.id || item.employeeId || item)
+              }
+              return Number(item)
+            })
+            .filter((id) => Number.isFinite(id))
+        }
+        if (!conflictStaffIds.length) {
+          conflictStaffIds = selectedStaffIds
+        }
+        const conflictNames = employees
+          .filter((emp) => conflictStaffIds.includes(emp.id))
+          .map((emp) => emp.fullName || emp.email || `Nhân viên #${emp.id}`)
+        
+        // Sử dụng message từ backend thay vì message đã dịch
+        const errorMessage = serverMsg || 'Nhân sự được chọn đang trùng lịch với sự kiện khác'
+        console.log('Setting conflict modal:', { open: true, message: errorMessage, serverMsg })
+        
+        // Sử dụng Modal.error để đảm bảo hiển thị với message từ backend
+        Modal.error({
+          title: 'Không thể gán nhân sự',
+          content: errorMessage,
+          centered: true,
+          okText: 'Đóng',
+          zIndex: 2000,
+          width: 500,
+          onOk: () => {
+            console.log('Conflict modal closed')
+          }
+        })
+        
+        // Vẫn set state để đồng bộ
+        setConflictModal({
+          open: true,
+          message: errorMessage,
+          staffNames: []
+        })
+        console.log('Conflict modal state set')
+      } else {
+        message.error(serverMsg)
+      }
     } finally {
       setLoading(false)
     }
   }
 
+  const existingManagerId = useMemo(() => {
+    const manager = assignedStaffs.find((s) => s.storeManager)
+    return manager ? manager.id : null
+  }, [assignedStaffs])
+
   // Lấy danh sách staff đã chọn
   const selectedStaffs = employees.filter(e => selectedStaffIds.includes(e.id))
 
   return (
+    <React.Fragment>
     <Modal
       title="Gán nhân sự cho sự kiện"
       open={visible}
@@ -248,10 +348,11 @@ const EventAssignStaff = ({ visible, onClose, eventId, onAssigned }) => {
         rowSelection={{ 
           selectedRowKeys: selectedStaffIds, 
           onChange: (keys) => {
-            // Lọc bỏ các nhân viên đã được assign
             const assignedIds = assignedStaffs.map(s => s.id)
             const filteredKeys = keys.filter(id => !assignedIds.includes(id))
+            const alreadySelectedManagers = Array.from(storeManagerIds).filter(id => filteredKeys.includes(id))
             setSelectedStaffIds(filteredKeys)
+            setStoreManagerIds(new Set(alreadySelectedManagers))
           },
           getCheckboxProps: (record) => ({
             disabled: assignedStaffs.some(s => s.id === record.id)
@@ -283,34 +384,102 @@ const EventAssignStaff = ({ visible, onClose, eventId, onAssigned }) => {
             title: 'Quản lý cửa hàng',
             key: 'storeManager',
             render: (_, record) => {
-              // Chỉ hiển thị toggle nếu staff có role STORE_MANAGER
-              const hasStoreManagerRole = (record.roles || []).some(
-                role => role === 'STORE_MANAGER' || role?.toUpperCase() === 'STORE_MANAGER'
-              )
-              
-              if (!hasStoreManagerRole) {
-                return <span className="text-gray-400">—</span>
-              }
-              
+              const isSelected = selectedStaffIds.includes(record.id)
+              const limitReached =
+                (!!existingManagerId && existingManagerId !== record.id) ||
+                (storeManagerIds.size >= 1 && !storeManagerIds.has(record.id))
+
               return (
                 <Switch
                   size="small"
                   checked={storeManagerIds.has(record.id)}
                   onChange={(checked) => {
-                    setStoreManagerIds((prev) => {
-                      const next = new Set(prev)
-                      if (checked) next.add(record.id); else next.delete(record.id)
+                    setStoreManagerIds(() => {
+                      const next = new Set()
+                      if (checked) {
+                        next.add(record.id)
+                      }
                       return next
                     })
                   }}
-                  disabled={!selectedStaffIds.includes(record.id)}
+                  disabled={!isSelected || limitReached}
                 />
               )
             }
           }
         ]}
       />
+      {conflictModal.open && (
+        <Modal
+          open={conflictModal.open}
+          onCancel={() => setConflictModal({ open: false, message: '', staffNames: [] })}
+          footer={[
+            <Button key="close" type="primary" onClick={() => setConflictModal({ open: false, message: '', staffNames: [] })}>
+              Đóng
+            </Button>
+          ]}
+          centered
+          title="Không thể gán nhân sự"
+        >
+          <div className="space-y-2">
+            <p>{conflictModal.message}</p>
+          </div>
+        </Modal>
+      )}
     </Modal>
+    {/* Render modal success bên ngoài modal chính để tránh bị unmount */}
+    {successModal && (
+      <Modal
+        open={successModal}
+        onCancel={() => {
+          setSuccessModal(false)
+          // Sau khi đóng modal success, đóng modal chính và gọi callback
+          onClose()
+          if (typeof onAssigned === 'function' && eventId) {
+            // Lấy lại số lượng nhân viên đã assign
+            getEventStaffs(eventId).then(staffRes => {
+              const staffList = staffRes?.data?.data || staffRes?.data || (Array.isArray(staffRes) ? staffRes : [])
+              const count = staffList.length
+              onAssigned(eventId, count)
+            }).catch(() => {
+              onAssigned(eventId, 0)
+            })
+          }
+        }}
+        footer={[
+          <Button 
+            key="close" 
+            type="primary" 
+            onClick={() => {
+              setSuccessModal(false)
+              // Sau khi đóng modal success, đóng modal chính và gọi callback
+              onClose()
+              if (typeof onAssigned === 'function' && eventId) {
+                // Lấy lại số lượng nhân viên đã assign
+                getEventStaffs(eventId).then(staffRes => {
+                  const staffList = staffRes?.data?.data || staffRes?.data || (Array.isArray(staffRes) ? staffRes : [])
+                  const count = staffList.length
+                  onAssigned(eventId, count)
+                }).catch(() => {
+                  onAssigned(eventId, 0)
+                })
+              }
+            }}
+          >
+            Đóng
+          </Button>
+        ]}
+        centered
+        title="Gán nhân sự thành công"
+        closable={true}
+        maskClosable={true}
+        destroyOnClose
+        zIndex={2000}
+      >
+        <p>Danh sách nhân sự mới đã được cập nhật cho sự kiện.</p>
+      </Modal>
+    )}
+    </React.Fragment>
   )
 }
 

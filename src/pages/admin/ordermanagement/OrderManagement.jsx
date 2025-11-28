@@ -6,6 +6,7 @@ import OrderDetail from './components/OrderDetail';
 import OrderAdd from './components/OrderAdd';
 import OrderEdit from './components/OrderEdit';
 import { getAdminOrders, getAdminOrderDetail, confirmOrderByStaff, processOrderByStaff, createShipmentForOrder, cancelOrderByStaff } from '../../../service/api/orderApi';
+import { isStaffOnly } from '../../../utils/authHelper';
 
 const { Search } = Input;
 const { Option } = Select;
@@ -519,6 +520,7 @@ const OrderManagement = () => {
             type="primary" 
             icon={<PlusOutlined />}
             onClick={handleAdd}
+            disabled={isStaffOnly()}
           >
             Tạo đơn hàng
           </Button>
@@ -696,6 +698,7 @@ const OrderManagement = () => {
         onConfirmOrder={handleConfirmOrder}
         confirmingOrderId={confirmingOrderId}
         onProcessOrder={handleProcessOrder}
+        isStaffOnly={isStaffOnly()}
         processingOrderId={processingOrderId}
         onShipOrder={handleOpenShipModal}
         shippingOrderId={shippingOrderId}

@@ -98,6 +98,22 @@ export const hasRole = (requiredRoles) => {
 };
 
 /**
+ * Kiểm tra user chỉ có role STAFF (không có ADMIN/MANAGER)
+ * @returns {boolean}
+ */
+export const isStaffOnly = () => {
+  const userInfo = getUserInfo();
+  if (!userInfo || !userInfo.roles || !Array.isArray(userInfo.roles)) return false;
+  
+  const roles = userInfo.roles.map(r => r.toUpperCase());
+  // Chỉ có STAFF và không có ADMIN, MANAGER, STORE_MANAGER
+  return roles.includes('STAFF') && 
+         !roles.includes('ADMIN') && 
+         !roles.includes('MANAGER') && 
+         !roles.includes('STORE_MANAGER');
+};
+
+/**
  * Kiểm tra token có hết hạn không (dựa vào JWT)
  * @param {string} token - JWT token
  * @returns {boolean}
@@ -245,6 +261,7 @@ export default {
   getUserInfo,
   isLoggedIn,
   hasRole,
+  isStaffOnly,
   isTokenExpired,
   redirectAfterLogin,
   formatAuthError,

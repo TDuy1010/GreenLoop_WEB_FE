@@ -237,14 +237,33 @@ const VoucherListModal = ({ visible, campaign, onClose }) => {
       render: (value) => (value ? formatCurrency(value) : '—'),
     },
     {
-      title: 'Số lượng',
+      title: 'SL tạo',
+      dataIndex: 'quantity',
       key: 'quantity',
-      width: 120,
-      render: (_, record) => (
-        <span>
-          {record.availableQuantity || 0} / {record.quantity || 0}
-        </span>
+      width: 110,
+      align: 'center',
+      render: (value) => (
+        <Tag color="blue" style={{ margin: 0 }}>
+          {value ?? 0}
+        </Tag>
       ),
+    },
+    {
+      title: 'SL khả dụng',
+      dataIndex: 'availableQuantity',
+      key: 'availableQuantity',
+      width: 140,
+      align: 'center',
+      render: (value, record) => {
+        const remaining = value ?? 0;
+        const total = record.quantity ?? 0;
+        const isLow = total > 0 && remaining / total <= 0.2;
+        return (
+          <Tag color={isLow ? 'red' : 'green'} style={{ margin: 0 }}>
+            {remaining} / {total}
+          </Tag>
+        );
+      },
     },
     {
       title: 'Điểm đổi',

@@ -22,6 +22,7 @@ const OrderTable = ({
   pagination,
   onChange,
   onConfirmOrder,
+  isStaffOnly = false,
   confirmingOrderId,
   onProcessOrder,
   processingOrderId,
@@ -399,6 +400,7 @@ const OrderTable = ({
               icon={<EditOutlined />} 
               size="small"
               onClick={() => handleEdit(record)}
+              disabled={isStaffOnly}
             />
           </Tooltip>
         </Space>

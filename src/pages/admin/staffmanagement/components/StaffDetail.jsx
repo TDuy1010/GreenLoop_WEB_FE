@@ -261,55 +261,9 @@ const StaffDetail = ({ visible, onClose, staff }) => {
                     </div>
                   </div>
                 </Col>
-                <Col span={24}>
-                  <div className="flex items-start gap-3">
-                    <DollarOutlined className="text-green-500 text-lg mt-1" />
-                    <div className="flex-1">
-                      <div className="text-xs text-gray-500">Mức lương</div>
-                      <div className="text-base font-bold text-green-600">
-                        {displayStaff.salary ? displayStaff.salary.toLocaleString('vi-VN') : 'Chưa cập nhật'} VNĐ
-                      </div>
-                    </div>
-                  </div>
-                </Col>
               </Row>
             </Card>
 
-            {/* Additional Statistics */}
-            <Card 
-              title={
-                <span className="text-base font-semibold text-gray-700">
-                  Thống kê
-                </span>
-              }
-              className="shadow-sm"
-              size="small"
-            >
-              <Row gutter={[16, 16]}>
-                <Col span={8}>
-                  <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {Math.floor((new Date() - new Date(displayStaff.joinDate)) / (1000 * 60 * 60 * 24 * 30))}
-                    </div>
-                    <div className="text-xs text-gray-600 mt-1">Tháng làm việc</div>
-                  </div>
-                </Col>
-                <Col span={8}>
-                  <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">
-                      {displayStaff.status === 'active' ? '✓' : '✗'}
-                    </div>
-                    <div className="text-xs text-gray-600 mt-1">Trạng thái</div>
-                  </div>
-                </Col>
-                <Col span={8}>
-                  <div className="text-center p-3 bg-purple-50 rounded-lg">
-                    <div className="text-2xl font-bold text-purple-600">A+</div>
-                    <div className="text-xs text-gray-600 mt-1">Hiệu suất</div>
-                  </div>
-                </Col>
-              </Row>
-            </Card>
           </>
         )}
       </Spin>

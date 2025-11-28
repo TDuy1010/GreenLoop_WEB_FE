@@ -24,6 +24,7 @@ import ProductAdd from './components/ProductAdd'
 import ProductEdit from './components/ProductEdit'
 import ProductImageManager from './components/ProductImageManager'
 import { getProducts, getProductById, toggleProductStatus } from '../../../service/api/productApi'
+import { isStaffOnly } from '../../../utils/authHelper'
 
 const { Search } = Input
 const { Option } = Select

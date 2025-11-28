@@ -25,7 +25,8 @@ const StaffTable = ({
   handleToggleStatus,
   handleDelete,
   pagination,
-  handleTableChange
+  handleTableChange,
+  isStaffOnly = false
 }) => {
   const columns = [
     {
@@ -89,6 +90,7 @@ const StaffTable = ({
           <Switch
             checked={status === 'active'}
             onChange={() => handleToggleStatus(record)}
+            disabled={isStaffOnly}
             checkedChildren="Active"
             unCheckedChildren="Inactive"
             className={status === 'active' ? 'bg-green-600' : ''}
@@ -115,6 +117,7 @@ const StaffTable = ({
               type="text"
               icon={<EditOutlined />}
               onClick={() => handleEdit(record)}
+              disabled={isStaffOnly}
               className="text-blue-600 hover:text-blue-700"
               size="small"
             />
@@ -126,12 +129,14 @@ const StaffTable = ({
             okText="Xóa"
             cancelText="Hủy"
             okButtonProps={{ danger: true }}
+            disabled={isStaffOnly}
           >
             <Tooltip title="Xóa">
               <Button
                 type="text"
                 icon={<DeleteOutlined />}
                 danger
+                disabled={isStaffOnly}
                 size="small"
               />
             </Tooltip>

@@ -28,7 +28,6 @@ import {
   CheckCircleOutlined,
   CopyOutlined
 } from '@ant-design/icons'
-import dayjs from 'dayjs'
 import { createEmployee } from '../../../../service/api/employeeApi'
 
 const { Option } = Select
@@ -47,10 +46,7 @@ const StaffAdd = ({ visible, onClose, onAdd }) => {
   // Role mapping: Tiếng Việt -> API
   const roleMapping = {
     'Nhân viên': 'STAFF',
-    'Quản lý cửa hàng': 'STORE_MANAGER',
-    'Nhân viên hỗ trợ': 'SUPPORT_STAFF',
-    'Quản lý': 'MANAGER',
-    'Quản trị viên': 'ADMIN'
+    'Quản lý': 'MANAGER'
   }
 
   const handleSubmit = async () => {
@@ -276,17 +272,12 @@ const StaffAdd = ({ visible, onClose, onAdd }) => {
                   Chức vụ
                 </span>
               }
+              initialValue="Nhân viên"
               rules={[{ required: true, message: 'Vui lòng chọn chức vụ!' }]}
             >
-              <Select 
-                placeholder="Chọn chức vụ"
-                size="large"
-              >
-                <Option value="Quản trị viên">Quản trị viên (ADMIN)</Option>
-                <Option value="Quản lý">Quản lý (MANAGER)</Option>
-                <Option value="Quản lý cửa hàng">Quản lý cửa hàng (STORE MANAGER)</Option>
-                <Option value="Nhân viên hỗ trợ">Nhân viên hỗ trợ (SUPPORT STAFF)</Option>
-                <Option value="Nhân viên">Nhân viên (STAFF)</Option>
+              <Select placeholder="Chọn chức vụ" size="large">
+                <Option value="Quản lý">Quản lý </Option>
+                <Option value="Nhân viên">Nhân viên </Option>
               </Select>
             </Form.Item>
           </Col>

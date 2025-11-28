@@ -2,6 +2,7 @@
 import React, { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Layout, Menu, Button, Typography, Badge, Alert } from 'antd';
+import { isStaffOnly } from '../utils/authHelper';
 import {
   DashboardOutlined,
   UserOutlined,
@@ -32,29 +33,42 @@ const Sidebar = ({ collapsed, onToggle }) => {
 
   // Cấu hình menu
   const menuItems = useMemo(
-    () => [
+    () => {
+      const staffOnly = isStaffOnly();
+      
+      // Nếu là STAFF: hiển thị trực tiếp "Quản lý khách hàng" (không có dropdown)
+      // Nếu không phải STAFF: hiển thị "Quản lý người dùng" với dropdown
+      const userManagementItem = staffOnly
+        ? {
+                key: '/admin/users',
+                label: 'Quản lý khách hàng',
+                icon: <UserOutlined />
+          }
+        : {
+            key: 'user-management',
+            label: 'Quản lý người dùng',
+            icon: <TeamOutlined />,
+            children: [
+              {
+                key: '/admin/users',
+                label: 'Quản lý khách hàng',
+                icon: <UserOutlined />
+              },
+              {
+                key: '/admin/staff',
+                label: 'Quản lý nhân viên',
+                icon: <UsergroupAddOutlined />
+              }
+            ]
+          };
+
+      return [
       {
         key: '/admin/dashboard',
         label: 'Bảng điều khiển',
         icon: <DashboardOutlined />
       },
-      {
-        key: 'user-management',
-        label: 'Quản lý người dùng',
-        icon: <TeamOutlined />,
-        children: [
-          {
-            key: '/admin/users',
-            label: 'Quản lý khách hàng',
-            icon: <UserOutlined />
-          },
-          {
-            key: '/admin/staff',
-            label: 'Quản lý nhân viên',
-            icon: <UsergroupAddOutlined />
-          }
-        ]
-      },
+      userManagementItem,
       {
         key: 'product-management',
         label: 'Quản lý sản phẩm',
@@ -128,7 +142,8 @@ const Sidebar = ({ collapsed, onToggle }) => {
       //   label: 'Đăng xuất',
       //   icon: <LogoutOutlined />
       // },
-    ],
+      ];
+    },
     []
   );
 

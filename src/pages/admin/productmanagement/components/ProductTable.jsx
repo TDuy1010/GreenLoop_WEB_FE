@@ -5,12 +5,10 @@ import {
   Space,
   Tag,
   Image,
-  Popconfirm,
   Switch
 } from 'antd'
 import {
   EditOutlined,
-  DeleteOutlined,
   EyeOutlined,
   CheckCircleOutlined
 } from '@ant-design/icons'
@@ -151,7 +149,6 @@ const ProductTable = ({
               Ảnh
             </Button>
           </Space>
-          <Space size="small">
             {record.status === 'pending' && (
               <Button
                 type="text"
@@ -163,24 +160,6 @@ const ProductTable = ({
                 Duyệt
               </Button>
             )}
-            <Popconfirm
-              title="Xóa sản phẩm"
-              description="Bạn có chắc chắn muốn xóa sản phẩm này?"
-              onConfirm={() => handleDelete(record.id)}
-              okText="Xóa"
-              cancelText="Hủy"
-              okButtonProps={{ danger: true }}
-            >
-              <Button
-                type="text"
-                icon={<DeleteOutlined />}
-                danger
-                size="small"
-              >
-                Xóa
-              </Button>
-            </Popconfirm>
-          </Space>
         </Space>
       ),
     },

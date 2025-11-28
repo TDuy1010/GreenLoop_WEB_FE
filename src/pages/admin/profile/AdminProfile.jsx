@@ -26,7 +26,7 @@ const AdminProfile = () => {
     email: '—',
     phoneNumber: '',
     gender: 'other',
-    dateOfBirth: '',
+    dateOfBirth: '1980-01-01',
     avatar: ''
   })
 
@@ -62,7 +62,7 @@ const AdminProfile = () => {
           phoneNumber: data.phoneNumber || '',
           // Backend trả về UPPERCASE (MALE/FEMALE/OTHER), chuyển về lowercase để hiển thị
           gender: data.gender ? data.gender.toLowerCase() : 'other',
-          dateOfBirth: data.dateOfBirth || '',
+          dateOfBirth: data.dateOfBirth || '1980-01-01',
           avatar: data.avatarUrl || ''
         }
 

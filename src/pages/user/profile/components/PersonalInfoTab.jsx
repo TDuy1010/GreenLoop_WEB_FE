@@ -159,7 +159,7 @@ const PersonalInfoTab = ({
             </span>
             <input
               type="date"
-              value={isEditing ? editedData.birthday : userData.birthday}
+              value={isEditing ? (editedData.birthday || '1980-01-01') : (userData.birthday || '1980-01-01')}
               onChange={(e) => onInputChange('birthday', e.target.value)}
               disabled={!isEditing}
               className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white shadow-inner focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 transition"
