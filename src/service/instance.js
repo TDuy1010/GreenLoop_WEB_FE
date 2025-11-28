@@ -83,6 +83,7 @@ axiosClient.interceptors.request.use(
       // Lấy token từ localStorage
       const token = localStorage.getItem("accessToken");
       const refreshToken = localStorage.getItem("refreshToken");
+      const hadAuthTokens = Boolean(localStorage.getItem("accessToken") || refreshToken);
 
       // Chủ động refresh nếu token sắp hết hạn để tránh 401 giữa chừng
       if (token && refreshToken && isTokenExpiringSoon(token) && !isRefreshing) {
@@ -224,7 +225,7 @@ axiosClient.interceptors.response.use(
         }
       } else {
         isRefreshing = false;
-        if (!DISABLE_AUTO_LOGOUT) {
+        if (hadAuthTokens && !DISABLE_AUTO_LOGOUT) {
           forceLogout();
         }
         return Promise.reject(error.response?.data || error);
