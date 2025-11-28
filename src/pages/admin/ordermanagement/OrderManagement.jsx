@@ -1,9 +1,8 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, Row, Col, Statistic, Input, Select, Button, message, Space, DatePicker, Modal, Form, InputNumber, Divider } from 'antd';
-import { SearchOutlined, PlusOutlined, ReloadOutlined, FilterOutlined, ExportOutlined } from '@ant-design/icons';
+import { SearchOutlined, ReloadOutlined, FilterOutlined } from '@ant-design/icons';
 import OrderTable from './components/OrderTable';
 import OrderDetail from './components/OrderDetail';
-import OrderAdd from './components/OrderAdd';
 import OrderEdit from './components/OrderEdit';
 import { getAdminOrders, getAdminOrderDetail, confirmOrderByStaff, processOrderByStaff, createShipmentForOrder, cancelOrderByStaff } from '../../../service/api/orderApi';
 import { isStaffOnly } from '../../../utils/authHelper';
@@ -124,7 +123,6 @@ const buildShipmentDefaults = (payload) => {
 
 const OrderManagement = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [addModalVisible, setAddModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -276,17 +274,6 @@ const OrderManagement = () => {
     showQuickJumper: true,
     showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} đơn hàng`,
     pageSizeOptions: ['10', '20', '50', '100'],
-  };
-
-  // Handle CRUD operations
-  const handleAdd = () => {
-    setAddModalVisible(true);
-  };
-
-  const handleAddOrder = (newOrder) => {
-    const updatedData = [...orderData, newOrder];
-    setOrderData(updatedData);
-    message.success('Thêm đơn hàng thành công!');
   };
 
   const handleView = async (order) => {
@@ -471,10 +458,6 @@ const OrderManagement = () => {
     setCancelError('');
   };
 
-  const handleCloseAdd = () => {
-    setAddModalVisible(false);
-  };
-
   const handleCloseEdit = () => {
     setEditModalVisible(false);
     setSelectedOrder(null);
@@ -488,10 +471,6 @@ const OrderManagement = () => {
     setDateRange(null);
     setTableParams(prev => ({ ...prev, current: 1 }));
     message.success('Đã làm mới bộ lọc đơn hàng');
-  };
-
-  const handleExport = () => {
-    message.info('Đang xuất báo cáo đơn hàng...');
   };
 
 
@@ -509,20 +488,6 @@ const OrderManagement = () => {
             onClick={handleRefresh}
           >
             Làm mới
-          </Button>
-          <Button 
-            icon={<ExportOutlined />}
-            onClick={handleExport}
-          >
-            Xuất báo cáo
-          </Button>
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />}
-            onClick={handleAdd}
-            disabled={isStaffOnly()}
-          >
-            Tạo đơn hàng
           </Button>
         </Space>
       </div>
@@ -889,13 +854,6 @@ const OrderManagement = () => {
           </Button>
         </div>
       </Modal>
-
-      {/* Order Add Modal */}
-      <OrderAdd
-        visible={addModalVisible}
-        onClose={handleCloseAdd}
-        onAdd={handleAddOrder}
-      />
 
       {/* Order Edit Modal */}
       <OrderEdit

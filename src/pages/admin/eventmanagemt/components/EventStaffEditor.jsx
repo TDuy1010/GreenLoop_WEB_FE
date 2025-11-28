@@ -136,7 +136,58 @@ const EventStaffEditor = ({ visible, onClose, eventId, assigned = [], onSaved })
         }))
       }
       console.log('UpdateEventStaffs payload:', payload)
-      await updateEventStaffs(eventId, payload)
+      const response = await updateEventStaffs(eventId, payload)
+      console.log('UpdateEventStaffs response:', response)
+      
+      // Kiểm tra nếu API trả về success: false
+      if (response?.data?.success === false || response?.success === false) {
+        const responseData = response?.data || response || {}
+        const serverMsg = responseData.message || 'Cập nhật phân công thất bại'
+        
+        console.log('API returned success: false', { responseData, serverMsg })
+        
+        // Kiểm tra conflict
+        const conflictKeywords = [
+          'time conflict', 
+          'trùng thời gian', 
+          'trùng lịch', 
+          'conflict', 
+          'trùng',
+          'sự kiện khác',
+          'có sự kiện khác',
+          'nhân viên có sự kiện',
+          'trùng thời gian với sự kiện'
+        ]
+        const msgLower = String(serverMsg || '').toLowerCase().trim()
+        const conflictIndicator = conflictKeywords.some(keyword => {
+          const keywordLower = String(keyword).toLowerCase()
+          return msgLower.includes(keywordLower)
+        })
+        
+        if (conflictIndicator) {
+          console.log('✓ Conflict detected from API response, showing Modal.error')
+          Modal.error({
+            title: 'Không thể lưu phân công',
+            content: serverMsg,
+            centered: true,
+            okText: 'Đóng',
+            zIndex: 2000,
+            width: 500
+          })
+        } else {
+          Modal.error({
+            title: 'Lỗi',
+            content: serverMsg,
+            centered: true,
+            okText: 'Đóng',
+            zIndex: 2000,
+            width: 500
+          })
+        }
+        setSaving(false)
+        return
+      }
+      
       // Lưu danh sách đã cập nhật để dùng khi đóng modal success
       const updatedList = Array.from(dedupMap.values()).map(a => ({
         staffId: a.staffId,
@@ -148,23 +199,23 @@ const EventStaffEditor = ({ visible, onClose, eventId, assigned = [], onSaved })
       setSuccessModal(true)
       setSaving(false)
       // Không gọi onSaved ngay, đợi người dùng đóng modal success
-    } catch (e) {
-      // Lấy message từ nhiều nguồn có thể
-      const responseData = e?.response?.data || {}
-      const serverMsg = responseData.message || e?.message || 'Cập nhật phân công thất bại'
-      const errors = responseData.errors || []
+    } catch (err) {
+      console.error('Full error object:', err)
+      console.error('Error response:', err?.response)
+      console.error('Error response data:', err?.response?.data)
+      
+      const responseData = err?.response?.data || {}
+      const serverMsg = responseData.message || err?.message || 'Cập nhật phân công thất bại'
       
       console.log('Error caught in EventStaffEditor:', { 
         serverMsg, 
-        errors, 
         fullError: responseData,
         statusCode: responseData.statusCode,
-        response: e?.response
+        response: err?.response,
+        errorObject: err
       })
       
-      const isEmptyError = errors.some(err => 
-        typeof err === 'string' && err.toLowerCase().includes('must not be empty')
-      ) || (serverMsg && String(serverMsg).toLowerCase().includes('must not be empty'))
+      const isEmptyError = (serverMsg && String(serverMsg).toLowerCase().includes('must not be empty'))
       
       // Kiểm tra nhiều từ khóa để phát hiện lỗi conflict
       // Message mẫu: "Nhân viên có sự kiện khác trùng thời gian với sự kiện này"
@@ -176,80 +227,54 @@ const EventStaffEditor = ({ visible, onClose, eventId, assigned = [], onSaved })
         'trùng',
         'sự kiện khác',
         'có sự kiện khác',
-        'nhân viên có sự kiện'
+        'nhân viên có sự kiện',
+        'trùng thời gian với sự kiện'
       ]
       const msgLower = String(serverMsg || '').toLowerCase().trim()
       const conflictIndicator = conflictKeywords.some(keyword => {
         const keywordLower = String(keyword).toLowerCase()
         const found = msgLower.includes(keywordLower)
         if (found) {
-          console.log(`Matched conflict keyword: "${keyword}" in message: "${serverMsg}"`)
+          console.log(`✓ Matched conflict keyword: "${keyword}" in message: "${serverMsg}"`)
         }
         return found
       })
       
-      console.log('Conflict check:', { 
+      console.log('Conflict check result:', { 
         serverMsg, 
         msgLower, 
         conflictIndicator, 
         conflictKeywords,
-        matchedKeyword: conflictKeywords.find(keyword => msgLower.includes(keyword.toLowerCase())),
-        msgLength: msgLower.length
+        matchedKeyword: conflictKeywords.find(keyword => msgLower.includes(keyword.toLowerCase()))
       })
       
       if (isEmptyError) {
+        console.log('Showing empty error modal')
         setErrorModal({
           open: true,
           title: 'Không thể lưu phân công',
           message: 'Danh sách nhân viên không được để trống. Vui lòng chọn ít nhất một nhân viên cho sự kiện.'
         })
       } else if (conflictIndicator) {
-        console.log('Setting conflict modal to open')
-        let conflictStaffIds = []
-        const conflictPayload = e?.response?.data?.data
-        if (Array.isArray(conflictPayload)) {
-          conflictStaffIds = conflictPayload
-            .map((item) => {
-              if (typeof item === 'object' && item !== null) {
-                return Number(item.staffId || item.id || item.employeeId || item)
-              }
-              return Number(item)
-            })
-            .filter((id) => Number.isFinite(id))
-        }
-        if (!conflictStaffIds.length) {
-          conflictStaffIds = assignments.map((a) => Number(a.staffId))
-        }
-        const staffLookup = [
-          ...allEmployees.map((emp) => ({
-            id: Number(emp.id),
-            fullName: emp.fullName || emp.email || `Nhân viên #${emp.id}`
-          })),
-          ...current.map((emp) => ({
-            id: Number(emp.staffId),
-            fullName: emp.fullName || emp.email || `Nhân viên #${emp.staffId}`
-          }))
-        ]
-        const conflictNames = conflictStaffIds
-          .map((id) => staffLookup.find((emp) => emp.id === Number(id))?.fullName)
-          .filter(Boolean)
-
-        // Sử dụng message từ backend thay vì message đã dịch
+        console.log('✓ Conflict detected, showing Modal.error with message:', serverMsg)
+        
+        // Sử dụng message chính xác từ backend
         const errorMessage = serverMsg || 'Nhân sự được chọn đang trùng lịch với sự kiện khác'
-        console.log('Setting conflict modal:', { open: true, message: errorMessage, serverMsg })
         
         // Sử dụng Modal.error để đảm bảo hiển thị với message từ backend
-        Modal.error({
-          title: 'Không thể lưu phân công',
-          content: errorMessage,
-          centered: true,
-          okText: 'Đóng',
-          zIndex: 2000,
-          width: 500,
-          onOk: () => {
-            console.log('Conflict modal closed')
-          }
-        })
+        setTimeout(() => {
+          Modal.error({
+            title: 'Không thể lưu phân công',
+            content: errorMessage,
+            centered: true,
+            okText: 'Đóng',
+            zIndex: 2000,
+            width: 500,
+            onOk: () => {
+              console.log('Conflict modal closed')
+            }
+          })
+        }, 100)
         
         // Vẫn set state để đồng bộ
         setConflictModal({
@@ -259,7 +284,16 @@ const EventStaffEditor = ({ visible, onClose, eventId, assigned = [], onSaved })
         })
         console.log('Conflict modal state set')
       } else {
-        message.error(serverMsg)
+        console.log('Non-conflict error, showing message.error:', serverMsg)
+        // Hiển thị tất cả lỗi khác bằng Modal.error để đảm bảo người dùng thấy
+        Modal.error({
+          title: 'Lỗi',
+          content: serverMsg,
+          centered: true,
+          okText: 'Đóng',
+          zIndex: 2000,
+          width: 500
+        })
       }
     } finally {
       setSaving(false)
