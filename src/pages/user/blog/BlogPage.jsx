@@ -1,99 +1,88 @@
-import React, { useState } from 'react'
-import { motion } from 'framer-motion'
+import React, { useState, useEffect, useCallback } from 'react'
+import { motion as Motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
+import { getPublishedBlogs } from '../../../service/api/blogApi'
+
+const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800'
+
+const stripHtml = (html = '') => html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
+const estimateReadTime = (text = '') => {
+  const words = text.split(/\s+/).filter(Boolean).length
+  return `${Math.max(1, Math.round(words / 200))} phút đọc`
+}
 
 const BlogPage = () => {
-  const [selectedCategory, setSelectedCategory] = useState('all')
-  const [searchText, setSearchText] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [activeSearch, setActiveSearch] = useState('')
+  const [blogs, setBlogs] = useState([])
+  const [page, setPage] = useState(0)
+  const [pageSize] = useState(6)
+  const [totalPages, setTotalPages] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  // Mock blog data
-  const blogPosts = [
-    {
-      id: 1,
-      title: '5 Cách Đơn Giản Để Sống Bền Vững Hơn Mỗi Ngày',
-      excerpt: 'Khám phá những thay đổi nhỏ trong cuộc sống hàng ngày có thể tạo ra tác động lớn đến môi trường...',
-      category: 'lifestyle',
-      author: 'Nguyễn Thanh Hà',
-      date: '2024-01-15',
-      readTime: '5 phút đọc',
-      image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800',
-      tags: ['Lối sống xanh', 'Môi trường', 'Tips']
-    },
-    {
-      id: 2,
-      title: 'Thời Trang Tuần Hoàn: Xu Hướng Của Tương Lai',
-      excerpt: 'Tìm hiểu về phong trào thời trang bền vững và cách chúng ta có thể góp phần vào nền kinh tế tuần hoàn...',
-      category: 'fashion',
-      author: 'Trần Minh Anh',
-      date: '2024-01-12',
-      readTime: '8 phút đọc',
-      image: 'https://images.unsplash.com/photo-1532453288672-3a27e9be9efd?w=800',
-      tags: ['Thời trang', 'Tuần hoàn', 'Xu hướng']
-    },
-    {
-      id: 3,
-      title: 'Tác Động Của Rác Thải Nhựa Đến Đại Dương',
-      excerpt: 'Những con số đáng báo động về ô nhiễm nhựa và những giải pháp chúng ta có thể áp dụng ngay hôm nay...',
-      category: 'environment',
-      author: 'Lê Văn Nam',
-      date: '2024-01-10',
-      readTime: '6 phút đọc',
-      image: 'https://images.unsplash.com/photo-1621451537084-482c73073a0f?w=800',
-      tags: ['Đại dương', 'Ô nhiễm', 'Hành động']
-    },
-    {
-      id: 4,
-      title: 'Hành Trình Quyên Góp Đồ Cũ: Từ Nhà Bạn Đến Người Cần',
-      excerpt: 'Khám phá quy trình xử lý và phân phối đồ quyên góp tại GreenLoop, nơi mỗi món đồ đều có ý nghĩa...',
-      category: 'greenloop',
-      author: 'Phạm Thị Lan',
-      date: '2024-01-08',
-      readTime: '7 phút đọc',
-      image: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800',
-      tags: ['Quyên góp', 'GreenLoop', 'Cộng đồng']
-    },
-    {
-      id: 5,
-      title: 'DIY: Biến Đồ Cũ Thành Đồ Mới Với Upcycling',
-      excerpt: 'Hướng dẫn chi tiết các dự án upcycling sáng tạo để biến những món đồ cũ thành những sản phẩm độc đáo...',
-      category: 'diy',
-      author: 'Hoàng Minh Tuấn',
-      date: '2024-01-05',
-      readTime: '10 phút đọc',
-      image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800',
-      tags: ['DIY', 'Upcycling', 'Sáng tạo']
-    },
-    {
-      id: 6,
-      title: 'Câu Chuyện Thành Công: Khách Hàng GreenLoop',
-      excerpt: 'Những câu chuyện truyền cảm hứng từ cộng đồng GreenLoop về hành trình sống xanh và đóng góp cho xã hội...',
-      category: 'stories',
-      author: 'Võ Thị Mai',
-      date: '2024-01-03',
-      readTime: '6 phút đọc',
-      image: 'https://images.unsplash.com/photo-1531206715517-5c0ba140b2b8?w=800',
-      tags: ['Câu chuyện', 'Thành công', 'Cảm hứng']
+  const fetchBlogs = useCallback(async ({ reset = false, targetPage = 0, searchText = activeSearch } = {}) => {
+    setLoading(true)
+    setError('')
+    try {
+      const response = await getPublishedBlogs({
+        page: targetPage,
+        size: pageSize,
+        search: searchText || undefined,
+        sortBy: 'publishedAt',
+        sortDir: 'DESC'
+      })
+
+      const payload = response?.data || response
+      const data = payload?.data || payload
+      const content = Array.isArray(data?.content) ? data.content : []
+
+      const normalized = content.map(item => {
+        const plainText = stripHtml(item.content)
+        return {
+          id: item.id,
+          title: item.title,
+          excerpt: plainText.length > 200 ? `${plainText.slice(0, 200)}…` : plainText,
+          category: item.category || 'blog',
+          author: item.authorName || 'GreenLoop',
+          publishedAt: item.publishedAt,
+          readTime: estimateReadTime(plainText),
+          image: item.thumbnailUrl || FALLBACK_IMAGE,
+          slug: item.slug || item.id
+        }
+      })
+
+      setBlogs(prev => (reset ? normalized : [...prev, ...normalized]))
+      setPage(data?.pageNumber ?? targetPage)
+      setTotalPages(data?.totalPages ?? (data?.totalElements ? Math.ceil(data.totalElements / pageSize) : targetPage + 1))
+    } catch (err) {
+      console.error('Failed to fetch blogs:', err)
+      setError(err?.message || 'Không thể tải danh sách blog')
+      if (reset) setBlogs([])
+    } finally {
+      setLoading(false)
     }
-  ]
+  }, [activeSearch, pageSize])
 
-  const categories = [
-    { id: 'all', name: 'Tất cả', icon: '📚' },
-    { id: 'lifestyle', name: 'Lối sống xanh', icon: '🌱' },
-    { id: 'fashion', name: 'Thời trang', icon: '👕' },
-    { id: 'environment', name: 'Môi trường', icon: '🌍' },
-    { id: 'greenloop', name: 'GreenLoop', icon: '♻️' },
-    { id: 'diy', name: 'DIY & Sáng tạo', icon: '✂️' },
-    { id: 'stories', name: 'Câu chuyện', icon: '💚' }
-  ]
+  useEffect(() => {
+    fetchBlogs({ reset: true, targetPage: 0, searchText: activeSearch })
+  }, [activeSearch, fetchBlogs])
 
-  // Filter posts
-  const filteredPosts = blogPosts.filter(post => {
-    const matchesCategory = selectedCategory === 'all' || post.category === selectedCategory
-    const matchesSearch = post.title.toLowerCase().includes(searchText.toLowerCase()) ||
-                         post.excerpt.toLowerCase().includes(searchText.toLowerCase()) ||
-                         post.tags.some(tag => tag.toLowerCase().includes(searchText.toLowerCase()))
-    return matchesCategory && matchesSearch
-  })
+  const filteredPosts = blogs
+
+  const hasMore = page + 1 < totalPages
+  const handleLoadMore = () => {
+    if (hasMore && !loading) {
+      fetchBlogs({ targetPage: page + 1 })
+    }
+  }
+
+  const handleSearchSubmit = (e) => {
+    e?.preventDefault()
+    setPage(0)
+    setActiveSearch(searchInput.trim())
+    fetchBlogs({ reset: true, targetPage: 0, searchText: searchInput.trim() })
+  }
 
   const fadeInUp = {
     hidden: { opacity: 0, y: 20 },
@@ -113,14 +102,14 @@ const BlogPage = () => {
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Hero Banner */}
-      <motion.div 
+      <Motion.div 
         className="bg-gradient-to-r from-green-600 to-blue-600 text-white py-16"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
       >
         <div className="max-w-7xl mx-auto px-6">
-          <motion.div
+          <Motion.div
             variants={fadeInUp}
             initial="hidden"
             animate="visible"
@@ -130,10 +119,10 @@ const BlogPage = () => {
             <p className="text-green-100 text-xl max-w-2xl mx-auto">
               Khám phá những câu chuyện, kiến thức và cảm hứng về lối sống bền vững
             </p>
-          </motion.div>
+          </Motion.div>
 
           {/* Search Bar */}
-          <motion.div
+          <Motion.div
             className="mt-8 max-w-2xl mx-auto"
             variants={fadeInUp}
             initial="hidden"
@@ -141,73 +130,58 @@ const BlogPage = () => {
             transition={{ delay: 0.2 }}
           >
             <div className="relative">
-              <input
-                type="text"
-                placeholder="Tìm kiếm bài viết..."
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                className="w-full px-6 py-4 rounded-full text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-300"
-              />
-              <button className="absolute right-2 top-1/2 -translate-y-1/2 bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-full transition">
+              <form onSubmit={handleSearchSubmit}>
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm bài viết..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="w-full px-6 py-4 rounded-full text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-300"
+                />
+                <button
+                  type="submit"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-full transition"
+                >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-              </button>
+                </button>
+              </form>
             </div>
-          </motion.div>
+          </Motion.div>
         </div>
-      </motion.div>
+      </Motion.div>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-12">
-        {/* Categories */}
-        <motion.div
-          className="mb-8"
-          variants={staggerContainer}
-          initial="hidden"
-          animate="visible"
-        >
-          <div className="flex flex-wrap gap-3 justify-center">
-            {categories.map(category => (
-              <motion.button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`px-6 py-3 rounded-full font-medium transition ${
-                  selectedCategory === category.id
-                    ? 'bg-green-600 text-white shadow-lg'
-                    : 'bg-white text-gray-700 hover:bg-gray-100'
-                }`}
-                variants={fadeInUp}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <span className="mr-2">{category.icon}</span>
-                {category.name}
-              </motion.button>
-            ))}
-          </div>
-        </motion.div>
-
         {/* Results Count */}
-        <motion.div
+        <Motion.div
           className="text-center mb-8"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
         >
           <p className="text-gray-600">
-            Hiển thị <span className="font-semibold text-green-600">{filteredPosts.length}</span> bài viết
+            {loading
+              ? 'Đang tải bài viết...'
+              : (
+                <>
+                  Hiển thị <span className="font-semibold text-green-600">{filteredPosts.length}</span> bài viết
+                </>
+                )
+            }
           </p>
-        </motion.div>
+          {error && <p className="text-red-500 mt-2">{error}</p>}
+        </Motion.div>
 
         {/* Blog Grid */}
-        <motion.div
+        <Motion.div
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
           variants={staggerContainer}
           initial="hidden"
           animate="visible"
         >
           {filteredPosts.map(post => (
-            <motion.article
+            <Motion.article
               key={post.id}
               className="bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition group"
               variants={fadeInUp}
@@ -220,11 +194,6 @@ const BlogPage = () => {
                   alt={post.title}
                   className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
                 />
-                <div className="absolute top-4 left-4">
-                  <span className="bg-white/90 backdrop-blur-sm px-4 py-1 rounded-full text-sm font-medium text-green-600">
-                    {categories.find(c => c.id === post.category)?.name}
-                  </span>
-                </div>
               </div>
 
               {/* Content */}
@@ -236,15 +205,6 @@ const BlogPage = () => {
                   {post.excerpt}
                 </p>
 
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {post.tags.map(tag => (
-                    <span key={tag} className="text-xs bg-gray-100 text-gray-600 px-3 py-1 rounded-full">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
                 <div className="flex items-center justify-between text-sm text-gray-500 border-t pt-4">
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -252,7 +212,6 @@ const BlogPage = () => {
                     </svg>
                     <span>{post.author}</span>
                   </div>
-                  <span>{post.readTime}</span>
                 </div>
 
                 <Link
@@ -265,13 +224,13 @@ const BlogPage = () => {
                   </svg>
                 </Link>
               </div>
-            </motion.article>
+            </Motion.article>
           ))}
-        </motion.div>
+        </Motion.div>
 
         {/* No Results */}
-        {filteredPosts.length === 0 && (
-          <motion.div
+        {!loading && filteredPosts.length === 0 && (
+          <Motion.div
             className="text-center py-16"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -283,39 +242,33 @@ const BlogPage = () => {
             <p className="text-gray-500 mb-6">Thử tìm kiếm với từ khóa khác hoặc chọn danh mục khác</p>
             <button
               onClick={() => {
-                setSelectedCategory('all')
-                setSearchText('')
+                setSearchInput('')
+                setActiveSearch('')
+                fetchBlogs({ reset: true, targetPage: 0, searchText: '' })
               }}
               className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition"
             >
               Xóa bộ lọc
             </button>
-          </motion.div>
+          </Motion.div>
         )}
 
-        {/* Newsletter Section */}
-        <motion.div
-          className="mt-16 bg-gradient-to-r from-green-600 to-blue-600 rounded-3xl p-12 text-center text-white"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-        >
-          <h2 className="text-3xl font-bold mb-4">📬 Đăng ký nhận tin</h2>
-          <p className="text-green-100 mb-6 max-w-2xl mx-auto">
-            Nhận các bài viết mới nhất, tips hữu ích và ưu đãi đặc biệt từ GreenLoop
-          </p>
-          <div className="flex gap-4 max-w-md mx-auto">
-            <input
-              type="email"
-              placeholder="Email của bạn"
-              className="flex-1 px-6 py-3 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-300"
-            />
-            <button className="bg-white text-green-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold transition">
-              Đăng ký
+        {hasMore && (
+          <div className="text-center mt-12">
+            <button
+              onClick={handleLoadMore}
+              disabled={loading}
+              className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-full font-semibold transition disabled:opacity-70"
+            >
+              {loading ? 'Đang tải...' : 'Xem thêm'}
+              {!loading && (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              )}
             </button>
           </div>
-        </motion.div>
+        )}
       </div>
     </div>
   )

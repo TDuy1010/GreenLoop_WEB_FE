@@ -30,6 +30,7 @@ import AdminErrorPage from './pages/admin/AdminErrorPage'
 import ErrorPage from './pages/ErrorPage'
 import AboutUsPage from './pages/user/aboutus/AboutUsPage'
 import BlogPage from './pages/user/blog/BlogPage'
+import BlogDetailPage from './pages/user/blog/BlogDetailPage'
 import ChatPage from './pages/user/chat/ChatPage'
 import ProfilePage from './pages/user/profile/ProfilePage'
 import CartPage from './pages/user/cart/CartPage'
@@ -75,6 +76,10 @@ const router = createBrowserRouter([
       {
         path:'blogs',
         element:<BlogPage />
+      },
+      {
+        path: 'blogs/:id',
+        element: <BlogDetailPage />
       },
       {
         path: 'chat',

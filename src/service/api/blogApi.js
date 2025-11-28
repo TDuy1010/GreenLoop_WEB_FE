@@ -93,6 +93,28 @@ export const deleteBlog = async (id) => {
   return response;
 };
 
+export const getPublishedBlogs = async (params = {}) => {
+  const {
+    page = 0,
+    size = 9,
+    search,
+    sortBy = 'publishedAt',
+    sortDir = 'DESC'
+  } = params;
+
+  const response = await axiosClient.get('/blogs/published', {
+    params: {
+      page,
+      size,
+      search,
+      sortBy,
+      sortDir
+    }
+  });
+
+  return response;
+};
+
 export default {
   getBlogs,
   createBlog,
@@ -100,6 +122,7 @@ export default {
   updateBlog,
   publishBlog,
   hideBlog,
-  deleteBlog
+  deleteBlog,
+  getPublishedBlogs
 };
 
