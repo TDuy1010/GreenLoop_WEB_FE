@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Row, Col, Statistic, Spin, message } from 'antd'
-import { HeartOutlined } from '@ant-design/icons'
+import { Card, Row, Col, Statistic, Spin, message, Empty, Divider } from 'antd'
+import { HeartOutlined, InboxOutlined, BarChartOutlined } from '@ant-design/icons'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { getDonationStatistics } from '../../../../service/api/statisticsApi'
+import { kpiCardStyles, cardStyle, cardBodyStyle, chartTooltipStyle, sectionHeaderStyle } from './_uiImprovements'
 
 const COLORS = ['#16a34a', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
@@ -42,7 +43,7 @@ const DonationStatistics = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
         <Spin size="large" />
       </div>
     )
@@ -75,35 +76,74 @@ const DonationStatistics = () => {
   })) : []
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', padding: '8px 0' }}>
       {/* KPI Cards */}
-      <Row gutter={[16, 16]}>
+      <div>
+        <h3 style={sectionHeaderStyle}>
+          <BarChartOutlined style={{ fontSize: '24px', color: '#16a34a' }} />
+          Tổng quan thống kê
+        </h3>
+        <Row gutter={[24, 24]} style={{ marginTop: '16px' }}>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card
+            style={{
+              background: kpiCardStyles[0].background,
+              border: `1px solid ${kpiCardStyles[0].borderColor}`,
+              borderRadius: '12px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer'
+            }}
+            hoverable
+            bodyStyle={{ padding: '20px' }}
+          >
             <Statistic
-              title="Tổng số lượt quyên góp"
+              title={<span style={{ color: '#64748b', fontSize: '14px', fontWeight: 500 }}>Tổng số lượt quyên góp</span>}
               value={stats?.totalDonations || 0}
-              prefix={<HeartOutlined />}
-              valueStyle={{ color: '#16a34a' }}
+              prefix={<HeartOutlined style={{ color: kpiCardStyles[0].iconColor, fontSize: '24px' }} />}
+              valueStyle={{ color: kpiCardStyles[0].iconColor, fontSize: '28px', fontWeight: 'bold' }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card
+            style={{
+              background: kpiCardStyles[1].background,
+              border: `1px solid ${kpiCardStyles[1].borderColor}`,
+              borderRadius: '12px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer'
+            }}
+            hoverable
+            bodyStyle={{ padding: '20px' }}
+          >
             <Statistic
-              title="Tổng số sản phẩm quyên góp"
+              title={<span style={{ color: '#64748b', fontSize: '14px', fontWeight: 500 }}>Tổng số sản phẩm quyên góp</span>}
               value={stats?.totalDonationItems || 0}
-              prefix={<HeartOutlined />}
-              valueStyle={{ color: '#3b82f6' }}
+              prefix={<HeartOutlined style={{ color: kpiCardStyles[1].iconColor, fontSize: '24px' }} />}
+              valueStyle={{ color: kpiCardStyles[1].iconColor, fontSize: '28px', fontWeight: 'bold' }}
             />
           </Card>
         </Col>
       </Row>
+      </div>
+
+      <Divider style={{ margin: '24px 0' }} />
 
       {/* Charts Row */}
-      <Row gutter={[16, 16]}>
+      <div>
+        <h3 style={sectionHeaderStyle}>
+          <BarChartOutlined style={{ fontSize: '24px', color: '#3b82f6' }} />
+          Biểu đồ phân tích
+        </h3>
+        <Row gutter={[24, 24]} style={{ marginTop: '16px' }}>
         <Col xs={24} lg={12}>
-          <Card title="Phân bố sản phẩm quyên góp theo trạng thái">
+          <Card
+            title={<span style={{ fontSize: '16px', fontWeight: 600 }}>Phân bố sản phẩm quyên góp theo trạng thái</span>}
+            style={cardStyle}
+            bodyStyle={cardBodyStyle}
+          >
             {itemsByStatusData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
@@ -112,8 +152,8 @@ const DonationStatistics = () => {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
+                    label={({ name, percent }) => percent > 0.05 ? `${name}: ${(percent * 100).toFixed(0)}%` : ''}
+                    outerRadius={90}
                     fill="#8884d8"
                     dataKey="value"
                   >
@@ -121,37 +161,56 @@ const DonationStatistics = () => {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => [`${value} sản phẩm`, 'Số lượng']} />
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    formatter={(value) => [`${value} sản phẩm`, 'Số lượng']}
+                  />
+                  <Legend
+                    wrapperStyle={{ paddingTop: '20px' }}
+                    iconType="circle"
+                  />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-                Chưa có dữ liệu
-              </div>
+              <Empty
+                image={<InboxOutlined style={{ fontSize: '48px', color: '#cbd5e1' }} />}
+                description={<span style={{ color: '#94a3b8' }}>Chưa có dữ liệu</span>}
+                style={{ padding: '40px 0' }}
+              />
             )}
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title="Phân bố sản phẩm quyên góp theo tình trạng">
+          <Card
+            title={<span style={{ fontSize: '16px', fontWeight: 600 }}>Phân bố sản phẩm quyên góp theo tình trạng</span>}
+            style={cardStyle}
+            bodyStyle={cardBodyStyle}
+          >
             {itemsByConditionData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={itemsByConditionData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => [`${value} sản phẩm`, 'Số lượng']} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="name" stroke="#64748b" />
+                  <YAxis stroke="#64748b" />
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    formatter={(value) => [`${value} sản phẩm`, 'Số lượng']}
+                  />
                   <Legend />
-                  <Bar dataKey="value" fill="#f59e0b" name="Số lượng" />
+                  <Bar dataKey="value" fill="#f59e0b" name="Số lượng" radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-                Chưa có dữ liệu
-              </div>
+              <Empty
+                image={<InboxOutlined style={{ fontSize: '48px', color: '#cbd5e1' }} />}
+                description={<span style={{ color: '#94a3b8' }}>Chưa có dữ liệu</span>}
+                style={{ padding: '40px 0' }}
+              />
             )}
           </Card>
         </Col>
       </Row>
+      </div>
     </div>
   )
 }

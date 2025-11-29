@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Row, Col, Statistic, Table, Spin, message } from 'antd'
-import { CalendarOutlined, UserOutlined, TeamOutlined } from '@ant-design/icons'
+import { Card, Row, Col, Statistic, Table, Spin, message, Empty, Divider } from 'antd'
+import { CalendarOutlined, UserOutlined, TeamOutlined, InboxOutlined, BarChartOutlined } from '@ant-design/icons'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { getEventStatistics, getEventRegistrationStatistics, getEventStaffStatistics } from '../../../../service/api/statisticsApi'
+import { kpiCardStyles, cardStyle, cardBodyStyle, chartTooltipStyle, sectionHeaderStyle } from './_uiImprovements'
 
 const COLORS = ['#16a34a', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
@@ -67,7 +68,7 @@ const EventStatistics = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
         <Spin size="large" />
       </div>
     )
@@ -129,203 +130,397 @@ const EventStatistics = () => {
   ]
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', padding: '8px 0' }}>
       {/* KPI Cards */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Tổng số sự kiện"
-              value={eventStats?.totalEvents || 0}
-              prefix={<CalendarOutlined />}
-              valueStyle={{ color: '#16a34a' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Tổng lượt đăng ký"
-              value={registrationStats?.totalRegistrations || 0}
-              prefix={<UserOutlined />}
-              valueStyle={{ color: '#3b82f6' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Tổng nhân sự phân công"
-              value={staffStats?.totalAssignments || 0}
-              prefix={<TeamOutlined />}
-              valueStyle={{ color: '#f59e0b' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Quản lý cửa hàng"
-              value={staffStats?.storeManagers || 0}
-              prefix={<TeamOutlined />}
-              valueStyle={{ color: '#8b5cf6' }}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <div>
+        <h3 style={sectionHeaderStyle}>
+          <BarChartOutlined style={{ fontSize: '24px', color: '#16a34a' }} />
+          Tổng quan thống kê
+        </h3>
+        <Row gutter={[24, 24]}>
+          <Col xs={24} sm={12} lg={6}>
+            <Card
+              style={{
+                background: kpiCardStyles[0].background,
+                border: `2px solid ${kpiCardStyles[0].borderColor}`,
+                borderRadius: '16px',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                cursor: 'pointer'
+              }}
+              hoverable
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-6px)'
+                e.currentTarget.style.boxShadow = kpiCardStyles[0].hoverShadow
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.1)'
+              }}
+              bodyStyle={{ padding: '24px' }}
+            >
+              <Statistic
+                title={<span style={{ color: '#64748b', fontSize: '14px', fontWeight: 500, letterSpacing: '0.3px' }}>Tổng số sự kiện</span>}
+                value={eventStats?.totalEvents || 0}
+                prefix={<CalendarOutlined style={{ color: kpiCardStyles[0].iconColor, fontSize: '28px' }} />}
+                valueStyle={{ color: kpiCardStyles[0].iconColor, fontSize: '32px', fontWeight: 'bold' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card
+              style={{
+                background: kpiCardStyles[1].background,
+                border: `2px solid ${kpiCardStyles[1].borderColor}`,
+                borderRadius: '16px',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                cursor: 'pointer'
+              }}
+              hoverable
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-6px)'
+                e.currentTarget.style.boxShadow = kpiCardStyles[1].hoverShadow
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.1)'
+              }}
+              bodyStyle={{ padding: '24px' }}
+            >
+              <Statistic
+                title={<span style={{ color: '#64748b', fontSize: '14px', fontWeight: 500, letterSpacing: '0.3px' }}>Tổng lượt đăng ký</span>}
+                value={registrationStats?.totalRegistrations || 0}
+                prefix={<UserOutlined style={{ color: kpiCardStyles[1].iconColor, fontSize: '28px' }} />}
+                valueStyle={{ color: kpiCardStyles[1].iconColor, fontSize: '32px', fontWeight: 'bold' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card
+              style={{
+                background: kpiCardStyles[2].background,
+                border: `2px solid ${kpiCardStyles[2].borderColor}`,
+                borderRadius: '16px',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                cursor: 'pointer'
+              }}
+              hoverable
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-6px)'
+                e.currentTarget.style.boxShadow = kpiCardStyles[2].hoverShadow
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.1)'
+              }}
+              bodyStyle={{ padding: '24px' }}
+            >
+              <Statistic
+                title={<span style={{ color: '#64748b', fontSize: '14px', fontWeight: 500, letterSpacing: '0.3px' }}>Tổng nhân sự phân công</span>}
+                value={staffStats?.totalAssignments || 0}
+                prefix={<TeamOutlined style={{ color: kpiCardStyles[2].iconColor, fontSize: '28px' }} />}
+                valueStyle={{ color: kpiCardStyles[2].iconColor, fontSize: '32px', fontWeight: 'bold' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card
+              style={{
+                background: kpiCardStyles[3].background,
+                border: `2px solid ${kpiCardStyles[3].borderColor}`,
+                borderRadius: '16px',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                cursor: 'pointer'
+              }}
+              hoverable
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-6px)'
+                e.currentTarget.style.boxShadow = kpiCardStyles[3].hoverShadow
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.1)'
+              }}
+              bodyStyle={{ padding: '24px' }}
+            >
+              <Statistic
+                title={<span style={{ color: '#64748b', fontSize: '14px', fontWeight: 500, letterSpacing: '0.3px' }}>Quản lý cửa hàng</span>}
+                value={staffStats?.storeManagers || 0}
+                prefix={<TeamOutlined style={{ color: kpiCardStyles[3].iconColor, fontSize: '28px' }} />}
+                valueStyle={{ color: kpiCardStyles[3].iconColor, fontSize: '32px', fontWeight: 'bold' }}
+              />
+            </Card>
+          </Col>
+        </Row>
+      </div>
+
+      <Divider style={{ margin: '24px 0' }} />
 
       {/* Charts Row 1 */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={12}>
-          <Card title="Tăng trưởng sự kiện theo tháng">
-            {monthlyCreatedData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={monthlyCreatedData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => [`${value} sự kiện`, 'Số lượng']} />
-                  <Legend />
-                  <Line type="monotone" dataKey="count" stroke="#16a34a" strokeWidth={2} name="Số sự kiện" />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-                Chưa có dữ liệu
-              </div>
-            )}
-          </Card>
-        </Col>
-        <Col xs={24} lg={12}>
-          <Card title="Phân bố sự kiện theo trạng thái">
-            {eventsByStatusData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={eventsByStatusData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {eventsByStatusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`${value} sự kiện`, 'Số lượng']} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-                Chưa có dữ liệu
-              </div>
-            )}
-          </Card>
-        </Col>
-      </Row>
+      <div>
+        <h3 style={sectionHeaderStyle}>
+          <BarChartOutlined style={{ fontSize: '24px', color: '#3b82f6' }} />
+          Biểu đồ phân tích
+        </h3>
+        <Row gutter={[24, 24]} style={{ marginTop: '16px' }}>
+          <Col xs={24} lg={12}>
+            <Card
+              title={<span style={{ fontSize: '18px', fontWeight: 600, color: '#1e293b' }}>Tăng trưởng sự kiện theo tháng</span>}
+              style={cardStyle}
+              bodyStyle={cardBodyStyle}
+            >
+              {monthlyCreatedData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={320}>
+                  <LineChart data={monthlyCreatedData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                    <XAxis dataKey="month" stroke="#64748b" style={{ fontSize: '12px' }} />
+                    <YAxis stroke="#64748b" style={{ fontSize: '12px' }} />
+                    <Tooltip
+                      contentStyle={chartTooltipStyle}
+                      formatter={(value) => [`${value} sự kiện`, 'Số lượng']}
+                    />
+                    <Legend wrapperStyle={{ paddingTop: '16px' }} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="count" 
+                      stroke="#16a34a" 
+                      strokeWidth={3} 
+                      name="Số sự kiện" 
+                      dot={{ fill: '#16a34a', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                      activeDot={{ r: 7 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <Empty
+                  image={<InboxOutlined style={{ fontSize: '48px', color: '#cbd5e1' }} />}
+                  description={<span style={{ color: '#94a3b8' }}>Chưa có dữ liệu</span>}
+                  style={{ padding: '60px 0' }}
+                />
+              )}
+            </Card>
+          </Col>
+          <Col xs={24} lg={12}>
+            <Card
+              title={<span style={{ fontSize: '18px', fontWeight: 600, color: '#1e293b' }}>Phân bố sự kiện theo trạng thái</span>}
+              style={cardStyle}
+              bodyStyle={cardBodyStyle}
+            >
+              {eventsByStatusData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={320}>
+                  <PieChart>
+                    <Pie
+                      data={eventsByStatusData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => percent > 0.05 ? `${name}: ${(percent * 100).toFixed(0)}%` : ''}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="value"
+                      innerRadius={30}
+                    >
+                      {eventsByStatusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={chartTooltipStyle}
+                      formatter={(value) => [`${value} sự kiện`, 'Số lượng']}
+                    />
+                    <Legend
+                      wrapperStyle={{ paddingTop: '24px' }}
+                      iconType="circle"
+                      formatter={(value, entry) => (
+                        <span style={{ color: '#475569', fontSize: '13px' }}>
+                          {value}: {entry.payload.value}
+                        </span>
+                      )}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <Empty
+                  image={<InboxOutlined style={{ fontSize: '48px', color: '#cbd5e1' }} />}
+                  description={<span style={{ color: '#94a3b8' }}>Chưa có dữ liệu</span>}
+                  style={{ padding: '60px 0' }}
+                />
+              )}
+            </Card>
+          </Col>
+        </Row>
+      </div>
+
+      <Divider style={{ margin: '32px 0' }} />
 
       {/* Charts Row 2 */}
-      <Row gutter={[16, 16]}>
+      <div>
+        <h3 style={sectionHeaderStyle}>
+          <BarChartOutlined style={{ fontSize: '24px', color: '#3b82f6' }} />
+          Xu hướng và phân bố
+        </h3>
+        <Row gutter={[24, 24]} style={{ marginTop: '16px' }}>
         <Col xs={24} lg={12}>
-          <Card title="Xu hướng điểm danh theo ngày">
+          <Card
+            title={<span style={{ fontSize: '18px', fontWeight: 600, color: '#1e293b' }}>Xu hướng điểm danh theo ngày</span>}
+            style={cardStyle}
+            bodyStyle={cardBodyStyle}
+          >
             {checkinTrendData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={checkinTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => [`${value} lượt điểm danh`, 'Số lượng']} />
-                  <Legend />
-                  <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} name="Số lượt điểm danh" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                  <XAxis dataKey="date" stroke="#64748b" style={{ fontSize: '12px' }} />
+                  <YAxis stroke="#64748b" style={{ fontSize: '12px' }} />
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    formatter={(value) => [`${value} lượt điểm danh`, 'Số lượng']}
+                  />
+                  <Legend wrapperStyle={{ paddingTop: '16px' }} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="count" 
+                    stroke="#3b82f6" 
+                    strokeWidth={3} 
+                    name="Số lượt điểm danh" 
+                    dot={{ fill: '#3b82f6', r: 5, strokeWidth: 2, stroke: '#fff' }}
+                    activeDot={{ r: 7 }}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-                Chưa có dữ liệu
-              </div>
+              <Empty
+                image={<InboxOutlined style={{ fontSize: '48px', color: '#cbd5e1' }} />}
+                description={<span style={{ color: '#94a3b8' }}>Chưa có dữ liệu</span>}
+                style={{ padding: '60px 0' }}
+              />
             )}
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title="Phân bố đăng ký theo trạng thái">
+          <Card
+            title={<span style={{ fontSize: '18px', fontWeight: 600, color: '#1e293b' }}>Phân bố đăng ký theo trạng thái</span>}
+            style={cardStyle}
+            bodyStyle={cardBodyStyle}
+          >
             {registrationsByStatusData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={registrationsByStatusData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => [`${value} lượt đăng ký`, 'Số lượng']} />
-                  <Legend />
-                  <Bar dataKey="value" fill="#3b82f6" name="Số lượt đăng ký" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                  <XAxis dataKey="name" stroke="#64748b" style={{ fontSize: '12px' }} />
+                  <YAxis stroke="#64748b" style={{ fontSize: '12px' }} />
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    formatter={(value) => [`${value} lượt đăng ký`, 'Số lượng']}
+                  />
+                  <Legend wrapperStyle={{ paddingTop: '16px' }} />
+                  <Bar 
+                    dataKey="value" 
+                    fill="#3b82f6" 
+                    name="Số lượt đăng ký" 
+                    radius={[12, 12, 0, 0]}
+                    style={{ cursor: 'pointer' }}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-                Chưa có dữ liệu
-              </div>
+              <Empty
+                image={<InboxOutlined style={{ fontSize: '48px', color: '#cbd5e1' }} />}
+                description={<span style={{ color: '#94a3b8' }}>Chưa có dữ liệu</span>}
+                style={{ padding: '60px 0' }}
+              />
             )}
           </Card>
         </Col>
       </Row>
+      </div>
+
+      <Divider style={{ margin: '32px 0' }} />
 
       {/* Tables Row */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={12}>
-          <Card title="Top sự kiện có nhiều đăng ký nhất">
-            {eventStats?.topEventsByRegistration && eventStats.topEventsByRegistration.length > 0 ? (
-              <Table
-                dataSource={eventStats.topEventsByRegistration}
-                columns={topEventsColumns}
-                rowKey="eventId"
-                pagination={{ pageSize: 5 }}
-                size="small"
-              />
-            ) : (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-                Chưa có dữ liệu
-              </div>
-            )}
-          </Card>
-        </Col>
-        <Col xs={24} lg={12}>
-          <Card title="Top người dùng đăng ký nhiều nhất">
-            {registrationStats?.topUsers && registrationStats.topUsers.length > 0 ? (
-              <Table
-                dataSource={registrationStats.topUsers}
-                columns={topUsersColumns}
-                rowKey="userId"
-                pagination={{ pageSize: 5 }}
-                size="small"
-              />
-            ) : (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-                Chưa có dữ liệu
-              </div>
-            )}
-          </Card>
-        </Col>
-      </Row>
+      <div>
+        <h3 style={sectionHeaderStyle}>
+          <BarChartOutlined style={{ fontSize: '24px', color: '#8b5cf6' }} />
+          Bảng dữ liệu chi tiết
+        </h3>
+        <Row gutter={[24, 24]}>
+          <Col xs={24} lg={12}>
+            <Card
+              title={<span style={{ fontSize: '18px', fontWeight: 600, color: '#1e293b' }}>Top sự kiện có nhiều đăng ký nhất</span>}
+              style={cardStyle}
+              bodyStyle={cardBodyStyle}
+            >
+              {eventStats?.topEventsByRegistration && eventStats.topEventsByRegistration.length > 0 ? (
+                <Table
+                  dataSource={eventStats.topEventsByRegistration}
+                  columns={topEventsColumns}
+                  rowKey="eventId"
+                  pagination={{ pageSize: 5 }}
+                  size="middle"
+                  style={{ borderRadius: '8px' }}
+                />
+              ) : (
+                <Empty
+                  image={<InboxOutlined style={{ fontSize: '48px', color: '#cbd5e1' }} />}
+                  description={<span style={{ color: '#94a3b8' }}>Chưa có dữ liệu</span>}
+                  style={{ padding: '60px 0' }}
+                />
+              )}
+            </Card>
+          </Col>
+          <Col xs={24} lg={12}>
+            <Card
+              title={<span style={{ fontSize: '18px', fontWeight: 600, color: '#1e293b' }}>Top người dùng đăng ký nhiều nhất</span>}
+              style={cardStyle}
+              bodyStyle={cardBodyStyle}
+            >
+              {registrationStats?.topUsers && registrationStats.topUsers.length > 0 ? (
+                <Table
+                  dataSource={registrationStats.topUsers}
+                  columns={topUsersColumns}
+                  rowKey="userId"
+                  pagination={{ pageSize: 5 }}
+                  size="middle"
+                  style={{ borderRadius: '8px' }}
+                />
+              ) : (
+                <Empty
+                  image={<InboxOutlined style={{ fontSize: '48px', color: '#cbd5e1' }} />}
+                  description={<span style={{ color: '#94a3b8' }}>Chưa có dữ liệu</span>}
+                  style={{ padding: '60px 0' }}
+                />
+              )}
+            </Card>
+          </Col>
+        </Row>
+      </div>
 
       {/* Staff by Event Table */}
-      {staffStats?.byEvent && staffStats.byEvent.length > 0 ? (
-        <Card title="Phân bố nhân sự theo sự kiện">
+      <Card
+        title={<span style={{ fontSize: '18px', fontWeight: 600, color: '#1e293b' }}>Phân bố nhân sự theo sự kiện</span>}
+        style={cardStyle}
+        bodyStyle={cardBodyStyle}
+      >
+        {staffStats?.byEvent && staffStats.byEvent.length > 0 ? (
           <Table
             dataSource={staffStats.byEvent}
             columns={staffByEventColumns}
             rowKey="eventId"
             pagination={{ pageSize: 10 }}
+            size="middle"
+            style={{ borderRadius: '8px' }}
           />
-        </Card>
-      ) : (
-        <Card title="Phân bố nhân sự theo sự kiện">
-          <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-            Chưa có dữ liệu phân bố nhân sự
-          </div>
-        </Card>
-      )}
+        ) : (
+          <Empty
+            image={<InboxOutlined style={{ fontSize: '48px', color: '#cbd5e1' }} />}
+            description={<span style={{ color: '#94a3b8' }}>Chưa có dữ liệu phân bố nhân sự</span>}
+            style={{ padding: '60px 0' }}
+          />
+        )}
+      </Card>
     </div>
   )
 }

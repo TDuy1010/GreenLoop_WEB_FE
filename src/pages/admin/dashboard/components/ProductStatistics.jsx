@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Row, Col, Statistic, Table, Spin, message } from 'antd'
-import { ShoppingOutlined, AppstoreOutlined } from '@ant-design/icons'
+import { Card, Row, Col, Statistic, Table, Spin, message, Empty, Divider } from 'antd'
+import { ShoppingOutlined, AppstoreOutlined, InboxOutlined, BarChartOutlined } from '@ant-design/icons'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { getProductStatistics, getCategoryStatistics } from '../../../../service/api/statisticsApi'
+import { kpiCardStyles, cardStyle, cardBodyStyle, chartTooltipStyle, sectionHeaderStyle } from './_uiImprovements'
 
 const COLORS = ['#16a34a', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
@@ -56,7 +57,7 @@ const ProductStatistics = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
         <Spin size="large" />
       </div>
     )
@@ -112,45 +113,101 @@ const ProductStatistics = () => {
   ]
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', padding: '8px 0' }}>
       {/* KPI Cards */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Tổng số sản phẩm"
-              value={productStats?.totalProducts || 0}
-              prefix={<ShoppingOutlined />}
-              valueStyle={{ color: '#16a34a' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Tổng số danh mục"
-              value={categoryStats?.totalCategories || 0}
-              prefix={<AppstoreOutlined />}
-              valueStyle={{ color: '#3b82f6' }}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <div>
+        <h3 style={sectionHeaderStyle}>
+          <BarChartOutlined style={{ fontSize: '24px', color: '#16a34a' }} />
+          Tổng quan thống kê
+        </h3>
+        <Row gutter={[24, 24]}>
+          <Col xs={24} sm={12} lg={6}>
+            <Card
+              style={{
+                background: kpiCardStyles[0].background,
+                border: `2px solid ${kpiCardStyles[0].borderColor}`,
+                borderRadius: '16px',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                cursor: 'pointer'
+              }}
+              hoverable
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-6px)'
+                e.currentTarget.style.boxShadow = kpiCardStyles[0].hoverShadow
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.1)'
+              }}
+              bodyStyle={{ padding: '24px' }}
+            >
+              <Statistic
+                title={<span style={{ color: '#64748b', fontSize: '14px', fontWeight: 500, letterSpacing: '0.3px' }}>Tổng số sản phẩm</span>}
+                value={productStats?.totalProducts || 0}
+                prefix={<ShoppingOutlined style={{ color: kpiCardStyles[0].iconColor, fontSize: '28px' }} />}
+                valueStyle={{ color: kpiCardStyles[0].iconColor, fontSize: '32px', fontWeight: 'bold' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card
+              style={{
+                background: kpiCardStyles[1].background,
+                border: `2px solid ${kpiCardStyles[1].borderColor}`,
+                borderRadius: '16px',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                cursor: 'pointer'
+              }}
+              hoverable
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-6px)'
+                e.currentTarget.style.boxShadow = kpiCardStyles[1].hoverShadow
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.1)'
+              }}
+              bodyStyle={{ padding: '24px' }}
+            >
+              <Statistic
+                title={<span style={{ color: '#64748b', fontSize: '14px', fontWeight: 500, letterSpacing: '0.3px' }}>Tổng số danh mục</span>}
+                value={categoryStats?.totalCategories || 0}
+                prefix={<AppstoreOutlined style={{ color: kpiCardStyles[1].iconColor, fontSize: '28px' }} />}
+                valueStyle={{ color: kpiCardStyles[1].iconColor, fontSize: '32px', fontWeight: 'bold' }}
+              />
+            </Card>
+          </Col>
+        </Row>
+      </div>
+
+      <Divider style={{ margin: '8px 0' }} />
 
       {/* Charts Row 1 */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={8}>
-          <Card title="Phân bố sản phẩm theo trạng thái">
+      <div>
+        <h3 style={sectionHeaderStyle}>
+          <BarChartOutlined style={{ fontSize: '24px', color: '#3b82f6' }} />
+          Biểu đồ phân tích
+        </h3>
+        <Row gutter={[24, 24]}>
+          <Col xs={24} lg={8}>
+            <Card
+              title={<span style={{ fontSize: '18px', fontWeight: 600, color: '#1e293b' }}>Phân bố sản phẩm theo trạng thái</span>}
+              style={cardStyle}
+              bodyStyle={cardBodyStyle}
+            >
             {productsByStatusData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={320}>
                 <PieChart>
                   <Pie
                     data={productsByStatusData}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
+                    label={({ name, percent }) => percent > 0.05 ? `${name}: ${(percent * 100).toFixed(0)}%` : ''}
+                    outerRadius={100}
+                    innerRadius={30}
                     fill="#8884d8"
                     dataKey="value"
                   >
@@ -158,28 +215,42 @@ const ProductStatistics = () => {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => [`${value} sản phẩm`, 'Số lượng']} />
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    formatter={(value) => [`${value} sản phẩm`, 'Số lượng']}
+                  />
+                  <Legend
+                    wrapperStyle={{ paddingTop: '20px' }}
+                    iconType="circle"
+                  />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-                Chưa có dữ liệu
-              </div>
+              <Empty
+                image={<InboxOutlined style={{ fontSize: '48px', color: '#cbd5e1' }} />}
+                description={<span style={{ color: '#94a3b8' }}>Chưa có dữ liệu</span>}
+                style={{ padding: '60px 0' }}
+              />
             )}
           </Card>
         </Col>
         <Col xs={24} lg={8}>
-          <Card title="Phân bố sản phẩm theo loại">
+          <Card
+            title={<span style={{ fontSize: '18px', fontWeight: 600, color: '#1e293b' }}>Phân bố sản phẩm theo loại</span>}
+            style={cardStyle}
+            bodyStyle={cardBodyStyle}
+          >
             {productsByTypeData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={320}>
                 <PieChart>
                   <Pie
                     data={productsByTypeData}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
+                    label={({ name, percent }) => percent > 0.05 ? `${name}: ${(percent * 100).toFixed(0)}%` : ''}
+                    outerRadius={100}
+                    innerRadius={30}
                     fill="#8884d8"
                     dataKey="value"
                   >
@@ -187,62 +258,101 @@ const ProductStatistics = () => {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => [`${value} sản phẩm`, 'Số lượng']} />
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    formatter={(value) => [`${value} sản phẩm`, 'Số lượng']}
+                  />
+                  <Legend
+                    wrapperStyle={{ paddingTop: '20px' }}
+                    iconType="circle"
+                  />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-                Chưa có dữ liệu
-              </div>
+              <Empty
+                image={<InboxOutlined style={{ fontSize: '48px', color: '#cbd5e1' }} />}
+                description={<span style={{ color: '#94a3b8' }}>Chưa có dữ liệu</span>}
+                style={{ padding: '60px 0' }}
+              />
             )}
           </Card>
         </Col>
         <Col xs={24} lg={8}>
-          <Card title="Phân bố sản phẩm theo tình trạng">
+          <Card
+            title={<span style={{ fontSize: '18px', fontWeight: 600, color: '#1e293b' }}>Phân bố sản phẩm theo tình trạng</span>}
+            style={cardStyle}
+            bodyStyle={cardBodyStyle}
+          >
             {productsByConditionData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={productsByConditionData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => [`${value} sản phẩm`, 'Số lượng']} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="name" stroke="#64748b" />
+                  <YAxis stroke="#64748b" />
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    formatter={(value) => [`${value} sản phẩm`, 'Số lượng']}
+                  />
                   <Legend />
-                  <Bar dataKey="value" fill="#f59e0b" name="Số lượng" />
+                  <Bar dataKey="value" fill="#f59e0b" name="Số lượng" radius={[12, 12, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-                Chưa có dữ liệu
-              </div>
+              <Empty
+                image={<InboxOutlined style={{ fontSize: '48px', color: '#cbd5e1' }} />}
+                description={<span style={{ color: '#94a3b8' }}>Chưa có dữ liệu</span>}
+                style={{ padding: '60px 0' }}
+              />
             )}
           </Card>
         </Col>
       </Row>
+      </div>
+
+      <Divider style={{ margin: '8px 0' }} />
 
       {/* Charts Row 2 */}
-      <Row gutter={[16, 16]}>
+      <div>
+        <h3 style={sectionHeaderStyle}>
+          <BarChartOutlined style={{ fontSize: '24px', color: '#8b5cf6' }} />
+          Bảng dữ liệu chi tiết
+        </h3>
+        <Row gutter={[24, 24]}>
         <Col xs={24} lg={12}>
-          <Card title="Phân bố sản phẩm theo danh mục">
+          <Card
+            title={<span style={{ fontSize: '18px', fontWeight: 600, color: '#1e293b' }}>Phân bố sản phẩm theo danh mục</span>}
+            style={cardStyle}
+            bodyStyle={cardBodyStyle}
+          >
             {categoryCountsData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={categoryCountsData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="name" type="category" width={150} />
-                  <Tooltip formatter={(value) => [`${value} sản phẩm`, 'Số lượng']} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis type="number" stroke="#64748b" />
+                  <YAxis dataKey="name" type="category" width={150} stroke="#64748b" />
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    formatter={(value) => [`${value} sản phẩm`, 'Số lượng']}
+                  />
                   <Legend />
-                  <Bar dataKey="productCount" fill="#16a34a" name="Số lượng sản phẩm" />
+                  <Bar dataKey="productCount" fill="#16a34a" name="Số lượng sản phẩm" radius={[0, 12, 12, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-                Chưa có dữ liệu
-              </div>
+              <Empty
+                image={<InboxOutlined style={{ fontSize: '48px', color: '#cbd5e1' }} />}
+                description={<span style={{ color: '#94a3b8' }}>Chưa có dữ liệu</span>}
+                style={{ padding: '60px 0' }}
+              />
             )}
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title="Top sản phẩm bán chạy">
+          <Card
+            title={<span style={{ fontSize: '18px', fontWeight: 600, color: '#1e293b' }}>Top sản phẩm bán chạy</span>}
+            style={cardStyle}
+            bodyStyle={cardBodyStyle}
+          >
             {productStats?.topProducts && productStats.topProducts.length > 0 ? (
               <Table
                 dataSource={productStats.topProducts}
@@ -250,33 +360,42 @@ const ProductStatistics = () => {
                 rowKey="productId"
                 pagination={{ pageSize: 5 }}
                 size="small"
+                style={{ borderRadius: '8px' }}
               />
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-                Chưa có dữ liệu sản phẩm bán chạy
-              </div>
+              <Empty
+                image={<InboxOutlined style={{ fontSize: '48px', color: '#cbd5e1' }} />}
+                description={<span style={{ color: '#94a3b8' }}>Chưa có dữ liệu sản phẩm bán chạy</span>}
+                style={{ padding: '60px 0' }}
+              />
             )}
           </Card>
         </Col>
       </Row>
+      </div>
 
       {/* Category Table */}
-      {categoryCountsData.length > 0 ? (
-        <Card title="Chi tiết phân bố theo danh mục">
+      <Card
+        title={<span style={{ fontSize: '18px', fontWeight: 600, color: '#1e293b' }}>Chi tiết phân bố theo danh mục</span>}
+        style={cardStyle}
+        bodyStyle={cardBodyStyle}
+      >
+        {categoryCountsData.length > 0 ? (
           <Table
             dataSource={categoryCountsData}
             columns={categoryColumns}
             rowKey="categoryId"
             pagination={{ pageSize: 10 }}
+            style={{ borderRadius: '8px' }}
           />
-        </Card>
-      ) : (
-        <Card title="Chi tiết phân bố theo danh mục">
-          <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-            Chưa có dữ liệu danh mục
-          </div>
-        </Card>
-      )}
+        ) : (
+          <Empty
+            image={<InboxOutlined style={{ fontSize: '48px', color: '#cbd5e1' }} />}
+            description={<span style={{ color: '#94a3b8' }}>Chưa có dữ liệu danh mục</span>}
+            style={{ padding: '40px 0' }}
+          />
+        )}
+      </Card>
     </div>
   )
 }

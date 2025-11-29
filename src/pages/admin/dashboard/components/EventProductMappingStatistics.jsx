@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Row, Col, Statistic, Table, Spin, message } from 'antd'
-import { LinkOutlined } from '@ant-design/icons'
+import { Card, Row, Col, Statistic, Table, Spin, message, Empty, Divider } from 'antd'
+import { LinkOutlined, InboxOutlined, BarChartOutlined } from '@ant-design/icons'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { getEventProductMappingStatistics } from '../../../../service/api/statisticsApi'
+import { kpiCardStyles, cardStyle, cardBodyStyle, chartTooltipStyle, sectionHeaderStyle } from './_uiImprovements'
 
 const COLORS = ['#16a34a', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
@@ -42,7 +43,7 @@ const EventProductMappingStatistics = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
         <Spin size="large" />
       </div>
     )
@@ -70,25 +71,53 @@ const EventProductMappingStatistics = () => {
   ]
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', padding: '8px 0' }}>
       {/* KPI Card */}
-      <Row gutter={[16, 16]}>
+      <div>
+        <h3 style={sectionHeaderStyle}>
+          <BarChartOutlined style={{ fontSize: '24px', color: '#16a34a' }} />
+          Tổng quan thống kê
+        </h3>
+        <Row gutter={[24, 24]} style={{ marginTop: '16px' }}>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card
+            style={{
+              background: kpiCardStyles[0].background,
+              border: `1px solid ${kpiCardStyles[0].borderColor}`,
+              borderRadius: '12px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer'
+            }}
+            hoverable
+            bodyStyle={{ padding: '20px' }}
+          >
             <Statistic
-              title="Tổng số liên kết"
+              title={<span style={{ color: '#64748b', fontSize: '14px', fontWeight: 500 }}>Tổng số liên kết</span>}
               value={stats?.totalMappings || 0}
-              prefix={<LinkOutlined />}
-              valueStyle={{ color: '#16a34a' }}
+              prefix={<LinkOutlined style={{ color: kpiCardStyles[0].iconColor, fontSize: '24px' }} />}
+              valueStyle={{ color: kpiCardStyles[0].iconColor, fontSize: '28px', fontWeight: 'bold' }}
             />
           </Card>
         </Col>
       </Row>
+      </div>
+
+      <Divider style={{ margin: '24px 0' }} />
 
       {/* Charts Row */}
-      <Row gutter={[16, 16]}>
+      <div>
+        <h3 style={sectionHeaderStyle}>
+          <BarChartOutlined style={{ fontSize: '24px', color: '#3b82f6' }} />
+          Biểu đồ phân tích
+        </h3>
+        <Row gutter={[24, 24]} style={{ marginTop: '16px' }}>
         <Col xs={24} lg={12}>
-          <Card title="Phân bố liên kết theo trạng thái">
+          <Card
+            title={<span style={{ fontSize: '16px', fontWeight: 600 }}>Phân bố liên kết theo trạng thái</span>}
+            style={cardStyle}
+            bodyStyle={cardBodyStyle}
+          >
             {mappingsByStatusData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
@@ -97,8 +126,8 @@ const EventProductMappingStatistics = () => {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
+                    label={({ name, percent }) => percent > 0.05 ? `${name}: ${(percent * 100).toFixed(0)}%` : ''}
+                    outerRadius={90}
                     fill="#8884d8"
                     dataKey="value"
                   >
@@ -106,55 +135,88 @@ const EventProductMappingStatistics = () => {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => [`${value} liên kết`, 'Số lượng']} />
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    formatter={(value) => [`${value} liên kết`, 'Số lượng']}
+                  />
+                  <Legend
+                    wrapperStyle={{ paddingTop: '20px' }}
+                    iconType="circle"
+                  />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-                Chưa có dữ liệu
-              </div>
+              <Empty
+                image={<InboxOutlined style={{ fontSize: '48px', color: '#cbd5e1' }} />}
+                description={<span style={{ color: '#94a3b8' }}>Chưa có dữ liệu</span>}
+                style={{ padding: '40px 0' }}
+              />
             )}
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title="Số lượng sản phẩm theo sự kiện">
+          <Card
+            title={<span style={{ fontSize: '16px', fontWeight: 600 }}>Số lượng sản phẩm theo sự kiện</span>}
+            style={cardStyle}
+            bodyStyle={cardBodyStyle}
+          >
             {eventProductCountsData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={eventProductCountsData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="eventId" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => [`${value} sản phẩm`, 'Số lượng']} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="eventId" stroke="#64748b" />
+                  <YAxis stroke="#64748b" />
+                  <Tooltip
+                    contentStyle={chartTooltipStyle}
+                    formatter={(value) => [`${value} sản phẩm`, 'Số lượng']}
+                  />
                   <Legend />
-                  <Bar dataKey="productCount" fill="#3b82f6" name="Số lượng sản phẩm" />
+                  <Bar dataKey="productCount" fill="#3b82f6" name="Số lượng sản phẩm" radius={[8, 8, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-                Chưa có dữ liệu
-              </div>
+              <Empty
+                image={<InboxOutlined style={{ fontSize: '48px', color: '#cbd5e1' }} />}
+                description={<span style={{ color: '#94a3b8' }}>Chưa có dữ liệu</span>}
+                style={{ padding: '40px 0' }}
+              />
             )}
           </Card>
         </Col>
       </Row>
+      </div>
+
+      <Divider style={{ margin: '32px 0' }} />
 
       {/* Event Product Counts Table */}
-      {eventProductCountsData.length > 0 ? (
-        <Card title="Chi tiết số lượng sản phẩm theo sự kiện">
+      <div>
+        <h3 style={sectionHeaderStyle}>
+          <BarChartOutlined style={{ fontSize: '24px', color: '#8b5cf6' }} />
+          Bảng dữ liệu chi tiết
+        </h3>
+        <Card
+          style={{ marginTop: '16px' }}
+        title={<span style={{ fontSize: '16px', fontWeight: 600 }}>Chi tiết số lượng sản phẩm theo sự kiện</span>}
+        style={cardStyle}
+        bodyStyle={cardBodyStyle}
+      >
+        {eventProductCountsData.length > 0 ? (
           <Table
             dataSource={eventProductCountsData}
             columns={eventProductColumns}
             rowKey="eventId"
             pagination={{ pageSize: 10 }}
+            style={{ borderRadius: '8px' }}
           />
+        ) : (
+          <Empty
+            image={<InboxOutlined style={{ fontSize: '48px', color: '#cbd5e1' }} />}
+            description={<span style={{ color: '#94a3b8' }}>Chưa có dữ liệu liên kết sản phẩm-sự kiện</span>}
+            style={{ padding: '40px 0' }}
+          />
+        )}
         </Card>
-      ) : (
-        <Card title="Chi tiết số lượng sản phẩm theo sự kiện">
-          <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-            Chưa có dữ liệu liên kết sản phẩm-sự kiện
-          </div>
-        </Card>
-      )}
+      </div>
     </div>
   )
 }
