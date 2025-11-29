@@ -8,6 +8,7 @@ import AddressSelector from './components/AddressSelector'
 import ShippingOptions from './components/ShippingOptions'
 import PaymentMethodList from './components/PaymentMethodList'
 import CheckoutSummary from './components/CheckoutSummary'
+import VoucherSelector from './components/VoucherSelector'
 
 const paymentOptions = [
   {
@@ -54,6 +55,7 @@ const PaymentPage = () => {
   })
   const [checkoutResult, setCheckoutResult] = useState(null)
   const [checkoutError, setCheckoutError] = useState(null)
+  const [selectedVoucher, setSelectedVoucher] = useState(null)
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -305,6 +307,10 @@ const PaymentPage = () => {
           selectedMethod={selectedPaymentMethod}
           onSelect={setSelectedPaymentMethod}
         />
+        <VoucherSelector
+          onSelectVoucher={setSelectedVoucher}
+          selectedVoucher={selectedVoucher}
+        />
       </>
     )
   }
@@ -357,6 +363,7 @@ const PaymentPage = () => {
             selectedAddress={selectedAddress}
             selectedShippingOption={selectedShippingOption}
             selectedPaymentMethod={selectedPaymentMethod}
+            selectedVoucher={selectedVoucher}
             totals={totals}
             paymentOptions={paymentOptions}
             currentStep={currentStep}

@@ -4,6 +4,7 @@ const CheckoutSummary = ({
   selectedAddress,
   selectedShippingOption,
   selectedPaymentMethod,
+  selectedVoucher,
   totals,
   paymentOptions,
   currentStep,
@@ -72,6 +73,16 @@ const CheckoutSummary = ({
           <p className="mt-2 text-slate-400">Chưa chọn phương thức.</p>
         )}
       </div>
+
+      {selectedVoucher && (
+        <div>
+          <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Mã giảm giá</p>
+          <div className="mt-3 p-3 rounded-2xl bg-emerald-50 border border-emerald-200">
+            <p className="font-semibold text-emerald-900">{selectedVoucher.name}</p>
+            <p className="text-sm text-emerald-700 mt-1">{selectedVoucher.code}</p>
+          </div>
+        </div>
+      )}
 
       <div className="rounded-2xl bg-slate-50 p-4 space-y-2 text-sm">
         <div className="flex justify-between text-slate-600">
