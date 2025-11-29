@@ -76,7 +76,7 @@ const EventProductMappingStatistics = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Tổng số mapping"
+              title="Tổng số liên kết"
               value={stats?.totalMappings || 0}
               prefix={<LinkOutlined />}
               valueStyle={{ color: '#16a34a' }}
@@ -88,7 +88,7 @@ const EventProductMappingStatistics = () => {
       {/* Charts Row */}
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
-          <Card title="Phân bố mapping theo trạng thái">
+          <Card title="Phân bố liên kết theo trạng thái">
             {mappingsByStatusData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
@@ -106,7 +106,7 @@ const EventProductMappingStatistics = () => {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => [`${value} mapping`, 'Số lượng']} />
+                  <Tooltip formatter={(value) => [`${value} liên kết`, 'Số lượng']} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
@@ -151,7 +151,7 @@ const EventProductMappingStatistics = () => {
       ) : (
         <Card title="Chi tiết số lượng sản phẩm theo sự kiện">
           <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-            Chưa có dữ liệu mapping sản phẩm-sự kiện
+            Chưa có dữ liệu liên kết sản phẩm-sự kiện
           </div>
         </Card>
       )}

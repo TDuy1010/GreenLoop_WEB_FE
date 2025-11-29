@@ -103,7 +103,7 @@ const DonationStatistics = () => {
       {/* Charts Row */}
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
-          <Card title="Phân bố donation item theo trạng thái">
+          <Card title="Phân bố sản phẩm quyên góp theo trạng thái">
             {itemsByStatusData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
@@ -132,7 +132,7 @@ const DonationStatistics = () => {
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title="Phân bố donation item theo tình trạng">
+          <Card title="Phân bố sản phẩm quyên góp theo tình trạng">
             {itemsByConditionData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={itemsByConditionData}>

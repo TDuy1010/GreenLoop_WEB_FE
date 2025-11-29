@@ -56,7 +56,7 @@ const DashboardPage = () => {
       key: 'ecopoints',
       label: (
         <span>
-          <DollarOutlined /> EcoPoint
+          <DollarOutlined /> Điểm Sinh Thái
         </span>
       ),
       children: <EcoPointStatistics />
@@ -65,7 +65,7 @@ const DashboardPage = () => {
       key: 'vouchers',
       label: (
         <span>
-          <GiftOutlined /> Voucher
+          <GiftOutlined /> Phiếu Giảm Giá
         </span>
       ),
       children: <VoucherStatistics />
@@ -83,7 +83,7 @@ const DashboardPage = () => {
       key: 'mappings',
       label: (
         <span>
-          <LinkOutlined /> Mapping Sản phẩm-Sự kiện
+          <LinkOutlined /> Liên kết Sản phẩm-Sự kiện
         </span>
       ),
       children: <EventProductMappingStatistics />
